@@ -1,4 +1,7 @@
-use std::sync::OnceLock;
+use std::{
+    io,
+    sync::{Arc, Mutex, OnceLock},
+};
 
 use axum::{body::Body, http::Request, http::StatusCode, Router};
 use opentelemetry::{
@@ -20,7 +23,42 @@ use tower::ServiceExt;
 const TRACE_ID: &str = "0af7651916cd43dd8448eb211c80319c";
 const TRACEPARENT: &str = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
 
+#[derive(Clone, Default)]
+struct StdoutCapture(Arc<Mutex<Vec<u8>>>);
+
+impl io::Write for StdoutCapture {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.0
+            .lock()
+            .map_err(|_| io::Error::other("capture buffer poisoned"))?
+            .extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl StdoutCapture {
+    fn json_lines(&self) -> Vec<serde_json::Value> {
+        let bytes = self.0.lock().expect("capture buffer must not be poisoned");
+        String::from_utf8_lossy(&bytes)
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("every stdout line must be JSON"))
+            .collect()
+    }
+
+    fn clear(&self) {
+        self.0
+            .lock()
+            .expect("capture buffer must not be poisoned")
+            .clear();
+    }
+}
+
 struct Harness {
+    stdout: StdoutCapture,
     spans: InMemorySpanExporter,
     metrics: InMemoryMetricExporter,
     logs: InMemoryLogExporter,
@@ -45,9 +83,13 @@ fn harness() -> &'static Harness {
         let logger = SdkLoggerProvider::builder()
             .with_simple_exporter(logs.clone())
             .build();
-        let telemetry = Telemetry::install(tracer, meter.clone(), logger)
-            .expect("telemetry must install once per test binary");
+        let stdout = StdoutCapture::default();
+        let writer = stdout.clone();
+        let telemetry =
+            Telemetry::install_with_writer(tracer, meter.clone(), logger, move || writer.clone())
+                .expect("telemetry must install once per test binary");
         Harness {
+            stdout,
             spans,
             metrics,
             logs,
@@ -63,6 +105,7 @@ impl Harness {
         self.meter.force_flush().expect("meter must flush");
         self.metrics.reset();
         self.logs.reset();
+        self.stdout.clear();
         app(faults)
     }
 
@@ -281,4 +324,19 @@ async fn each_request_grows_the_retained_memory_by_the_configured_leak() {
     }
 
     assert_eq!(faults.leaked_bytes(), 3 * 4096);
+}
+
+#[tokio::test]
+#[serial]
+async fn handler_log_is_written_to_stdout_as_json_even_without_a_collector() {
+    let app = harness().start(Faults::default());
+
+    get(&app, "/prices/SKU-001?quantity=1").await;
+
+    let lines = harness().stdout.json_lines();
+    let price_log = lines
+        .iter()
+        .find(|line| line["fields"]["message"] == "price computed")
+        .expect("the handler log must reach stdout");
+    assert_eq!(price_log["level"], "INFO");
 }

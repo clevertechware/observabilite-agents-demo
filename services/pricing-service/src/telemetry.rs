@@ -6,7 +6,7 @@ use opentelemetry_sdk::{
     propagation::TraceContextPropagator, trace::SdkTracerProvider, Resource,
 };
 use tracing_subscriber::{
-    layer::SubscriberExt, util::SubscriberInitExt, util::TryInitError, EnvFilter,
+    fmt::MakeWriter, layer::SubscriberExt, util::SubscriberInitExt, util::TryInitError, EnvFilter,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -50,6 +50,18 @@ impl Telemetry {
         meter: SdkMeterProvider,
         logger: SdkLoggerProvider,
     ) -> Result<Self, TelemetryError> {
+        Self::install_with_writer(tracer, meter, logger, std::io::stdout)
+    }
+
+    pub fn install_with_writer<W>(
+        tracer: SdkTracerProvider,
+        meter: SdkMeterProvider,
+        logger: SdkLoggerProvider,
+        writer: W,
+    ) -> Result<Self, TelemetryError>
+    where
+        W: for<'a> MakeWriter<'a> + Send + Sync + 'static,
+    {
         global::set_tracer_provider(tracer.clone());
         global::set_meter_provider(meter.clone());
         global::set_text_map_propagator(TraceContextPropagator::new());
@@ -57,6 +69,7 @@ impl Telemetry {
         let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
         tracing_subscriber::registry()
             .with(filter)
+            .with(tracing_subscriber::fmt::layer().json().with_writer(writer))
             .with(OpenTelemetryTracingBridge::new(&logger))
             .try_init()?;
 
