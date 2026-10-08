@@ -5,6 +5,8 @@ metadata:
   namespace: demo
 data:
   10-roles-and-databases.sh: |
+    #!/usr/bin/env bash
+    set -euo pipefail
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<SQL
     CREATE ROLE inventory LOGIN PASSWORD '${INVENTORY_DB_PASSWORD}';
     CREATE ROLE orders LOGIN PASSWORD '${ORDERS_DB_PASSWORD}';
@@ -12,6 +14,8 @@ data:
     CREATE DATABASE orders OWNER orders;
     SQL
   20-inventory-schema.sh: |
+    #!/usr/bin/env bash
+    set -euo pipefail
     psql -v ON_ERROR_STOP=1 --username inventory --dbname inventory <<'SQL'
     CREATE TABLE stock (
       sku      text PRIMARY KEY,
