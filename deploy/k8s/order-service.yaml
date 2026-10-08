@@ -15,6 +15,10 @@ spec:
       labels:
         app: order-service
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
       imagePullSecrets:
         - name: ghcr-pull
       containers:
@@ -56,11 +60,17 @@ spec:
             periodSeconds: 20
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop: [ALL]
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
           resources:
             requests: {cpu: 250m, memory: 512Mi}
             limits: {cpu: "1", memory: 768Mi}
+      volumes:
+        - name: tmp
+          emptyDir: {sizeLimit: 64Mi}
 ---
 apiVersion: v1
 kind: Service
