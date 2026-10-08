@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/orders
+    username: orders
+    password: orders
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+  http:
+    client:
+      connect-timeout: 2s
+      read-timeout: 5s
+
+server:
+  port: 8080
+  shutdown: graceful
+
+inventory:
+  base-url: ${INVENTORY_URL:http://localhost:8081}
