@@ -10,7 +10,7 @@ spring:
       mode: always
       schema-locations: classpath:schema.sql
   http:
-    client:
+    clients:
       connect-timeout: 2s
       read-timeout: 5s
 

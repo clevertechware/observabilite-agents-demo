@@ -54,7 +54,7 @@ class OrderApiTest {
     @DynamicPropertySource
     static void inventoryProperties(DynamicPropertyRegistry registry) {
         registry.add("inventory.base-url", inventory::baseUrl);
-        registry.add("spring.http.client.read-timeout", () -> "500ms");
+        registry.add("spring.http.clients.read-timeout", () -> "500ms");
     }
 
     @Autowired
@@ -200,7 +200,13 @@ class OrderApiTest {
     @Test
     void returns_502_when_inventory_exceeds_read_timeout() throws Exception {
         inventory.stubFor(WireMock.post("/reservations")
-                .willReturn(aResponse().withStatus(200).withFixedDelay(2000)));
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                                {"sku": "SKU-1", "quantity": 2, "unitPrice": 10.00, "total": 20.00}
+                                """)
+                        .withFixedDelay(2000)));
 
         mockMvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON).content(ORDER_BODY))
                 .andExpect(status().isBadGateway());
