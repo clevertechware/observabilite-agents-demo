@@ -1,0 +1,69 @@
+mode: deployment
+replicaCount: 1
+
+image:
+  repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-k8s
+command:
+  name: otelcol-k8s
+
+presets:
+  clusterMetrics:
+    enabled: true
+  kubernetesEvents:
+    enabled: true
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+extraEnvs:
+  - name: O2_AUTH
+    valueFrom:
+      secretKeyRef:
+        name: otel-collector-auth
+        key: authorization
+
+config:
+  extensions:
+    health_check:
+      endpoint: 0.0.0.0:13133
+
+  receivers:
+    k8s_cluster:
+      resource_attributes:
+        k8s.container.status.last_terminated_reason:
+          enabled: true
+
+  processors:
+    memory_limiter:
+      check_interval: 1s
+      limit_percentage: 80
+      spike_limit_percentage: 15
+    batch:
+      timeout: 5s
+
+  exporters:
+    otlphttp/openobserve:
+      endpoint: http://o2-openobserve-standalone.openobserve.svc:5080/api/default
+      headers:
+        Authorization: "${env:O2_AUTH}"
+
+  service:
+    extensions:
+      - health_check
+    pipelines:
+      metrics:
+        processors:
+          - memory_limiter
+          - batch
+        exporters:
+          - otlphttp/openobserve
+      logs:
+        processors:
+          - memory_limiter
+          - batch
+        exporters:
+          - otlphttp/openobserve

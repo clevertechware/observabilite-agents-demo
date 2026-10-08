@@ -1,0 +1,14 @@
+clusterRole:
+  rules:
+    - apiGroups: [""]
+      resources: ["nodes/pods"]
+      verbs: ["get"]
+
+config:
+  receivers:
+    kubeletstats:
+      metrics:
+        k8s.container.cpu_limit_utilization:
+          enabled: true
+        k8s.container.memory_limit_utilization:
+          enabled: true

@@ -1,0 +1,19 @@
+# Secrets
+.env
+*.env
+secret.yaml
+*-secret.yaml
+*.pem
+*.key
+
+# Rust
+target/
+# Java
+*.class
+.mvn/wrapper/maven-wrapper.jar
+# Go
+/bin/
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store

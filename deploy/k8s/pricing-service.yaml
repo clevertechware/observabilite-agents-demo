@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pricing-service
+  namespace: demo
+  labels:
+    app: pricing-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pricing-service
+  template:
+    metadata:
+      labels:
+        app: pricing-service
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: pricing-service
+          image: ghcr.io/clevertechware/observabilite-agents-demo/pricing-service:0.1.0
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: otel-env
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: pricing-service
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: service.namespace=shop,service.version=0.1.0,deployment.environment.name=demo
+            - name: FAULT_ERROR_RATE
+              value: "0"
+            - name: FAULT_LEAK_BYTES_PER_REQUEST
+              value: "0"
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests: {cpu: 50m, memory: 32Mi}
+            limits: {memory: 64Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pricing-service
+  namespace: demo
+  labels:
+    app: pricing-service
+spec:
+  selector:
+    app: pricing-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

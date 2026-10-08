@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: demo
+  labels:
+    app: order-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: order-service
+          image: ghcr.io/clevertechware/observabilite-agents-demo/order-service:0.1.0
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: otel-env
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: order-service
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: service.namespace=shop,service.version=0.1.0,deployment.environment.name=demo
+            - name: OTEL_SEMCONV_STABILITY_OPT_IN
+              value: database
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres.demo.svc:5432/orders
+            - name: SPRING_DATASOURCE_USERNAME
+              value: orders
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: postgres-credentials, key: orders-password}
+            - name: INVENTORY_URL
+              value: http://inventory-service.demo.svc:8080
+            - name: FAULT_HEAP_LEAK_BYTES_PER_REQUEST
+              value: "0"
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          startupProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 5
+            failureThreshold: 36
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: "1", memory: 768Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: demo
+  labels:
+    app: order-service
+spec:
+  selector:
+    app: order-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

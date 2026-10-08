@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-generator
+  namespace: demo
+  labels:
+    app: load-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: load-generator
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      containers:
+        - name: load-generator
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              while true; do
+                for sku in SKU-001 SKU-002 SKU-003; do
+                  wget -q -O /dev/null \
+                    --header 'Content-Type: application/json' \
+                    --post-data "{\"sku\":\"$sku\",\"quantity\":1}" \
+                    http://order-service.demo.svc:8080/orders
+                  sleep 1
+                done
+              done
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {memory: 32Mi}

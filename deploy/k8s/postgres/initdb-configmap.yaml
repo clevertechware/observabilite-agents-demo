@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-initdb
+  namespace: demo
+data:
+  10-roles-and-databases.sh: |
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<SQL
+    CREATE ROLE inventory LOGIN PASSWORD '${INVENTORY_DB_PASSWORD}';
+    CREATE ROLE orders LOGIN PASSWORD '${ORDERS_DB_PASSWORD}';
+    CREATE DATABASE inventory OWNER inventory;
+    CREATE DATABASE orders OWNER orders;
+    SQL
+  20-inventory-schema.sh: |
+    psql -v ON_ERROR_STOP=1 --username inventory --dbname inventory <<'SQL'
+    CREATE TABLE stock (
+      sku      text PRIMARY KEY,
+      quantity integer NOT NULL CHECK (quantity >= 0)
+    );
+    INSERT INTO stock (sku, quantity) VALUES
+      ('SKU-001', 1000000),
+      ('SKU-002', 1000000),
+      ('SKU-003', 1000000);
+    SQL
