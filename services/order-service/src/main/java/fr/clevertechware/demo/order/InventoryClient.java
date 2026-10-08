@@ -28,8 +28,8 @@ class InventoryClient {
                         throw new UnknownSkuException(sku);
                     })
                     .body(Reservation.class);
-            if (reservation == null) {
-                throw new InventoryUnavailableException("Inventory returned an empty reservation");
+            if (reservation == null || reservation.unitPrice() == null || reservation.total() == null) {
+                throw new InventoryUnavailableException("Inventory returned an incomplete reservation");
             }
             return reservation;
         } catch (RestClientException e) {

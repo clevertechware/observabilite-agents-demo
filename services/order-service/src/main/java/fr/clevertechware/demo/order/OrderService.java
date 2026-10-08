@@ -1,6 +1,5 @@
 package fr.clevertechware.demo.order;
 
-import java.math.BigDecimal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -24,7 +23,7 @@ class OrderService {
                 request.sku(),
                 request.quantity(),
                 reservation.unitPrice(),
-                reservation.unitPrice().multiply(BigDecimal.valueOf(request.quantity())));
+                reservation.total());
         log.info("Order {} placed for sku {} (quantity {})", order.id(), order.sku(), order.quantity());
         return order;
     }

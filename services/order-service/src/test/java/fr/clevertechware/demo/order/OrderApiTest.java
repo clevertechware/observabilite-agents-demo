@@ -71,7 +71,7 @@ class OrderApiTest {
     @Test
     void creates_order_with_unit_price_returned_by_inventory() throws Exception {
         stubReservation(200, """
-                {"sku": "SKU-1", "quantity": 2, "unitPrice": 10.00}
+                {"sku": "SKU-1", "quantity": 2, "unitPrice": 10.00, "total": 20.00}
                 """);
 
         mockMvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON).content(ORDER_BODY))
@@ -84,9 +84,23 @@ class OrderApiTest {
     }
 
     @Test
+    void stores_total_returned_by_inventory_instead_of_recomputing_it() throws Exception {
+        stubReservation(200, """
+                {"sku": "SKU-1", "quantity": 2, "unitPrice": 10.00, "total": 18.50}
+                """);
+
+        mockMvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON).content(ORDER_BODY))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.total").value(18.50));
+
+        Integer rows = jdbc.sql("SELECT count(*) FROM orders WHERE total = 18.50").query(Integer.class).single();
+        assertThat(rows).isEqualTo(1);
+    }
+
+    @Test
     void sends_sku_and_quantity_to_inventory_reservations_endpoint() throws Exception {
         stubReservation(200, """
-                {"sku": "SKU-1", "quantity": 2, "unitPrice": 10.00}
+                {"sku": "SKU-1", "quantity": 2, "unitPrice": 10.00, "total": 20.00}
                 """);
 
         mockMvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON).content(ORDER_BODY))
@@ -99,7 +113,7 @@ class OrderApiTest {
     @Test
     void persists_created_order_in_orders_table() throws Exception {
         stubReservation(200, """
-                {"sku": "SKU-1", "quantity": 2, "unitPrice": 10.00}
+                {"sku": "SKU-1", "quantity": 2, "unitPrice": 10.00, "total": 20.00}
                 """);
 
         mockMvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON).content(ORDER_BODY))
@@ -114,7 +128,7 @@ class OrderApiTest {
     @Test
     void returns_created_order_by_id() throws Exception {
         stubReservation(200, """
-                {"sku": "SKU-1", "quantity": 2, "unitPrice": 10.00}
+                {"sku": "SKU-1", "quantity": 2, "unitPrice": 10.00, "total": 20.00}
                 """);
         MvcResult created = mockMvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON).content(ORDER_BODY))
                 .andExpect(status().isCreated())
@@ -157,6 +171,17 @@ class OrderApiTest {
     @ValueSource(ints = {500, 503})
     void returns_502_when_inventory_answers_with_unexpected_error_status(int inventoryStatus) throws Exception {
         stubReservation(inventoryStatus, "{}");
+
+        mockMvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON).content(ORDER_BODY))
+                .andExpect(status().isBadGateway());
+        assertThat(orderCount()).isZero();
+    }
+
+    @Test
+    void returns_502_when_inventory_reservation_has_no_total() throws Exception {
+        stubReservation(200, """
+                {"sku": "SKU-1", "quantity": 2, "unitPrice": 10.00}
+                """);
 
         mockMvc.perform(post("/orders").contentType(MediaType.APPLICATION_JSON).content(ORDER_BODY))
                 .andExpect(status().isBadGateway());
