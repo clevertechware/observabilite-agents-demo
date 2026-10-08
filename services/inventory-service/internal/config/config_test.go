@@ -46,6 +46,21 @@ func TestLoad(t *testing.T) {
 			env:     map[string]string{"PRICING_URL": "http://pricing", "FAULT_SLOW_QUERY_SECONDS": "-1"},
 			wantErr: true,
 		},
+		{
+			name:    "rejects NaN fault",
+			env:     map[string]string{"PRICING_URL": "http://pricing", "FAULT_SLOW_QUERY_SECONDS": "NaN"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects positive infinite fault",
+			env:     map[string]string{"PRICING_URL": "http://pricing", "FAULT_SLOW_QUERY_SECONDS": "+Inf"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects negative infinite fault",
+			env:     map[string]string{"PRICING_URL": "http://pricing", "FAULT_SLOW_QUERY_SECONDS": "-Inf"},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

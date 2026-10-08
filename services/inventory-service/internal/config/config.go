@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 )
@@ -34,8 +35,8 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 	if raw := getenv("FAULT_SLOW_QUERY_SECONDS"); raw != "" {
 		seconds, err := strconv.ParseFloat(raw, 64)
-		if err != nil || seconds < 0 {
-			return Config{}, fmt.Errorf("FAULT_SLOW_QUERY_SECONDS must be a non-negative number, got %q", raw)
+		if err != nil || math.IsNaN(seconds) || math.IsInf(seconds, 0) || seconds < 0 {
+			return Config{}, fmt.Errorf("FAULT_SLOW_QUERY_SECONDS must be a finite non-negative number, got %q", raw)
 		}
 		cfg.FaultSlowQuerySeconds = seconds
 	}
