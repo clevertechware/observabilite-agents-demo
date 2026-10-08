@@ -4,7 +4,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/orders
     username: orders
-    password: orders
+    password: ${SPRING_DATASOURCE_PASSWORD}
   sql:
     init:
       mode: always

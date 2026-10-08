@@ -37,6 +37,9 @@ OTEL_TRACES_EXPORTER=logging OTEL_METRICS_EXPORTER=logging OTEL_LOGS_EXPORTER=lo
 java -javaagent:/tmp/opentelemetry-javaagent.jar -jar target/order-service.jar
 ```
 
+`SPRING_DATASOURCE_PASSWORD` n'a pas de valeur par défaut : sans elle, la connexion à PostgreSQL est refusée
+(`password authentication failed`) et le service s'arrête au démarrage.
+
 Sans `OTEL_*_EXPORTER=logging`, l'agent exporte en OTLP (`OTEL_EXPORTER_OTLP_ENDPOINT`).
 
 ## Image
@@ -75,7 +78,7 @@ Le service attend que la base `orders` et son rôle existent.
 |---|---|---|
 | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/orders` | JDBC de la base `orders` |
 | `SPRING_DATASOURCE_USERNAME` | `orders` | rôle PostgreSQL |
-| `SPRING_DATASOURCE_PASSWORD` | `orders` | mot de passe (à fournir par un Secret) |
+| `SPRING_DATASOURCE_PASSWORD` | aucun (obligatoire) | mot de passe (à fournir par un Secret) |
 | `INVENTORY_URL` | `http://localhost:8081` | URL de base d'`inventory-service` |
 | `FAULT_HEAP_LEAK_BYTES_PER_REQUEST` | `0` | octets retenus dans le heap à chaque requête (hors `/healthz`) |
 | `OTEL_*` | | configuration de l'agent |
