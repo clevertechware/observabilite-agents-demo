@@ -10,7 +10,7 @@ variable "zone" {
 
 variable "kubernetes_version" {
   type    = string
-  default = "1.35.3"
+  default = "1.37.1"
 }
 
 variable "node_type" {
