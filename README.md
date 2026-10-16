@@ -9,12 +9,13 @@ load-generator -> order-service (Java) -> inventory-service (Go) -> pricing-serv
                   base orders              base inventory     (une instance Postgres 18)
 ```
 
-Ce dépôt contient le socle de déploiement (`deploy/`) et la publication des images (`.github/`). Le code des services est
-dans `services/`.
+Ce dépôt contient l'infrastructure Scaleway (`infra/`), le socle de déploiement (`deploy/`) et la publication des
+images (`.github/`). Le code des services est dans `services/`.
 
 ## Arborescence
 
 ```text
+infra/                           OpenTofu / Terraform : réseau, cluster Kapsule, pool de nœuds, IP du load balancer
 deploy/
   k8s/
     namespace-demo.yaml          namespace demo
@@ -39,7 +40,8 @@ services/
 
 ## Prérequis
 
-- Un cluster Kubernetes avec la classe de stockage `scw-bssd-retain` (Kapsule), `kubectl` et `helm`.
+- Un cluster Kubernetes avec la classe de stockage `scw-bssd-retain` (Kapsule), `kubectl` et `helm`. Le dossier
+  [`infra/`](infra/README.md) le crée.
 - Le cluster, OpenObserve et le Collector `otel` (DaemonSet) en place, comme dans les articles 3a et 3b. Le Secret
   `otel-collector-auth` existe dans le namespace `otel`.
 - Les images publiées sur GHCR (voir plus bas) et un jeton personnel GitHub limité à `read:packages`.
