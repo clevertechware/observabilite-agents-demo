@@ -1,0 +1,19 @@
+auth:
+  existingRootUserSecret:
+    name: o2-root-user
+
+config:
+  ZO_TELEMETRY: "false"
+  ZO_COMPACT_DATA_RETENTION_DAYS: "14"
+
+persistence:
+  size: 30Gi
+  storageClass: scw-bssd-retain
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 2Gi
