@@ -37,6 +37,7 @@ export KUBECONFIG=$PWD/kubeconfig.yaml
 | `zone`               | `fr-par-1` | Zone du pool et de l'IP (les volumes sont zonaux)   |
 | `kubernetes_version` | `1.35.3`   | Version de Kubernetes                               |
 | `node_type`          | `DEV1-M`   | Type des nœuds (`DEV1-L` pour la démo complète)     |
+| `running`            | `true`     | `false` supprime le pool de nœuds, le cluster reste |
 | `node_count`         | `2`        | Nombre de nœuds                                     |
 
 ## Sorties

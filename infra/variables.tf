@@ -18,6 +18,11 @@ variable "node_type" {
   default = "DEV1-M"
 }
 
+variable "running" {
+  type    = bool
+  default = true
+}
+
 variable "node_count" {
   type    = number
   default = 2

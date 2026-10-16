@@ -12,6 +12,7 @@ resource "scaleway_k8s_cluster" "main" {
 }
 
 resource "scaleway_k8s_pool" "main" {
+  count      = var.running ? 1 : 0
   cluster_id = scaleway_k8s_cluster.main.id
   name       = "main"
   node_type  = var.node_type
