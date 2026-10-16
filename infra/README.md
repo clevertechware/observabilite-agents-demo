@@ -6,7 +6,8 @@ un Private Network, un cluster Kapsule, un pool de nœuds et une IP de load bala
 ## Prérequis
 
 - Terraform ou [OpenTofu](https://opentofu.org) (les commandes `tofu` sont identiques à celles de `terraform`), et la CLI `scw`
-- Les identifiants Scaleway dans l'environnement :
+- Les identifiants Scaleway dans l'environnement (`SCW_DEFAULT_PROJECT_ID` est facultatif si `project_id` est passé en
+  variable) :
 
 ```bash
 export SCW_ACCESS_KEY=<SCW_ACCESS_KEY>
@@ -31,6 +32,7 @@ export KUBECONFIG=$PWD/kubeconfig.yaml
 
 | Variable             | Défaut     | Rôle                                                |
 |----------------------|------------|-----------------------------------------------------|
+| `project_id`         | `null`     | Projet Scaleway ; sinon `SCW_DEFAULT_PROJECT_ID`    |
 | `zone`               | `fr-par-1` | Zone du pool et de l'IP (les volumes sont zonaux)   |
 | `kubernetes_version` | `1.35.3`   | Version de Kubernetes                               |
 | `node_type`          | `DEV1-M`   | Type des nœuds (`DEV1-L` pour la démo complète)     |
