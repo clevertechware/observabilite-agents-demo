@@ -11,6 +11,14 @@ output "lb_ip_address" {
   value = scaleway_lb_ip.traefik.ip_address
 }
 
+output "lb_ipv6_id" {
+  value = split("/", scaleway_lb_ip.traefik_v6.id)[1]
+}
+
+output "lb_ipv6_address" {
+  value = scaleway_lb_ip.traefik_v6.ip_address
+}
+
 output "pod_cidr" {
   value = scaleway_k8s_cluster.main.pod_cidr
 }

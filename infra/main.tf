@@ -22,3 +22,8 @@ resource "scaleway_k8s_pool" "main" {
 resource "scaleway_lb_ip" "traefik" {
   zone = var.zone
 }
+
+resource "scaleway_lb_ip" "traefik_v6" {
+  zone    = var.zone
+  is_ipv6 = true
+}

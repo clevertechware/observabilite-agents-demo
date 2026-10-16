@@ -1,7 +1,8 @@
 # Infrastructure Scaleway
 
 OpenTofu du cluster Kapsule décrit dans l'article « Installer OpenObserve sur Kubernetes Kapsule, à la demande » :
-un Private Network, un cluster Kapsule, un pool de nœuds et une IP de load balancer réservée pour Traefik.
+un Private Network, un cluster Kapsule, un pool de nœuds et deux IP de load balancer réservées pour Traefik (IPv4 et
+IPv6).
 
 ## Prérequis
 
@@ -40,7 +41,8 @@ export KUBECONFIG=$PWD/kubeconfig.yaml
 
 ## Sorties
 
-`lb_ip_address` sert à l'enregistrement DNS. `lb_ip_id`, `private_network_cidr` et `pod_cidr` alimentent les values
-Helm de Traefik.
+`lb_ip_address` sert à l'enregistrement DNS `A`, `lb_ipv6_address` à l'enregistrement `AAAA`. `lb_ip_id`,
+`lb_ipv6_id`, `private_network_cidr` et `pod_cidr` alimentent les values Helm de Traefik. L'annotation
+`service.beta.kubernetes.io/scw-loadbalancer-ip-ids` prend les deux identifiants : `<lb_ip_id>,<lb_ipv6_id>`.
 
 Ne détruisez pas le cluster : `delete_additional_resources = false` laisse les volumes orphelins.
