@@ -1,11 +1,11 @@
 # Infrastructure Scaleway
 
-Terraform du cluster Kapsule décrit dans l'article « Installer OpenObserve sur Kubernetes Kapsule, à la demande » :
+OpenTofu du cluster Kapsule décrit dans l'article « Installer OpenObserve sur Kubernetes Kapsule, à la demande » :
 un Private Network, un cluster Kapsule, un pool de nœuds et une IP de load balancer réservée pour Traefik.
 
 ## Prérequis
 
-- Terraform ou [OpenTofu](https://opentofu.org) (les commandes `tofu` sont identiques à celles de `terraform`), et la CLI `scw`
+- [OpenTofu](https://opentofu.org) et la CLI `scw` (Terraform accepte les mêmes fichiers et les mêmes commandes)
 - Les identifiants Scaleway dans l'environnement (`SCW_DEFAULT_PROJECT_ID` est facultatif si `project_id` est passé en
   variable) :
 
@@ -19,14 +19,14 @@ export SCW_DEFAULT_PROJECT_ID=<SCW_PROJECT_ID>
 
 ```bash
 scw k8s version list
-terraform init
-terraform apply
-terraform output -raw kubeconfig > kubeconfig.yaml
+tofu init
+tofu apply
+tofu output -raw kubeconfig > kubeconfig.yaml
 chmod 600 kubeconfig.yaml
 export KUBECONFIG=$PWD/kubeconfig.yaml
 ```
 
-`kubeconfig.yaml` et l'état Terraform contiennent un token : ils sont ignorés par git.
+`kubeconfig.yaml` et l'état OpenTofu contiennent un token : ils sont ignorés par git.
 
 ## Variables
 
