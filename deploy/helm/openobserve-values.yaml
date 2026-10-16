@@ -6,6 +6,10 @@ config:
   ZO_TELEMETRY: "false"
   ZO_COMPACT_DATA_RETENTION_DAYS: "14"
 
+image:
+  oss:
+    tag: "v1.1.1"
+
 persistence:
   size: 30Gi
   storageClass: scw-bssd-retain
