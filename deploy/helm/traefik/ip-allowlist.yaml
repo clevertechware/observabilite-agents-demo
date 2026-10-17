@@ -1,0 +1,12 @@
+# ip-allowlist.yaml
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: ip-allowlist
+  namespace: openobserve
+spec:
+  ipAllowList:
+    sourceRange:
+      - "203.0.113.0/24"
+      - "2001:db8:1234:5678::/64"
+

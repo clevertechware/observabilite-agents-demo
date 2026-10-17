@@ -1,0 +1,38 @@
+deployment:
+  replicas: 1
+
+updateStrategy:
+  type: Recreate
+  rollingUpdate: null
+
+service:
+  annotations:
+    service.beta.kubernetes.io/scw-loadbalancer-type: "LB-S"
+    service.beta.kubernetes.io/scw-loadbalancer-zone: "fr-par-1"
+    service.beta.kubernetes.io/scw-loadbalancer-ip-ids: "<lb-ip-ids-from-scaleway>"
+    service.beta.kubernetes.io/scw-loadbalancer-proxy-protocol-v2: "true"
+
+ports:
+  web:
+    proxyProtocol:
+      trustedIPs: ["<CIDR_PRIVATE_NETWORK>", "<CIDR_PODS>"]
+  websecure:
+    proxyProtocol:
+      trustedIPs: ["<CIDR_PRIVATE_NETWORK>", "<CIDR_PODS>"]
+
+persistence:
+  enabled: true
+  storageClass: scw-bssd
+  size: 1Gi
+
+podSecurityContext:
+  fsGroup: 65532
+  fsGroupChangePolicy: OnRootMismatch
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: admin@o2.example.com
+      storage: /data/acme.json
+      httpChallenge:
+        entryPoint: web
