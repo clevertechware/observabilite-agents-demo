@@ -29,6 +29,18 @@ export KUBECONFIG=$PWD/kubeconfig.yaml
 
 `kubeconfig.yaml` et l'état OpenTofu contiennent un token : ils sont ignorés par git.
 
+## Éteindre et rallumer
+
+```bash
+./down.sh
+./up.sh chemin/vers/traefik-values.yaml
+```
+
+`down.sh` désinstalle Traefik, ce qui supprime le load balancer, puis supprime le pool de nœuds (`running=false`). Le
+cluster, les volumes et les IP réservées restent. `up.sh` recrée le pool puis réinstalle Traefik avec ses values
+(`traefik-values.yaml` dans le répertoire courant par défaut). Les deux scripts attendent `KUBECONFIG` et les
+identifiants Scaleway dans l'environnement.
+
 ## Variables
 
 | Variable             | Défaut     | Rôle                                                |
