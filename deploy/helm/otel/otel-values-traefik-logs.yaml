@@ -1,0 +1,44 @@
+config:
+  receivers:
+    filelog:
+      operators:
+        - type: container
+          id: container-parser
+          max_log_size: 102400
+        - type: json_parser
+          id: traefik-access-log
+          if: 'resource["k8s.namespace.name"] == "traefik" and body matches "^\\{.*\"RequestMethod\""'
+          parse_from: body
+          parse_to: attributes
+          timestamp:
+            parse_from: attributes.StartUTC
+            layout_type: gotime
+            layout: "2006-01-02T15:04:05.999999999Z07:00"
+          severity:
+            parse_from: attributes.DownstreamStatus
+            overwrite_text: true
+            preset: none
+            mapping:
+              info: [2xx, 3xx]
+              warn: 4xx
+              error: 5xx
+
+  processors:
+    transform/traefik-access-log:
+      error_mode: ignore
+      log_statements:
+        - conditions:
+            - resource.attributes["k8s.namespace.name"] == "traefik" and log.attributes["RequestMethod"] != nil
+          statements:
+            - set(log.body, Concat([log.attributes["RequestMethod"], log.attributes["RequestPath"], Format("%d", [Int(log.attributes["DownstreamStatus"])])], " "))
+
+  service:
+    pipelines:
+      logs:
+        processors:
+          - memory_limiter
+          - filter/openobserve-ingest
+          - transform/traefik-access-log
+          - batch
+        exporters:
+          - otlphttp/openobserve

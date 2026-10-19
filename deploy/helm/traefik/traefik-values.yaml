@@ -36,3 +36,10 @@ certificatesResolvers:
       storage: /data/acme.json
       httpChallenge:
         entryPoint: web
+
+accessLog:
+  enabled: true
+  format: json
+  fields:
+    queryParameters:
+      defaultMode: drop
