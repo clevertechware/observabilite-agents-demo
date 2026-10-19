@@ -41,4 +41,4 @@ config:
           - transform/traefik-access-log
           - batch
         exporters:
-          - otlphttp/openobserve
+          - otlp_http/openobserve

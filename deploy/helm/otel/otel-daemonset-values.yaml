@@ -42,7 +42,7 @@ config:
           - 'resource.attributes["k8s.namespace.name"] == "openobserve" and IsMatch(body, "POST /api/[^/ ]+/v1/(logs|metrics|traces) HTTP")'
 
   exporters:
-    otlphttp/openobserve:
+    otlp_http/openobserve:
       endpoint: http://o2-openobserve-standalone.openobserve.svc:5080/api/default
       headers:
         Authorization: "${env:O2_AUTH}"
@@ -57,4 +57,4 @@ config:
           - filter/openobserve-ingest
           - batch
         exporters:
-          - otlphttp/openobserve
+          - otlp_http/openobserve

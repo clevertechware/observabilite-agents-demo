@@ -15,4 +15,4 @@ config:
           - memory_limiter
           - batch
         exporters:
-          - otlphttp/openobserve
+          - otlp_http/openobserve

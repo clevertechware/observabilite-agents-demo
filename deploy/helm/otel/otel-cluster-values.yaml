@@ -46,7 +46,7 @@ config:
       timeout: 5s
 
   exporters:
-    otlphttp/openobserve:
+    otlp_http/openobserve:
       endpoint: http://o2-openobserve-standalone.openobserve.svc:5080/api/default
       headers:
         Authorization: "${env:O2_AUTH}"
@@ -60,10 +60,10 @@ config:
           - memory_limiter
           - batch
         exporters:
-          - otlphttp/openobserve
+          - otlp_http/openobserve
       logs:
         processors:
           - memory_limiter
           - batch
         exporters:
-          - otlphttp/openobserve
+          - otlp_http/openobserve
