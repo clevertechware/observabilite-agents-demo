@@ -1,3 +1,10 @@
+presets:
+  kubeletMetrics:
+    enabled: true
+
+service:
+  enabled: true
+
 clusterRole:
   rules:
     - apiGroups: [""]
@@ -6,9 +13,28 @@ clusterRole:
 
 config:
   receivers:
+    filelog:
+      exclude:
+        - /var/log/pods/otel_otel-opentelemetry-collector*_*/opentelemetry-collector/*.log
+        - /var/log/pods/demo_*/*/*.log
     kubeletstats:
       metrics:
         k8s.container.cpu_limit_utilization:
           enabled: true
         k8s.container.memory_limit_utilization:
           enabled: true
+
+  service:
+    pipelines:
+      metrics:
+        processors:
+          - memory_limiter
+          - batch
+        exporters:
+          - otlphttp/openobserve
+      traces:
+        processors:
+          - memory_limiter
+          - batch
+        exporters:
+          - otlphttp/openobserve
