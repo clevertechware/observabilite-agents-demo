@@ -11,6 +11,7 @@ clusterRole:
 config:
   receivers:
     kubeletstats:
+      insecure_skip_verify: true
       metrics:
         k8s.container.cpu_limit_utilization:
           enabled: true
