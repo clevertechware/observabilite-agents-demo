@@ -29,8 +29,12 @@ deploy/
     order-service.yaml           Deployment + Service
     load-generator.yaml          Deployment, une commande par seconde vers order-service
   helm/
-    otel-cluster-values.yaml     release otel-cluster (clusterMetrics + kubernetesEvents)
-    otel-values-patch.yaml       complément à la release otel (DaemonSet) : RBAC nodes/pods et métriques *_limit_utilization
+    otel/
+      otel-daemonset-values.yaml     release otel (3b) : logs de tous les pods vers OpenObserve
+      otel-values-metrics.yaml       release otel (3c) : métriques kubelet des nœuds, pods et conteneurs
+      otel-cluster-values.yaml       release otel-cluster (3c) : clusterMetrics + kubernetesEvents
+      otel-values-traefik-logs.yaml  release otel (3d) : parsing des access logs JSON de Traefik
+      otel-values-patch.yaml         release otel (4a) : Service OTLP, traces, exclusion du namespace demo du filelog
 services/
   inventory-service/             Go + Gin
   pricing-service/               Rust + Axum
@@ -89,20 +93,23 @@ helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm
 helm install otel-cluster open-telemetry/opentelemetry-collector \
   --version 0.173.1 \
   --namespace otel \
-  --values deploy/helm/otel-cluster-values.yaml
+  --values deploy/helm/otel/otel-cluster-values.yaml
 ```
 
-### 4. Droits et métriques supplémentaires sur la release `otel`
+### 4. Chemin OTLP sur la release `otel`
 
-`otel-values-patch.yaml` s'ajoute aux values de l'article 3b (`otel-daemonset-values.yaml`). Les listes `clusterRole.rules`
-du patch s'ajoutent à celles du chart, et les métriques s'ajoutent à la configuration du receiver `kubeletstats`.
+`otel-values-patch.yaml` s'ajoute aux values des articles 3b, 3c et 3d. Il expose le Collector aux services en OTLP,
+ajoute la pipeline de traces et exclut le namespace `demo` du receiver `filelog`. Une release Helm n'a qu'un jeu de values
+effectif : chaque `helm upgrade` doit repasser tous les fichiers, dans cet ordre.
 
 ```bash
 helm upgrade otel open-telemetry/opentelemetry-collector \
   --version 0.173.1 \
   --namespace otel \
-  --values otel-daemonset-values.yaml \
-  --values deploy/helm/otel-values-patch.yaml
+  --values deploy/helm/otel/otel-daemonset-values.yaml \
+  --values deploy/helm/otel/otel-values-metrics.yaml \
+  --values deploy/helm/otel/otel-values-traefik-logs.yaml \
+  --values deploy/helm/otel/otel-values-patch.yaml
 ```
 
 ### 5. Postgres, services et générateur de trafic
@@ -167,6 +174,6 @@ kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0 FAULT_LEAK_BYT
 ```bash
 kubeconform -strict -kubernetes-version 1.36.0 deploy/k8s/*.yaml deploy/k8s/postgres/*.yaml
 helm template otel-cluster open-telemetry/opentelemetry-collector --version 0.173.1 \
-  --namespace otel --values deploy/helm/otel-cluster-values.yaml
+  --namespace otel --values deploy/helm/otel/otel-cluster-values.yaml
 actionlint .github/workflows/images.yml
 ```
