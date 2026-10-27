@@ -51,6 +51,19 @@ identifiants Scaleway dans l'environnement.
 | `node_type`          | `DEV1-M`   | Type des nœuds (`DEV1-L` pour la démo complète)     |
 | `running`            | `true`     | `false` supprime le pool de nœuds, le cluster reste |
 | `node_count`         | `2`        | Nombre de nœuds                                     |
+| `api_allowed_cidrs`  | `[]`       | CIDR autorisés sur l'API server ; vide = pas d'ACL  |
+
+## Restreindre l'accès à l'API server
+
+`api_allowed_cidrs` crée une ACL Kapsule sur l'endpoint public de l'API server. Les nœuds passent par le Private
+Network et ne sont pas concernés. Chaque poste qui lance `kubectl`, `helm`, `up.sh` ou `down.sh` doit figurer dans la
+liste :
+
+```hcl
+api_allowed_cidrs = ["203.0.113.42/32"]
+```
+
+Si l'IP publique change, `tofu apply` met l'ACL à jour : l'API Scaleway n'est pas filtrée par cette ACL.
 
 ## Sorties
 

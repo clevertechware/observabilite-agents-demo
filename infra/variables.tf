@@ -27,3 +27,13 @@ variable "node_count" {
   type    = number
   default = 2
 }
+
+variable "api_allowed_cidrs" {
+  type    = list(string)
+  default = []
+
+  validation {
+    condition     = alltrue([for cidr in var.api_allowed_cidrs : can(cidrhost(cidr, 0))])
+    error_message = "api_allowed_cidrs must only contain CIDR blocks, e.g. 203.0.113.42/32."
+  }
+}

@@ -28,3 +28,15 @@ resource "scaleway_lb_ip" "traefik_v6" {
   zone    = var.zone
   is_ipv6 = true
 }
+
+resource "scaleway_k8s_acl" "api" {
+  count      = length(var.api_allowed_cidrs) > 0 ? 1 : 0
+  cluster_id = scaleway_k8s_cluster.main.id
+
+  dynamic "acl_rules" {
+    for_each = var.api_allowed_cidrs
+    content {
+      ip = acl_rules.value
+    }
+  }
+}
