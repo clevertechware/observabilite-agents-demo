@@ -47,7 +47,7 @@ identifiants Scaleway dans l'environnement.
 |----------------------|------------|-----------------------------------------------------|
 | `project_id`         | `null`     | Projet Scaleway ; sinon `SCW_DEFAULT_PROJECT_ID`    |
 | `zone`               | `fr-par-1` | Zone du pool et de l'IP (les volumes sont zonaux)   |
-| `kubernetes_version` | `1.35.3`   | Version de Kubernetes                               |
+| `kubernetes_version` | `1.37.1`   | Version de Kubernetes                               |
 | `node_type`          | `DEV1-M`   | Type des nœuds (`DEV1-L` pour la démo complète)     |
 | `running`            | `true`     | `false` supprime le pool de nœuds, le cluster reste |
 | `node_count`         | `2`        | Nombre de nœuds                                     |
