@@ -7,7 +7,10 @@ use opentelemetry_sdk::{
 };
 use tracing_subscriber::{
     fmt::MakeWriter, layer::SubscriberExt, util::SubscriberInitExt, util::TryInitError, EnvFilter,
+    Layer,
 };
+
+const HTTP_CLIENT_TARGETS: [&str; 4] = ["hyper", "hyper_util", "h2", "reqwest"];
 
 #[derive(Debug, thiserror::Error)]
 pub enum TelemetryError {
@@ -44,6 +47,20 @@ pub fn init_telemetry() -> Result<Telemetry, TelemetryError> {
     Telemetry::install(tracer, meter, logger)
 }
 
+/// The OTLP exporter sends its requests through `reqwest`, `hyper` and `h2`. Exporting their own
+/// logs would make each export produce new logs to export.
+fn export_filter() -> EnvFilter {
+    HTTP_CLIENT_TARGETS
+        .iter()
+        .fold(EnvFilter::new("info"), |filter, target| {
+            filter.add_directive(
+                format!("{target}=off")
+                    .parse()
+                    .expect("a target directive is valid"),
+            )
+        })
+}
+
 impl Telemetry {
     pub fn install(
         tracer: SdkTracerProvider,
@@ -66,11 +83,16 @@ impl Telemetry {
         global::set_meter_provider(meter.clone());
         global::set_text_map_propagator(TraceContextPropagator::new());
 
-        let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+        let stdout_filter =
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
         tracing_subscriber::registry()
-            .with(filter)
-            .with(tracing_subscriber::fmt::layer().json().with_writer(writer))
-            .with(OpenTelemetryTracingBridge::new(&logger))
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .json()
+                    .with_writer(writer)
+                    .with_filter(stdout_filter),
+            )
+            .with(OpenTelemetryTracingBridge::new(&logger).with_filter(export_filter()))
             .try_init()?;
 
         Ok(Self {

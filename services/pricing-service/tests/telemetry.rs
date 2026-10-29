@@ -340,3 +340,27 @@ async fn handler_log_is_written_to_stdout_as_json_even_without_a_collector() {
         .expect("the handler log must reach stdout");
     assert_eq!(price_log["level"], "INFO");
 }
+
+#[tokio::test]
+#[serial]
+async fn http_client_logs_stay_off_the_otlp_export_to_avoid_a_telemetry_loop() {
+    let _app = harness().start(Faults::default());
+
+    tracing::info!(target: "reqwest::connect", "connecting to the collector");
+    tracing::info!(target: "hyper_util::client", "pooling the collector connection");
+    tracing::info!(target: "pricing_service::probe", "application log");
+
+    let exported: Vec<String> = harness()
+        .logs
+        .get_emitted_logs()
+        .expect("logs must be readable")
+        .iter()
+        .map(|log| format!("{:?}", log.record.body()))
+        .collect();
+    assert!(exported.iter().any(|body| body.contains("application log")));
+    assert!(!exported.iter().any(|body| body.contains("collector")));
+    let on_stdout = harness().stdout.json_lines();
+    assert!(on_stdout
+        .iter()
+        .any(|line| line["fields"]["message"] == "connecting to the collector"));
+}
