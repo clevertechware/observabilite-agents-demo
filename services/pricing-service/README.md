@@ -35,7 +35,7 @@ Remises : 5 % à partir de 10 unités, 10 % à partir de 50, 15 % à partir de 1
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` | Collector ; `/v1/traces`, `/v1/metrics`, `/v1/logs` sont ajoutés |
 | `OTEL_SERVICE_NAME` | `unknown_service:pricing-service` | `service.name` |
 | `OTEL_RESOURCE_ATTRIBUTES` | vide | attributs de ressource `clé=valeur,...` |
-| `RUST_LOG` | `info` | filtre des logs |
+| `RUST_LOG` | `info` | filtre des logs de la sortie standard |
 | `FAULT_ERROR_RATE` | `0` | proportion de réponses 500, entre 0 et 1 |
 | `FAULT_LEAK_BYTES_PER_REQUEST` | `0` | octets retenus à chaque requête |
 
