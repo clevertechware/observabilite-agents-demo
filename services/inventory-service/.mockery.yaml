@@ -4,7 +4,7 @@ disable-version-string: true
 issue-845-fix: true
 dir: "{{.InterfaceDir}}/mocks"
 outpkg: mocks
-filename: "mock_{{.InterfaceName}}.go"
+filename: "mock_{{.InterfaceName | snakecase}}.go"
 mockname: "Mock{{.InterfaceName}}"
 packages:
   github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/api:
