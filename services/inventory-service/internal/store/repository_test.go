@@ -2,20 +2,14 @@ package store_test
 
 import (
 	"context"
-	"log"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
@@ -25,7 +19,6 @@ import (
 const postgresImage = "postgres:18.6-trixie"
 
 var (
-	databaseURL    string
 	spans          = tracetest.NewInMemoryExporter()
 	tracerProvider = sdktrace.NewTracerProvider(sdktrace.WithSyncer(spans))
 )
@@ -35,43 +28,6 @@ var (
 func requestContext() context.Context {
 	ctx, _ := tracerProvider.Tracer("test").Start(context.Background(), "request")
 	return ctx
-}
-
-func TestMain(m *testing.M) {
-	os.Exit(runWithPostgres(m))
-}
-
-func runWithPostgres(m *testing.M) int {
-	ctx := context.Background()
-	container, err := startPostgres(ctx)
-	if err != nil {
-		log.Printf("start postgres: %v", err)
-		return 1
-	}
-	defer func() {
-		if err := testcontainers.TerminateContainer(container); err != nil {
-			log.Printf("terminate postgres: %v", err)
-		}
-	}()
-
-	databaseURL, err = container.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		log.Printf("postgres connection string: %v", err)
-		return 1
-	}
-	return m.Run()
-}
-
-func newPool(t *testing.T) *pgxpool.Pool {
-	t.Helper()
-	spans.Reset()
-	pool, err := store.NewPool(context.Background(), databaseURL,
-		otelpgx.WithTracerProvider(tracerProvider))
-	require.NoError(t, err)
-	t.Cleanup(pool.Close)
-	_, err = pool.Exec(context.Background(), `TRUNCATE stock`)
-	require.NoError(t, err)
-	return pool
 }
 
 func seed(t *testing.T, pool *pgxpool.Pool, sku string, quantity int) {
@@ -232,14 +188,4 @@ func TestConcurrentReservationsNeverOversellStock(t *testing.T) {
 	quantity, err := repository.Quantity(requestContext(), "SKU-42")
 	require.NoError(t, err)
 	assert.Equal(t, 0, quantity)
-}
-
-func startPostgres(ctx context.Context) (*postgres.PostgresContainer, error) {
-	return postgres.Run(ctx, postgresImage,
-		postgres.WithDatabase("inventory"),
-		postgres.WithUsername("inventory"),
-		postgres.WithPassword("inventory"),
-		postgres.WithInitScripts(filepath.Join("..", "..", "schema.sql")),
-		postgres.BasicWaitStrategies(),
-	)
 }
