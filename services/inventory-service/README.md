@@ -11,7 +11,7 @@ L'exemple montre :
 
 ## Prérequis
 
-- Go 1.27.1
+- Go 1.27.3
 - Docker (tests d'intégration et image)
 - Postgres 18 avec le schéma de `schema.sql` (données de démonstration optionnelles dans `seed.sql`)
 

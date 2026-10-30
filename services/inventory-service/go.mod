@@ -1,6 +1,6 @@
 module github.com/clevertechware/observabilite-agents-demo/services/inventory-service
 
-go 1.27.1
+go 1.27.3
 
 require (
 	github.com/exaring/otelpgx v0.12.1
