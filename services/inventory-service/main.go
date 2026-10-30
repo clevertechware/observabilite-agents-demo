@@ -43,7 +43,7 @@ func run() error {
 	}
 	defer flushTelemetry(shutdownTelemetry)
 
-	if err := runtime.Start(); err != nil {
+	if err = runtime.Start(); err != nil {
 		return err
 	}
 
@@ -65,14 +65,14 @@ func run() error {
 	go func() { serverErr <- server.ListenAndServe() }()
 
 	select {
-	case err := <-serverErr:
+	case err = <-serverErr:
 		return err
 	case <-ctx.Done():
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
-	if err := server.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err = server.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 	return nil
