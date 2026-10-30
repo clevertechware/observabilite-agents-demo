@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -23,6 +24,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/api"
+	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/api/mocks"
 	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/pricing"
 	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/store"
 )
@@ -31,27 +33,9 @@ func init() {
 	gin.SetMode(gin.TestMode)
 }
 
-type fakeRepository struct {
-	quantities map[string]int
-	reserved   []string
-}
-
-func (f *fakeRepository) Quantity(_ context.Context, sku string) (int, error) {
-	quantity, ok := f.quantities[sku]
-	if !ok {
-		return 0, store.ErrSkuNotFound
-	}
-	return quantity, nil
-}
-
-func (f *fakeRepository) Reserve(_ context.Context, sku string, _ int) error {
-	f.reserved = append(f.reserved, sku)
-	return nil
-}
-
 type fixture struct {
 	router     http.Handler
-	repository *fakeRepository
+	repository *mocks.MockStockRepository
 	spans      *tracetest.InMemoryExporter
 	metrics    *sdkmetric.ManualReader
 	pricingHit *recordedRequest
@@ -89,7 +73,7 @@ func newFixture(t *testing.T, pricingStatus int, pricingBody string) *fixture {
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	propagator := propagation.TraceContext{}
 
-	repository := &fakeRepository{quantities: map[string]int{"SKU-42": 10}}
+	repository := mocks.NewMockStockRepository(t)
 	pricingClient := pricing.NewClient(pricingServer.URL,
 		otelhttp.WithTracerProvider(tracerProvider),
 		otelhttp.WithPropagators(propagator),
@@ -100,6 +84,10 @@ func newFixture(t *testing.T, pricingStatus int, pricingBody string) *fixture {
 		otelgin.WithPropagators(propagator),
 	)
 	return &fixture{router: router, repository: repository, spans: spans, metrics: reader, pricingHit: hit}
+}
+
+func (f *fixture) hasStock(sku string, quantity int) {
+	f.repository.EXPECT().Quantity(mock.Anything, sku).Return(quantity, nil)
 }
 
 func (f *fixture) do(method, target, body string) *httptest.ResponseRecorder {
@@ -125,6 +113,7 @@ const priceBody = `{"unitPrice": 12.5, "total": 25}`
 
 func TestServerSpanCarriesRouteTemplate(t *testing.T) {
 	f := newFixture(t, http.StatusOK, priceBody)
+	f.hasStock("SKU-42", 10)
 
 	f.do(http.MethodGet, "/stock/SKU-42", "")
 
@@ -134,6 +123,7 @@ func TestServerSpanCarriesRouteTemplate(t *testing.T) {
 
 func TestServerDurationMetricCarriesRouteMethodAndStatus(t *testing.T) {
 	f := newFixture(t, http.StatusOK, priceBody)
+	f.hasStock("SKU-42", 10)
 
 	f.do(http.MethodGet, "/stock/SKU-42", "")
 
@@ -178,6 +168,8 @@ func TestHealthzIsNotTraced(t *testing.T) {
 
 func TestReservationPropagatesTraceContextToPricing(t *testing.T) {
 	f := newFixture(t, http.StatusOK, priceBody)
+	f.hasStock("SKU-42", 10)
+	f.repository.EXPECT().Reserve(mock.Anything, "SKU-42", 2).Return(nil)
 
 	response := f.do(http.MethodPost, "/reservations", `{"sku":"SKU-42","quantity":2}`)
 
@@ -197,6 +189,8 @@ func TestReservationPropagatesTraceContextToPricing(t *testing.T) {
 
 func TestReservationRoutesTemplateOnServerSpan(t *testing.T) {
 	f := newFixture(t, http.StatusOK, priceBody)
+	f.hasStock("SKU-42", 10)
+	f.repository.EXPECT().Reserve(mock.Anything, "SKU-42", 2).Return(nil)
 
 	f.do(http.MethodPost, "/reservations", `{"sku":"SKU-42","quantity":2}`)
 
@@ -206,6 +200,8 @@ func TestReservationRoutesTemplateOnServerSpan(t *testing.T) {
 
 func TestReservationCallsPricingWithSkuAndQuantity(t *testing.T) {
 	f := newFixture(t, http.StatusOK, priceBody)
+	f.hasStock("SKU-42", 10)
+	f.repository.EXPECT().Reserve(mock.Anything, "SKU-42", 2).Return(nil)
 
 	f.do(http.MethodPost, "/reservations", `{"sku":"SKU-42","quantity":2}`)
 
@@ -217,6 +213,8 @@ func TestReservationCallsPricingWithSkuAndQuantity(t *testing.T) {
 
 func TestReservationReturnsPriceAndDecrementsStock(t *testing.T) {
 	f := newFixture(t, http.StatusOK, priceBody)
+	f.hasStock("SKU-42", 10)
+	f.repository.EXPECT().Reserve(mock.Anything, "SKU-42", 2).Return(nil).Once()
 
 	response := f.do(http.MethodPost, "/reservations", `{"sku":"SKU-42","quantity":2}`)
 
@@ -224,20 +222,20 @@ func TestReservationReturnsPriceAndDecrementsStock(t *testing.T) {
 	var body map[string]any
 	require.NoError(t, json.Unmarshal(response.Body.Bytes(), &body))
 	assert.Equal(t, map[string]any{"sku": "SKU-42", "quantity": 2.0, "unitPrice": 12.5, "total": 25.0}, body)
-	assert.Equal(t, []string{"SKU-42"}, f.repository.reserved)
 }
 
 func TestReservationRejectedWithConflictWhenStockIsInsufficient(t *testing.T) {
 	f := newFixture(t, http.StatusOK, priceBody)
+	f.hasStock("SKU-42", 10)
 
 	response := f.do(http.MethodPost, "/reservations", `{"sku":"SKU-42","quantity":11}`)
 
 	assert.Equal(t, http.StatusConflict, response.Code)
-	assert.Empty(t, f.repository.reserved)
 }
 
 func TestReservationRejectedWithNotFoundWhenSkuIsUnknownToInventory(t *testing.T) {
 	f := newFixture(t, http.StatusOK, priceBody)
+	f.repository.EXPECT().Quantity(mock.Anything, "SKU-NONE").Return(0, store.ErrSkuNotFound)
 
 	response := f.do(http.MethodPost, "/reservations", `{"sku":"SKU-NONE","quantity":1}`)
 
@@ -246,20 +244,20 @@ func TestReservationRejectedWithNotFoundWhenSkuIsUnknownToInventory(t *testing.T
 
 func TestReservationRejectedWithNotFoundWhenPricingDoesNotKnowSku(t *testing.T) {
 	f := newFixture(t, http.StatusNotFound, `{}`)
+	f.hasStock("SKU-42", 10)
 
 	response := f.do(http.MethodPost, "/reservations", `{"sku":"SKU-42","quantity":1}`)
 
 	assert.Equal(t, http.StatusNotFound, response.Code)
-	assert.Empty(t, f.repository.reserved)
 }
 
 func TestReservationFailsWithServerErrorWhenPricingIsDown(t *testing.T) {
 	f := newFixture(t, http.StatusInternalServerError, `{}`)
+	f.hasStock("SKU-42", 10)
 
 	response := f.do(http.MethodPost, "/reservations", `{"sku":"SKU-42","quantity":1}`)
 
 	assert.Equal(t, http.StatusInternalServerError, response.Code)
-	assert.Empty(t, f.repository.reserved)
 }
 
 func TestReservationRejectsInvalidBodies(t *testing.T) {
@@ -282,6 +280,7 @@ func TestReservationRejectsInvalidBodies(t *testing.T) {
 
 func TestGetStockReturnsQuantity(t *testing.T) {
 	f := newFixture(t, http.StatusOK, priceBody)
+	f.hasStock("SKU-42", 10)
 
 	response := f.do(http.MethodGet, "/stock/SKU-42", "")
 
@@ -291,6 +290,7 @@ func TestGetStockReturnsQuantity(t *testing.T) {
 
 func TestGetStockReturnsNotFoundForUnknownSku(t *testing.T) {
 	f := newFixture(t, http.StatusOK, priceBody)
+	f.repository.EXPECT().Quantity(mock.Anything, "SKU-NONE").Return(0, store.ErrSkuNotFound)
 
 	response := f.do(http.MethodGet, "/stock/SKU-NONE", "")
 

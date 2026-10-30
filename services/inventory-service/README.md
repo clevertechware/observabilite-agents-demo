@@ -56,6 +56,12 @@ go run .
 
 Les tests d'intégration du paquet `internal/store` démarrent `postgres:18.6-trixie` avec testcontainers-go et appliquent `schema.sql` : Docker doit être disponible.
 
+Les mocks de `internal/api/mocks` sont générés par [mockery](https://vektra.github.io/mockery/) à partir de `.mockery.yaml` :
+
+```bash
+go run github.com/vektra/mockery/v2@v2.53.8
+```
+
 ## Structure
 
 ```
