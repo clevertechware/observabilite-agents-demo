@@ -56,6 +56,8 @@ go run .
 
 Les tests d'intégration du paquet `internal/store` démarrent `postgres:18.6-trixie` avec testcontainers-go et appliquent `schema.sql` : Docker doit être disponible.
 
+La configuration de `golangci-lint` (v2) est dans `.golangci.yml` : linters standard, `revive` (règles de `golint` hors commentaires de documentation), `errorlint`, `bodyclose` et `misspell`.
+
 Les mocks de `internal/api/mocks` sont générés par [mockery](https://vektra.github.io/mockery/) à partir de `.mockery.yaml` :
 
 ```bash
