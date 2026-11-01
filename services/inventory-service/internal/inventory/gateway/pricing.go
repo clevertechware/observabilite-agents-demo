@@ -1,31 +1,25 @@
-package pricing
+package gateway
 
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"time"
 
+	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/inventory"
+
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-var ErrPriceNotFound = errors.New("price not found")
-
-type Price struct {
-	UnitPrice float64 `json:"unitPrice"`
-	Total     float64 `json:"total"`
-}
-
-type Client struct {
+type PricingHTTPClient struct {
 	baseURL string
 	http    *http.Client
 }
 
-func NewClient(baseURL string, transportOptions ...otelhttp.Option) *Client {
-	return &Client{
+func NewPricingHTTPClient(baseURL string, transportOptions ...otelhttp.Option) *PricingHTTPClient {
+	return &PricingHTTPClient{
 		baseURL: baseURL,
 		http: &http.Client{
 			Transport: otelhttp.NewTransport(http.DefaultTransport, transportOptions...),
@@ -34,31 +28,31 @@ func NewClient(baseURL string, transportOptions ...otelhttp.Option) *Client {
 	}
 }
 
-func (c *Client) Price(ctx context.Context, sku string, quantity int) (Price, error) {
+func (c *PricingHTTPClient) Price(ctx context.Context, sku string, quantity int) (inventory.Price, error) {
 	target := fmt.Sprintf("%s/prices/%s?quantity=%d", c.baseURL, url.PathEscape(sku), quantity)
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
-		return Price{}, err
+		return inventory.Price{}, err
 	}
 	response, err := c.http.Do(request)
 	if err != nil {
-		return Price{}, err
+		return inventory.Price{}, err
 	}
 	defer func() { _ = response.Body.Close() }()
 	return decodePrice(response)
 }
 
-func decodePrice(response *http.Response) (Price, error) {
+func decodePrice(response *http.Response) (inventory.Price, error) {
 	switch response.StatusCode {
 	case http.StatusOK:
-		var price Price
+		var price inventory.Price
 		if err := json.NewDecoder(response.Body).Decode(&price); err != nil {
-			return Price{}, fmt.Errorf("decode price: %w", err)
+			return inventory.Price{}, fmt.Errorf("decode price: %w", err)
 		}
 		return price, nil
 	case http.StatusNotFound:
-		return Price{}, ErrPriceNotFound
+		return inventory.Price{}, inventory.ErrPriceNotFound
 	default:
-		return Price{}, fmt.Errorf("pricing returned status %d", response.StatusCode)
+		return inventory.Price{}, fmt.Errorf("gateway returned status %d", response.StatusCode)
 	}
 }

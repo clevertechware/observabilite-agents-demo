@@ -54,11 +54,11 @@ export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 go run .
 ```
 
-Les tests d'intégration du paquet `internal/store` démarrent `postgres:18.6-trixie` avec testcontainers-go et appliquent `schema.sql` : Docker doit être disponible.
+Les tests d'intégration du paquet `internal/inventory/postgres` démarrent `postgres:18.6-trixie` avec testcontainers-go et appliquent `schema.sql` : Docker doit être disponible.
 
 La configuration de `golangci-lint` (v2) est dans `.golangci.yml` : linters standard, `revive` (règles de `golint` hors commentaires de documentation), `errorlint`, `bodyclose` et `misspell`.
 
-Les mocks de `internal/api/mocks` sont générés par [mockery](https://vektra.github.io/mockery/) à partir de `.mockery.yaml` :
+Les mocks de `internal/inventory/mocks` sont générés par [mockery](https://vektra.github.io/mockery/) à partir de `.mockery.yaml` :
 
 ```bash
 go run github.com/vektra/mockery/v2@v2.53.8
@@ -72,7 +72,8 @@ schema.sql                   table stock
 seed.sql                     SKU de démonstration
 internal/config              variables d'environnement
 internal/telemetry           SDK OpenTelemetry
-internal/api                 routeur Gin et handlers
+internal/inventory           cas d'usage, erreurs métier, routeur Gin et handlers HTTP
+internal/inventory/postgres  pool pgx et repository
+internal/inventory/mocks     mocks des interfaces d'inventaire
 internal/pricing             client HTTP vers pricing-service
-internal/store               pool pgx et repository
 ```

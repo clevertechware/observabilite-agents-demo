@@ -1,4 +1,4 @@
-package store_test
+package repositories_test
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/store"
+	inventorypostgres "github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/inventory/repositories"
 	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
@@ -47,7 +47,7 @@ func startPostgres(ctx context.Context) (*postgres.PostgresContainer, error) {
 		postgres.WithDatabase("inventory"),
 		postgres.WithUsername("inventory"),
 		postgres.WithPassword("inventory"),
-		postgres.WithInitScripts(filepath.Join("..", "..", "schema.sql")),
+		postgres.WithInitScripts(filepath.Join("..", "..", "..", "schema.sql")),
 		postgres.BasicWaitStrategies(),
 	)
 }
@@ -55,7 +55,7 @@ func startPostgres(ctx context.Context) (*postgres.PostgresContainer, error) {
 func newPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	spans.Reset()
-	pool, err := store.NewPool(context.Background(), databaseURL, otelpgx.WithTracerProvider(tracerProvider))
+	pool, err := inventorypostgres.NewPool(context.Background(), databaseURL, otelpgx.WithTracerProvider(tracerProvider))
 	require.NoError(t, err)
 	t.Cleanup(pool.Close)
 	_, err = pool.Exec(context.Background(), `TRUNCATE stock`)

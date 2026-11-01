@@ -1,4 +1,4 @@
-package store_test
+package repositories_test
 
 import (
 	"context"
@@ -13,7 +13,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
-	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/store"
+	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/inventory"
+	postgres "github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/inventory/repositories"
 )
 
 const postgresImage = "postgres:18.6-trixie"
@@ -53,7 +54,7 @@ func TestQueryTextKeepsPlaceholderAndOmitsSku(t *testing.T) {
 	pool := newPool(t)
 	seed(t, pool, "SKU-42", 10)
 
-	_, err := store.NewRepository(pool, 0).Quantity(requestContext(), "SKU-42")
+	_, err := postgres.NewPGStock(pool, 0).Quantity(requestContext(), "SKU-42")
 
 	require.NoError(t, err)
 	texts := queryTexts("FROM stock")
@@ -68,7 +69,7 @@ func TestQuantityReturnsStoredQuantity(t *testing.T) {
 	pool := newPool(t)
 	seed(t, pool, "SKU-42", 10)
 
-	quantity, err := store.NewRepository(pool, 0).Quantity(requestContext(), "SKU-42")
+	quantity, err := postgres.NewPGStock(pool, 0).Quantity(requestContext(), "SKU-42")
 
 	require.NoError(t, err)
 	assert.Equal(t, 10, quantity)
@@ -77,9 +78,9 @@ func TestQuantityReturnsStoredQuantity(t *testing.T) {
 func TestQuantityReportsUnknownSku(t *testing.T) {
 	pool := newPool(t)
 
-	_, err := store.NewRepository(pool, 0).Quantity(requestContext(), "SKU-NONE")
+	_, err := postgres.NewPGStock(pool, 0).Quantity(requestContext(), "SKU-NONE")
 
-	assert.ErrorIs(t, err, store.ErrSkuNotFound)
+	assert.ErrorIs(t, err, inventory.ErrSkuNotFound)
 }
 
 func TestSlowQueryFaultDelaysReadByConfiguredSeconds(t *testing.T) {
@@ -88,7 +89,7 @@ func TestSlowQueryFaultDelaysReadByConfiguredSeconds(t *testing.T) {
 	const delay = 700 * time.Millisecond
 
 	started := time.Now()
-	_, err := store.NewRepository(pool, delay.Seconds()).Quantity(requestContext(), "SKU-42")
+	_, err := postgres.NewPGStock(pool, delay.Seconds()).Quantity(requestContext(), "SKU-42")
 
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, time.Since(started), delay)
@@ -98,7 +99,7 @@ func TestSlowQueryFaultValueIsAbsentFromQueryText(t *testing.T) {
 	pool := newPool(t)
 	seed(t, pool, "SKU-42", 10)
 
-	_, err := store.NewRepository(pool, 0.25).Quantity(requestContext(), "SKU-42")
+	_, err := postgres.NewPGStock(pool, 0.25).Quantity(requestContext(), "SKU-42")
 
 	require.NoError(t, err)
 	texts := queryTexts("pg_sleep")
@@ -113,9 +114,9 @@ func TestQueryTextIsIdenticalWhateverTheFaultValue(t *testing.T) {
 	pool := newPool(t)
 	seed(t, pool, "SKU-42", 10)
 
-	_, err := store.NewRepository(pool, 0).Quantity(requestContext(), "SKU-42")
+	_, err := postgres.NewPGStock(pool, 0).Quantity(requestContext(), "SKU-42")
 	require.NoError(t, err)
-	_, err = store.NewRepository(pool, 0.1).Quantity(requestContext(), "SKU-42")
+	_, err = postgres.NewPGStock(pool, 0.1).Quantity(requestContext(), "SKU-42")
 	require.NoError(t, err)
 
 	distinct := map[string]struct{}{}
@@ -128,7 +129,7 @@ func TestQueryTextIsIdenticalWhateverTheFaultValue(t *testing.T) {
 func TestReserveDecrementsStock(t *testing.T) {
 	pool := newPool(t)
 	seed(t, pool, "SKU-42", 10)
-	repository := store.NewRepository(pool, 0)
+	repository := postgres.NewPGStock(pool, 0)
 
 	require.NoError(t, repository.Reserve(requestContext(), "SKU-42", 4))
 
@@ -140,11 +141,11 @@ func TestReserveDecrementsStock(t *testing.T) {
 func TestReserveRefusesMoreThanAvailableAndKeepsStock(t *testing.T) {
 	pool := newPool(t)
 	seed(t, pool, "SKU-42", 3)
-	repository := store.NewRepository(pool, 0)
+	repository := postgres.NewPGStock(pool, 0)
 
 	err := repository.Reserve(requestContext(), "SKU-42", 4)
 
-	assert.ErrorIs(t, err, store.ErrInsufficientStock)
+	assert.ErrorIs(t, err, inventory.ErrInsufficientStock)
 	quantity, err := repository.Quantity(requestContext(), "SKU-42")
 	require.NoError(t, err)
 	assert.Equal(t, 3, quantity)
@@ -153,15 +154,15 @@ func TestReserveRefusesMoreThanAvailableAndKeepsStock(t *testing.T) {
 func TestReserveReportsUnknownSku(t *testing.T) {
 	pool := newPool(t)
 
-	err := store.NewRepository(pool, 0).Reserve(requestContext(), "SKU-NONE", 1)
+	err := postgres.NewPGStock(pool, 0).Reserve(requestContext(), "SKU-NONE", 1)
 
-	assert.ErrorIs(t, err, store.ErrSkuNotFound)
+	assert.ErrorIs(t, err, inventory.ErrSkuNotFound)
 }
 
 func TestConcurrentReservationsNeverOversellStock(t *testing.T) {
 	pool := newPool(t)
 	seed(t, pool, "SKU-42", 5)
-	repository := store.NewRepository(pool, 0)
+	repository := postgres.NewPGStock(pool, 0)
 
 	const attempts = 20
 	results := make(chan error, attempts)
@@ -182,7 +183,7 @@ func TestConcurrentReservationsNeverOversellStock(t *testing.T) {
 			succeeded++
 			continue
 		}
-		assert.ErrorIs(t, err, store.ErrInsufficientStock)
+		assert.ErrorIs(t, err, inventory.ErrInsufficientStock)
 	}
 	assert.Equal(t, 5, succeeded)
 	quantity, err := repository.Quantity(requestContext(), "SKU-42")

@@ -5,8 +5,8 @@ issue-845-fix: true
 dir: "{{.InterfaceDir}}/mocks"
 outpkg: mocks
 filename: "mock_{{.InterfaceName | snakecase}}.go"
-mockname: "Mock{{.InterfaceName}}"
+mockname: "Mock{{.InterfaceName | firstUpper}}"
 packages:
-  github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/api:
+  github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/inventory:
     interfaces:
-      StockRepository:
+      stockRepository:

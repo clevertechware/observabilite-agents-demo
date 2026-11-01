@@ -1,4 +1,4 @@
-package store
+package repositories
 
 import (
 	"context"
@@ -18,7 +18,7 @@ func NewPool(ctx context.Context, databaseURL string, tracerOptions ...otelpgx.O
 	if err != nil {
 		return nil, err
 	}
-	if err := otelpgx.RecordStats(pool); err != nil {
+	if err = otelpgx.RecordStats(pool); err != nil {
 		pool.Close()
 		return nil, err
 	}

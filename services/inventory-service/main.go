@@ -10,12 +10,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/inventory/gateway"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 
-	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/api"
 	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/config"
-	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/pricing"
-	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/store"
+	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/inventory"
+	postgres "github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/inventory/repositories"
 	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/telemetry"
 )
 
@@ -47,17 +47,18 @@ func run() error {
 		return err
 	}
 
-	pool, err := store.NewPool(ctx, cfg.DatabaseURL)
+	pool, err := postgres.NewPool(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return err
 	}
 	defer pool.Close()
 
-	repository := store.NewRepository(pool, cfg.FaultSlowQuerySeconds)
-	pricingClient := pricing.NewClient(cfg.PricingURL)
+	pgStock := postgres.NewPGStock(pool, cfg.FaultSlowQuerySeconds)
+	pricingHTTPClient := gateway.NewPricingHTTPClient(cfg.PricingURL)
+	reservations := inventory.NewReservations(pgStock, pricingHTTPClient)
 	server := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           api.NewRouter(repository, pricingClient),
+		Handler:           inventory.NewHttpRouter(reservations),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

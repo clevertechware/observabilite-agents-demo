@@ -1,4 +1,4 @@
-package api_test
+package inventory_test
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/inventory/gateway"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -23,10 +24,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
-	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/api"
-	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/api/mocks"
-	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/pricing"
-	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/store"
+	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/inventory"
+	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/inventory/mocks"
 )
 
 func init() {
@@ -74,11 +73,12 @@ func newFixture(t *testing.T, pricingStatus int, pricingBody string) *fixture {
 	propagator := propagation.TraceContext{}
 
 	repository := mocks.NewMockStockRepository(t)
-	pricingClient := pricing.NewClient(pricingServer.URL,
+	pricingClient := gateway.NewPricingHTTPClient(pricingServer.URL,
 		otelhttp.WithTracerProvider(tracerProvider),
 		otelhttp.WithPropagators(propagator),
 	)
-	router := api.NewRouter(repository, pricingClient,
+	reservations := inventory.NewReservations(repository, pricingClient)
+	router := inventory.NewHttpRouter(reservations,
 		otelgin.WithTracerProvider(tracerProvider),
 		otelgin.WithMeterProvider(meterProvider),
 		otelgin.WithPropagators(propagator),
@@ -235,7 +235,7 @@ func TestReservationRejectedWithConflictWhenStockIsInsufficient(t *testing.T) {
 
 func TestReservationRejectedWithNotFoundWhenSkuIsUnknownToInventory(t *testing.T) {
 	f := newFixture(t, http.StatusOK, priceBody)
-	f.repository.EXPECT().Quantity(mock.Anything, "SKU-NONE").Return(0, store.ErrSkuNotFound)
+	f.repository.EXPECT().Quantity(mock.Anything, "SKU-NONE").Return(0, inventory.ErrSkuNotFound)
 
 	response := f.do(http.MethodPost, "/reservations", `{"sku":"SKU-NONE","quantity":1}`)
 
@@ -290,7 +290,7 @@ func TestGetStockReturnsQuantity(t *testing.T) {
 
 func TestGetStockReturnsNotFoundForUnknownSku(t *testing.T) {
 	f := newFixture(t, http.StatusOK, priceBody)
-	f.repository.EXPECT().Quantity(mock.Anything, "SKU-NONE").Return(0, store.ErrSkuNotFound)
+	f.repository.EXPECT().Quantity(mock.Anything, "SKU-NONE").Return(0, inventory.ErrSkuNotFound)
 
 	response := f.do(http.MethodGet, "/stock/SKU-NONE", "")
 

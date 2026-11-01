@@ -1,4 +1,4 @@
-package pricing_test
+package gateway_test
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/inventory"
+	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/inventory/gateway"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -13,8 +15,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	oteltrace "go.opentelemetry.io/otel/trace"
-
-	"github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/pricing"
 )
 
 const pricingServiceResponse = `{"sku":"SKU-001","quantity":2,"unitPrice":19.99,"total":39.98}`
@@ -40,7 +40,7 @@ func startRemotePricing(t *testing.T, status int, body string) *remotePricing {
 func TestPriceCallsGetPricesWithSkuInPathAndQuantityInQuery(t *testing.T) {
 	remote := startRemotePricing(t, http.StatusOK, pricingServiceResponse)
 
-	_, err := pricing.NewClient(remote.server.URL).Price(context.Background(), "SKU-001", 2)
+	_, err := gateway.NewPricingHTTPClient(remote.server.URL).Price(context.Background(), "SKU-001", 2)
 
 	require.NoError(t, err)
 	assert.Equal(t, http.MethodGet, remote.request.Method)
@@ -51,7 +51,7 @@ func TestPriceCallsGetPricesWithSkuInPathAndQuantityInQuery(t *testing.T) {
 func TestPriceEscapesTheSkuInThePath(t *testing.T) {
 	remote := startRemotePricing(t, http.StatusOK, pricingServiceResponse)
 
-	_, err := pricing.NewClient(remote.server.URL).Price(context.Background(), "SKU/1 ?", 1)
+	_, err := gateway.NewPricingHTTPClient(remote.server.URL).Price(context.Background(), "SKU/1 ?", 1)
 
 	require.NoError(t, err)
 	assert.Equal(t, "/prices/SKU%2F1%20%3F", remote.request.URL.EscapedPath())
@@ -60,18 +60,18 @@ func TestPriceEscapesTheSkuInThePath(t *testing.T) {
 func TestPriceReadsUnitPriceAndTotalFromTheCamelCaseResponse(t *testing.T) {
 	remote := startRemotePricing(t, http.StatusOK, pricingServiceResponse)
 
-	price, err := pricing.NewClient(remote.server.URL).Price(context.Background(), "SKU-001", 2)
+	price, err := gateway.NewPricingHTTPClient(remote.server.URL).Price(context.Background(), "SKU-001", 2)
 
 	require.NoError(t, err)
-	assert.Equal(t, pricing.Price{UnitPrice: 19.99, Total: 39.98}, price)
+	assert.Equal(t, inventory.Price{UnitPrice: 19.99, Total: 39.98}, price)
 }
 
 func TestPriceFailsWithPriceNotFoundWhenPricingAnswersNotFound(t *testing.T) {
 	remote := startRemotePricing(t, http.StatusNotFound, `{"error":"unknown sku"}`)
 
-	_, err := pricing.NewClient(remote.server.URL).Price(context.Background(), "SKU-999", 1)
+	_, err := gateway.NewPricingHTTPClient(remote.server.URL).Price(context.Background(), "SKU-999", 1)
 
-	assert.ErrorIs(t, err, pricing.ErrPriceNotFound)
+	assert.ErrorIs(t, err, inventory.ErrPriceNotFound)
 }
 
 func TestPriceFailsWithTheStatusWhenPricingAnswersAnotherError(t *testing.T) {
@@ -79,11 +79,11 @@ func TestPriceFailsWithTheStatusWhenPricingAnswersAnotherError(t *testing.T) {
 		t.Run(http.StatusText(status), func(t *testing.T) {
 			remote := startRemotePricing(t, status, `{}`)
 
-			_, err := pricing.NewClient(remote.server.URL).Price(context.Background(), "SKU-001", 1)
+			_, err := gateway.NewPricingHTTPClient(remote.server.URL).Price(context.Background(), "SKU-001", 1)
 
 			require.Error(t, err)
-			assert.NotErrorIs(t, err, pricing.ErrPriceNotFound)
-			assert.ErrorContains(t, err, "pricing returned status")
+			assert.NotErrorIs(t, err, inventory.ErrPriceNotFound)
+			assert.ErrorContains(t, err, "gateway returned status")
 		})
 	}
 }
@@ -91,7 +91,7 @@ func TestPriceFailsWithTheStatusWhenPricingAnswersAnotherError(t *testing.T) {
 func TestPriceFailsWhenTheSuccessfulResponseIsNotJson(t *testing.T) {
 	remote := startRemotePricing(t, http.StatusOK, `not json`)
 
-	_, err := pricing.NewClient(remote.server.URL).Price(context.Background(), "SKU-001", 1)
+	_, err := gateway.NewPricingHTTPClient(remote.server.URL).Price(context.Background(), "SKU-001", 1)
 
 	assert.ErrorContains(t, err, "decode price")
 }
@@ -100,7 +100,7 @@ func TestPriceFailsWhenPricingIsUnreachable(t *testing.T) {
 	remote := startRemotePricing(t, http.StatusOK, pricingServiceResponse)
 	remote.server.Close()
 
-	_, err := pricing.NewClient(remote.server.URL).Price(context.Background(), "SKU-001", 1)
+	_, err := gateway.NewPricingHTTPClient(remote.server.URL).Price(context.Background(), "SKU-001", 1)
 
 	assert.Error(t, err)
 }
@@ -110,17 +110,17 @@ func TestPriceFailsWhenTheContextIsCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err := pricing.NewClient(remote.server.URL).Price(ctx, "SKU-001", 1)
+	_, err := gateway.NewPricingHTTPClient(remote.server.URL).Price(ctx, "SKU-001", 1)
 
 	assert.ErrorIs(t, err, context.Canceled)
 }
 
-func TestPriceSendsTheTraceparentOfTheCurrentSpan(t *testing.T) {
+func TestPriceSendsTheTraceParentOfTheCurrentSpan(t *testing.T) {
 	remote := startRemotePricing(t, http.StatusOK, pricingServiceResponse)
 	spans := tracetest.NewInMemoryExporter()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSyncer(spans))
 	propagator := propagation.TraceContext{}
-	client := pricing.NewClient(remote.server.URL,
+	client := gateway.NewPricingHTTPClient(remote.server.URL,
 		otelhttp.WithTracerProvider(tracerProvider),
 		otelhttp.WithPropagators(propagator),
 	)

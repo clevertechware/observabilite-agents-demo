@@ -32,7 +32,7 @@ func TestLoad(t *testing.T) {
 			},
 		},
 		{
-			name:    "rejects missing pricing url",
+			name:    "rejects missing gateway url",
 			env:     map[string]string{},
 			wantErr: true,
 		},
