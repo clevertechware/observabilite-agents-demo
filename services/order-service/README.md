@@ -1,6 +1,6 @@
 # order-service
 
-Service Java 25 + Spring Boot 4.1.1 de la démo « observabilité des agents ». Racine de la chaîne
+Service Java 27 + Spring Boot 4.1.2 de la démo « observabilité des agents ». Racine de la chaîne
 `client -> order-service -> inventory-service -> pricing-service`.
 
 Le code ne contient aucune dépendance OpenTelemetry. La télémétrie est produite par l'agent
@@ -8,7 +8,7 @@ Le code ne contient aucune dépendance OpenTelemetry. La télémétrie est produ
 
 ## Prérequis
 
-- JDK 25 ou supérieur (le build compile avec `--release 25`)
+- JDK 27 ou supérieur (le build compile avec `--release 27`)
 - Docker (tests Testcontainers et build de l'image)
 - Maven n'est pas nécessaire : le Maven Wrapper (`./mvnw`, Maven 3.9.16) est inclus
 

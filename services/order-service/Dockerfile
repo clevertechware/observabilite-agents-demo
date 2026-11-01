@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM eclipse-temurin:25-jdk AS build
+FROM eclipse-temurin:27-jdk AS build
 WORKDIR /workspace
 COPY . .
 RUN --mount=type=cache,target=/root/.m2 ./mvnw -q -B -DskipTests package
@@ -11,7 +11,7 @@ ADD --checksum=sha256:${OTEL_AGENT_SHA256} --chmod=0444 \
     https://repo1.maven.org/maven2/io/opentelemetry/javaagent/opentelemetry-javaagent/${OTEL_AGENT_VERSION}/opentelemetry-javaagent-${OTEL_AGENT_VERSION}.jar \
     /otel/opentelemetry-javaagent.jar
 
-FROM eclipse-temurin:25-jre-noble
+FROM eclipse-temurin:27-jre-resolute
 RUN groupadd --system --gid 10001 app \
     && useradd --system --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app
 COPY --from=agent /otel/opentelemetry-javaagent.jar /otel/opentelemetry-javaagent.jar

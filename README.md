@@ -38,7 +38,7 @@ deploy/
 services/
   inventory-service/             Go + Gin
   pricing-service/               Rust + Axum
-  order-service/                 Java 25 + Spring Boot + agent OpenTelemetry
+  order-service/                 Java 27 + Spring Boot + agent OpenTelemetry
 .github/workflows/images.yml     build et push des images vers GHCR
 ```
 
