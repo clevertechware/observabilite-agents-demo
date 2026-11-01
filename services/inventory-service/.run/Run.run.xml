@@ -1,0 +1,22 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Run" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="inventory-service" />
+    <working_directory value="$PROJECT_DIR$" />
+    <envs>
+      <env name="DATABASE_URL" value="postgres://inventory:inventory@localhost:5432/inventory?sslmode=disable" />
+      <env name="FAULT_SLOW_QUERY_SECONDS" value="0" />
+      <env name="GIN_MODE" value="debug" />
+      <env name="OTEL_EXPORTER_OTLP_ENDPOINT" value="http://localhost:4318" />
+      <env name="OTEL_EXPORTER_OTLP_PROTOCOL" value="http/protobuf" />
+      <env name="OTEL_RESOURCE_ATTRIBUTES" value="service.namespace=shop,deployment.environment.name=local" />
+      <env name="OTEL_SERVICE_NAME" value="inventory-service" />
+      <env name="PORT" value="8080" />
+      <env name="PRICING_URL" value="http://localhost:8081" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="github.com/clevertechware/observabilite-agents-demo/services/inventory-service" />
+    <directory value="$PROJECT_DIR$" />
+    <auto_managed_config_id value="$PROJECT_DIR$" />
+    <method v="2" />
+  </configuration>
+</component>
