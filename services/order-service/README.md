@@ -59,7 +59,7 @@ L'image s'exécute avec l'utilisateur 10001.
 |---|---|---|
 | `POST` | `/orders` `{"sku": "...", "quantity": n}` | 201 + commande (`id`, `sku`, `quantity`, `unitPrice`, `total`) |
 | `GET` | `/orders/{id}` | 200 + commande, 404 si absente |
-| `GET` | `/healthz` | 200 |
+| `GET` | `/actuator/health/liveness`, `/actuator/health/readiness` | 200 `{"status":"UP"}` (sondes Kubernetes, Actuator) |
 
 `POST /orders` appelle `POST {INVENTORY_URL}/reservations`. Réponses d'erreur :
 
@@ -80,7 +80,7 @@ Le service attend que la base `orders` et son rôle existent.
 | `SPRING_DATASOURCE_USERNAME` | `orders` | rôle PostgreSQL |
 | `SPRING_DATASOURCE_PASSWORD` | aucun (obligatoire) | mot de passe (à fournir par un Secret) |
 | `INVENTORY_URL` | `http://localhost:8081` | URL de base d'`inventory-service` |
-| `FAULT_HEAP_LEAK_BYTES_PER_REQUEST` | `0` | octets retenus dans le heap à chaque requête (hors `/healthz`) |
+| `FAULT_HEAP_LEAK_BYTES_PER_REQUEST` | `0` | octets retenus dans le heap à chaque requête (hors `/actuator/*`) |
 | `OTEL_*` | | configuration de l'agent |
 
 ## Panne de heap

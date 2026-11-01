@@ -28,9 +28,4 @@ class OrderController {
     Order get(@PathVariable long id) {
         return orders.find(id);
     }
-
-    @GetMapping("/healthz")
-    String healthz() {
-        return "ok";
-    }
 }

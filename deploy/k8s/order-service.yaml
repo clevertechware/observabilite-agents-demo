@@ -49,14 +49,14 @@ spec:
             - name: FAULT_HEAP_LEAK_BYTES_PER_REQUEST
               value: "0"
           readinessProbe:
-            httpGet: {path: /healthz, port: http}
+            httpGet: {path: /actuator/health/readiness, port: http}
             periodSeconds: 10
           startupProbe:
-            httpGet: {path: /healthz, port: http}
+            httpGet: {path: /actuator/health/liveness, port: http}
             periodSeconds: 5
             failureThreshold: 36
           livenessProbe:
-            httpGet: {path: /healthz, port: http}
+            httpGet: {path: /actuator/health/liveness, port: http}
             periodSeconds: 20
           securityContext:
             allowPrivilegeEscalation: false

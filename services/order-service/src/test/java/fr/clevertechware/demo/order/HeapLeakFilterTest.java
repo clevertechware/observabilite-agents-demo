@@ -24,7 +24,7 @@ class HeapLeakFilterTest {
 
     @Test
     void ignores_health_probes() throws ServletException, IOException {
-        filter.doFilter(new MockHttpServletRequest("GET", "/healthz"), new MockHttpServletResponse(),
+        filter.doFilter(new MockHttpServletRequest("GET", "/actuator/health/liveness"), new MockHttpServletResponse(),
                 new MockFilterChain());
 
         assertThat(fault.retainedBytes()).isZero();

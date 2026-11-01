@@ -230,9 +230,12 @@ class OrderApiTest {
         inventory.verify(0, postRequestedFor(urlEqualTo("/reservations")));
     }
 
-    @Test
-    void healthz_answers_200() throws Exception {
-        mockMvc.perform(get("/healthz")).andExpect(status().isOk());
+    @ParameterizedTest
+    @ValueSource(strings = {"/actuator/health/liveness", "/actuator/health/readiness"})
+    void kubernetes_probe_reports_up_once_started(String probe) throws Exception {
+        mockMvc.perform(get(probe))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"));
     }
 
     private void stubReservation(int status, String body) {

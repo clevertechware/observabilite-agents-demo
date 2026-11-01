@@ -19,7 +19,7 @@ class HeapLeakFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return request.getRequestURI().equals("/healthz");
+        return request.getRequestURI().startsWith("/actuator/");
     }
 
     @Override
