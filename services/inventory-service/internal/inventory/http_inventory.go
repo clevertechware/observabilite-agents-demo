@@ -49,8 +49,7 @@ func (h *httpHandlers) reserve(c *gin.Context) {
 	var request reservationRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		status := http.StatusBadRequest
-		var validationErrors validator.ValidationErrors
-		if errors.As(err, &validationErrors) {
+		if _, ok := errors.AsType[validator.ValidationErrors](err); ok {
 			status = http.StatusUnprocessableEntity
 		}
 		c.JSON(status, errorResponse{Error: "invalid reservation request"})
