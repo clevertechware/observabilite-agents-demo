@@ -62,12 +62,15 @@ Puis, depuis ce dossier :
 curl -fsSLo /tmp/opentelemetry-javaagent.jar \
   https://repo1.maven.org/maven2/io/opentelemetry/javaagent/opentelemetry-javaagent/2.32.0/opentelemetry-javaagent-2.32.0.jar
 
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/orders \
-SPRING_DATASOURCE_USERNAME=orders SPRING_DATASOURCE_PASSWORD=orders \
-INVENTORY_URL=http://localhost:8081 \
-OTEL_SERVICE_NAME=order-service \
-OTEL_SEMCONV_STABILITY_OPT_IN=database \
-OTEL_TRACES_EXPORTER=logging OTEL_METRICS_EXPORTER=logging OTEL_LOGS_EXPORTER=logging \
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/orders
+SPRING_DATASOURCE_USERNAME=orders SPRING_DATASOURCE_PASSWORD=orders
+INVENTORY_URL=http://localhost:8080
+OTEL_SERVICE_NAME=order-service
+OTEL_SEMCONV_STABILITY_OPT_IN=database
+OTEL_TRACES_EXPORTER=logging 
+OTEL_METRICS_EXPORTER=logging 
+OTEL_LOGS_EXPORTER=logging
+SERVER_PORT=8082
 java -javaagent:/tmp/opentelemetry-javaagent.jar -jar target/order-service.jar
 ```
 
