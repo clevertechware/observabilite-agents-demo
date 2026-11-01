@@ -20,7 +20,7 @@ L'exemple montre :
 Depuis ce dossier (`services/inventory-service`), avec Docker Compose v2 ou supérieur :
 
 ```bash
-docker compose up -f compose.yaml -f compose.build.yaml --build -d
+docker compose -f ./compose.yaml -f ./compose.build.yaml up --build
 ```
 
 Compose Postgres sur `localhost:5432` et un Collector OpenTelemetry OTLP/HTTP sur `http://localhost:4318`. Le schéma et les SKU
@@ -56,12 +56,21 @@ réserver ce lancement à un environnement de développement de confiance.
 Vérification depuis la machine hôte, une fois Rust démarré :
 
 ```bash
-curl --fail http://localhost:8080/healthz
+
 curl --fail http://localhost:8080/stock/SKU-001
 curl --fail http://localhost:8080/reservations \
   -H 'Content-Type: application/json' \
   -d '{"sku":"SKU-001","quantity":2}'
 docker compose logs -f otel-collector
+```
+
+Ou avec [HTTPie](https://httpie.io) :
+
+```bash
+http :8080/healthz
+http :8080/stock/SKU-001
+http :8080/reservations sku=SKU-001 quantity:=2
+docker compose -f ./compose.yaml logs -f otel-collector
 ```
 
 Le Collector affiche la télémétrie reçue dans ses logs ; aucun compte OpenObserve n'est requis.
