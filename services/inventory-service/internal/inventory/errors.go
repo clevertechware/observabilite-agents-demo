@@ -3,6 +3,8 @@ package inventory
 import "errors"
 
 var (
+	// ErrInvalidQuantity is returned when the quantity is not positive.
+	ErrInvalidQuantity = errors.New("quantity must be positive")
 	// ErrSkuNotFound is returned when the SKU is not found.
 	ErrSkuNotFound = errors.New("sku not found")
 	// ErrInsufficientStock is returned when the quantity is not available.

@@ -22,18 +22,22 @@ type stockLevel struct {
 	Quantity int    `json:"quantity"`
 }
 
+type errorResponse struct {
+	Error string `json:"error"`
+}
+
 func (h *httpHandlers) getStock(c *gin.Context) {
 	ctx := c.Request.Context()
 	sku := c.Param("sku")
 
 	quantity, err := h.reservations.Quantity(ctx, sku)
 	if errors.Is(err, ErrSkuNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "unknown sku"})
+		c.JSON(http.StatusNotFound, errorResponse{Error: "unknown sku"})
 		return
 	}
 	if err != nil {
 		slog.ErrorContext(ctx, "stock lookup failed", "sku", sku, "error", err)
-		c.Status(http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: "internal server error"})
 		return
 	}
 	c.JSON(http.StatusOK, stockLevel{SKU: sku, Quantity: quantity})
@@ -43,20 +47,22 @@ func (h *httpHandlers) reserve(c *gin.Context) {
 	ctx := c.Request.Context()
 	var request reservationRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid reservation request"})
 		return
 	}
 
 	reservation, err := h.reservations.ReserveStock(ctx, request.SKU, request.Quantity)
 	switch {
+	case errors.Is(err, ErrInvalidQuantity):
+		c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid reservation request"})
 	case errors.Is(err, ErrInsufficientStock):
 		slog.WarnContext(ctx, "insufficient stock", "sku", request.SKU, "quantity", request.Quantity)
-		c.JSON(http.StatusConflict, gin.H{"error": "insufficient stock"})
+		c.JSON(http.StatusConflict, errorResponse{Error: "insufficient stock"})
 	case errors.Is(err, ErrSkuNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "unknown sku"})
+		c.JSON(http.StatusNotFound, errorResponse{Error: "unknown sku"})
 	case err != nil:
 		slog.ErrorContext(ctx, "reservation failed", "sku", request.SKU, "error", err)
-		c.Status(http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: "internal server error"})
 	default:
 		slog.InfoContext(ctx, "stock reserved", "sku", request.SKU, "quantity", request.Quantity)
 		c.JSON(http.StatusCreated, reservation)

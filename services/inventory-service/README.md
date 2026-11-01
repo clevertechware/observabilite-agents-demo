@@ -20,8 +20,10 @@ L'exemple montre :
 | Méthode et chemin | Réponses |
 |---|---|
 | `POST /reservations` `{"sku":"...","quantity":n}` | 201 `{"sku","quantity","unitPrice","total"}`, 400 corps invalide, 404 SKU inconnu, 409 stock insuffisant, 500 erreur interne |
-| `GET /stock/{sku}` | 200 `{"sku","quantity"}`, 404 SKU inconnu |
+| `GET /stock/{sku}` | 200 `{"sku","quantity"}`, 404 SKU inconnu, 500 erreur interne |
 | `GET /healthz` | 200, non tracé |
+
+Les erreurs de ces endpoints d'inventaire ont un corps JSON `{"error":"..."}` : `invalid reservation request` (400), `unknown sku` (404), `insufficient stock` (409) ou `internal server error` (500). Les détails techniques des erreurs internes restent dans les logs. La quantité réservée doit être strictement positive ; cette règle est vérifiée par le binding HTTP et par le cas d'usage.
 
 `pricing-service` doit répondre à `GET /prices/{sku}?quantity=n` par `{"unitPrice": 12.5, "total": 25}` (200) ou 404.
 
@@ -54,7 +56,7 @@ export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 go run .
 ```
 
-Les tests d'intégration du paquet `internal/inventory/postgres` démarrent `postgres:18.6-trixie` avec testcontainers-go et appliquent `schema.sql` : Docker doit être disponible.
+Les tests d'intégration du paquet `internal/inventory/repositories` démarrent `postgres:18.6-trixie` avec testcontainers-go et appliquent `schema.sql` : Docker doit être disponible.
 
 La configuration de `golangci-lint` (v2) est dans `.golangci.yml` : linters standard, `revive` (règles de `golint` hors commentaires de documentation), `errorlint`, `bodyclose` et `misspell`.
 
@@ -73,7 +75,7 @@ seed.sql                     SKU de démonstration
 internal/config              variables d'environnement
 internal/telemetry           SDK OpenTelemetry
 internal/inventory           cas d'usage, erreurs métier, routeur Gin et handlers HTTP
-internal/inventory/postgres  pool pgx et repository
+internal/inventory/repositories  pool pgx et repository
 internal/inventory/mocks     mocks des interfaces d'inventaire
-internal/pricing             client HTTP vers pricing-service
+internal/inventory/gateway   client HTTP vers pricing-service
 ```

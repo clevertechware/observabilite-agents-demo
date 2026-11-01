@@ -38,8 +38,12 @@ func (r *Reservations) Quantity(ctx context.Context, sku string) (int, error) {
 
 // ReserveStock reserves the given quantity of the given SKU.
 //
-// It returns an error if the quantity is not available, or if there is an error retrieving the price.
+// It returns an error if the quantity is invalid or not available, or if there is an error retrieving the price.
 func (r *Reservations) ReserveStock(ctx context.Context, sku string, quantity int) (Reservation, error) {
+	if quantity <= 0 {
+		return Reservation{}, ErrInvalidQuantity
+	}
+
 	available, err := r.repository.Quantity(ctx, sku)
 	if err != nil {
 		return Reservation{}, err

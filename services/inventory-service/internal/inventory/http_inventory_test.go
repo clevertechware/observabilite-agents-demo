@@ -3,6 +3,7 @@ package inventory_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -231,6 +232,7 @@ func TestReservationRejectedWithConflictWhenStockIsInsufficient(t *testing.T) {
 	response := f.do(http.MethodPost, "/reservations", `{"sku":"SKU-42","quantity":11}`)
 
 	assert.Equal(t, http.StatusConflict, response.Code)
+	assert.JSONEq(t, `{"error":"insufficient stock"}`, response.Body.String())
 }
 
 func TestReservationRejectedWithNotFoundWhenSkuIsUnknownToInventory(t *testing.T) {
@@ -240,6 +242,7 @@ func TestReservationRejectedWithNotFoundWhenSkuIsUnknownToInventory(t *testing.T
 	response := f.do(http.MethodPost, "/reservations", `{"sku":"SKU-NONE","quantity":1}`)
 
 	assert.Equal(t, http.StatusNotFound, response.Code)
+	assert.JSONEq(t, `{"error":"unknown sku"}`, response.Body.String())
 }
 
 func TestReservationRejectedWithNotFoundWhenPricingDoesNotKnowSku(t *testing.T) {
@@ -249,6 +252,7 @@ func TestReservationRejectedWithNotFoundWhenPricingDoesNotKnowSku(t *testing.T) 
 	response := f.do(http.MethodPost, "/reservations", `{"sku":"SKU-42","quantity":1}`)
 
 	assert.Equal(t, http.StatusNotFound, response.Code)
+	assert.JSONEq(t, `{"error":"unknown sku"}`, response.Body.String())
 }
 
 func TestReservationFailsWithServerErrorWhenPricingIsDown(t *testing.T) {
@@ -258,12 +262,16 @@ func TestReservationFailsWithServerErrorWhenPricingIsDown(t *testing.T) {
 	response := f.do(http.MethodPost, "/reservations", `{"sku":"SKU-42","quantity":1}`)
 
 	assert.Equal(t, http.StatusInternalServerError, response.Code)
+	assert.JSONEq(t, `{"error":"internal server error"}`, response.Body.String())
 }
 
 func TestReservationRejectsInvalidBodies(t *testing.T) {
 	tests := map[string]string{
 		"malformed json":    `{`,
+		"empty body":        ``,
 		"missing sku":       `{"quantity":1}`,
+		"missing quantity":  `{"sku":"SKU-42"}`,
+		"wrong type":        `{"sku":"SKU-42","quantity":"two"}`,
 		"zero quantity":     `{"sku":"SKU-42","quantity":0}`,
 		"negative quantity": `{"sku":"SKU-42","quantity":-3}`,
 	}
@@ -274,6 +282,7 @@ func TestReservationRejectsInvalidBodies(t *testing.T) {
 			response := f.do(http.MethodPost, "/reservations", body)
 
 			assert.Equal(t, http.StatusBadRequest, response.Code)
+			assert.JSONEq(t, `{"error":"invalid reservation request"}`, response.Body.String())
 		})
 	}
 }
@@ -295,4 +304,24 @@ func TestGetStockReturnsNotFoundForUnknownSku(t *testing.T) {
 	response := f.do(http.MethodGet, "/stock/SKU-NONE", "")
 
 	assert.Equal(t, http.StatusNotFound, response.Code)
+	assert.JSONEq(t, `{"error":"unknown sku"}`, response.Body.String())
+}
+
+func TestInventoryLookupFailuresReturnGenericServerError(t *testing.T) {
+	for _, method := range []string{http.MethodGet, http.MethodPost} {
+		t.Run(method, func(t *testing.T) {
+			f := newFixture(t, http.StatusOK, priceBody)
+			f.repository.EXPECT().Quantity(mock.Anything, "SKU-42").Return(0, errors.New("private database details"))
+			target := "/stock/SKU-42"
+			if method == http.MethodPost {
+				target = "/reservations"
+			}
+
+			response := f.do(method, target, `{"sku":"SKU-42","quantity":1}`)
+
+			assert.Equal(t, http.StatusInternalServerError, response.Code)
+			assert.Contains(t, response.Header().Get("Content-Type"), "application/json")
+			assert.JSONEq(t, `{"error":"internal server error"}`, response.Body.String())
+		})
+	}
 }
