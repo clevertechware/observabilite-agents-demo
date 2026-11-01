@@ -1,0 +1,25 @@
+config:
+  processors:
+    filter/probes:
+      error_mode: ignore
+      trace_conditions:
+        - 'span.attributes["http.route"] == "/actuator/health/**"'
+      metric_conditions:
+        - 'metric.name == "http.server.request.duration" and datapoint.attributes["http.route"] == "/actuator/health/**"'
+
+  service:
+    pipelines:
+      traces:
+        processors:
+          - memory_limiter
+          - filter/probes
+          - batch
+        exporters:
+          - otlp_http/openobserve
+      metrics:
+        processors:
+          - memory_limiter
+          - filter/probes
+          - batch
+        exporters:
+          - otlp_http/openobserve

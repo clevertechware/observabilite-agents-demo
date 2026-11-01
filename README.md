@@ -35,6 +35,7 @@ deploy/
       otel-cluster-values.yaml       release otel-cluster (3c) : clusterMetrics + kubernetesEvents
       otel-values-traefik-logs.yaml  release otel (3d) : parsing des access logs JSON de Traefik
       otel-values-patch.yaml         release otel (4a) : Service OTLP, traces, exclusion du namespace demo du filelog
+      otel-values-filter-probes.yaml release otel (4d) : retire les spans et métriques des sondes Actuator d'order-service
 services/
   inventory-service/             Go + Gin
   pricing-service/               Rust + Axum
@@ -109,7 +110,8 @@ helm upgrade otel open-telemetry/opentelemetry-collector \
   --values deploy/helm/otel/otel-daemonset-values.yaml \
   --values deploy/helm/otel/otel-values-metrics.yaml \
   --values deploy/helm/otel/otel-values-traefik-logs.yaml \
-  --values deploy/helm/otel/otel-values-patch.yaml
+  --values deploy/helm/otel/otel-values-patch.yaml \
+  --values deploy/helm/otel/otel-values-filter-probes.yaml
 ```
 
 ### 5. Postgres, services et générateur de trafic
