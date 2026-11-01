@@ -19,11 +19,11 @@ L'exemple montre :
 
 | Méthode et chemin | Réponses |
 |---|---|
-| `POST /reservations` `{"sku":"...","quantity":n}` | 201 `{"sku","quantity","unitPrice","total"}`, 400 corps invalide, 404 SKU inconnu, 409 stock insuffisant, 500 erreur interne |
+| `POST /reservations` `{"sku":"...","quantity":n}` | 201 `{"sku","quantity","unitPrice","total"}`, 400 erreur de décodage, 422 données invalides, 404 SKU inconnu, 409 stock insuffisant, 500 erreur interne |
 | `GET /stock/{sku}` | 200 `{"sku","quantity"}`, 404 SKU inconnu, 500 erreur interne |
 | `GET /healthz` | 200, non tracé |
 
-Les erreurs de ces endpoints d'inventaire ont un corps JSON `{"error":"..."}` : `invalid reservation request` (400), `unknown sku` (404), `insufficient stock` (409) ou `internal server error` (500). Les détails techniques des erreurs internes restent dans les logs. La quantité réservée doit être strictement positive ; cette règle est vérifiée par le binding HTTP et par le cas d'usage.
+Les erreurs de ces endpoints d'inventaire ont un corps JSON `{"error":"..."}` : `invalid reservation request` (400 pour un corps vide, un JSON mal formé ou un type incorrect ; 422 pour un SKU absent ou vide, ou une quantité absente, nulle ou négative), `unknown sku` (404), `insufficient stock` (409) ou `internal server error` (500). Les détails techniques des erreurs internes restent dans les logs. La quantité réservée doit être strictement positive ; cette règle est vérifiée par le binding HTTP et par le cas d'usage.
 
 `pricing-service` doit répondre à `GET /prices/{sku}?quantity=n` par `{"unitPrice": 12.5, "total": 25}` (200) ou 404.
 

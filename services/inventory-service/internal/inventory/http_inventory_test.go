@@ -290,24 +290,28 @@ func TestReservationFailsWithServerErrorWhenPricingIsDown(t *testing.T) {
 func TestReservationRejectsInvalidBodies(t *testing.T) {
 	t.Parallel()
 
-	tests := map[string]string{
-		"malformed json":    `{`,
-		"empty body":        ``,
-		"missing sku":       `{"quantity":1}`,
-		"missing quantity":  `{"sku":"SKU-42"}`,
-		"wrong type":        `{"sku":"SKU-42","quantity":"two"}`,
-		"zero quantity":     `{"sku":"SKU-42","quantity":0}`,
-		"negative quantity": `{"sku":"SKU-42","quantity":-3}`,
+	tests := map[string]struct {
+		body   string
+		status int
+	}{
+		"malformed json":    {`{`, http.StatusBadRequest},
+		"empty body":        {``, http.StatusBadRequest},
+		"missing sku":       {`{"quantity":1}`, http.StatusUnprocessableEntity},
+		"empty sku":         {`{"sku":"","quantity":1}`, http.StatusUnprocessableEntity},
+		"missing quantity":  {`{"sku":"SKU-42"}`, http.StatusUnprocessableEntity},
+		"wrong type":        {`{"sku":"SKU-42","quantity":"two"}`, http.StatusBadRequest},
+		"zero quantity":     {`{"sku":"SKU-42","quantity":0}`, http.StatusUnprocessableEntity},
+		"negative quantity": {`{"sku":"SKU-42","quantity":-3}`, http.StatusUnprocessableEntity},
 	}
-	for name, body := range tests {
+	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			f := newFixture(t, http.StatusOK, priceBody)
 
-			response := f.do(http.MethodPost, "/reservations", body)
+			response := f.do(http.MethodPost, "/reservations", tt.body)
 
-			assert.Equal(t, http.StatusBadRequest, response.Code)
+			assert.Equal(t, tt.status, response.Code)
 			assert.JSONEq(t, `{"error":"invalid reservation request"}`, response.Body.String())
 		})
 	}

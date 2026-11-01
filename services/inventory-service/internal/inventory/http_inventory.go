@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 )
 
 type httpHandlers struct {
@@ -47,14 +48,19 @@ func (h *httpHandlers) reserve(c *gin.Context) {
 	ctx := c.Request.Context()
 	var request reservationRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid reservation request"})
+		status := http.StatusBadRequest
+		var validationErrors validator.ValidationErrors
+		if errors.As(err, &validationErrors) {
+			status = http.StatusUnprocessableEntity
+		}
+		c.JSON(status, errorResponse{Error: "invalid reservation request"})
 		return
 	}
 
 	reservation, err := h.reservations.ReserveStock(ctx, request.SKU, request.Quantity)
 	switch {
 	case errors.Is(err, ErrInvalidQuantity):
-		c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid reservation request"})
+		c.JSON(http.StatusUnprocessableEntity, errorResponse{Error: "invalid reservation request"})
 	case errors.Is(err, ErrInsufficientStock):
 		slog.WarnContext(ctx, "insufficient stock", "sku", request.SKU, "quantity", request.Quantity)
 		c.JSON(http.StatusConflict, errorResponse{Error: "insufficient stock"})
