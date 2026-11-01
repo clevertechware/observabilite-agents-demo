@@ -52,9 +52,23 @@ cargo test
 
 ## Lancer
 
+En conteneur via le compose mutualisé, depuis la racine du dépôt (Docker Compose v2.20+) :
+
 ```bash
-OTEL_SERVICE_NAME=pricing-service LISTEN_ADDR=127.0.0.1:8080 cargo run --release
-curl 'http://127.0.0.1:8080/prices/SKU-002?quantity=50'
+docker compose up --build pricing-service
+```
+
+Le conteneur écoute en interne sur `0.0.0.0:8080` et est publié sur `127.0.0.1:8082` :
+
+```bash
+curl 'http://localhost:8082/prices/SKU-002?quantity=50'
+```
+
+Sur la machine hôte (le socle Compose fournit le Collector sur `localhost:4318`) :
+
+```bash
+OTEL_SERVICE_NAME=pricing-service LISTEN_ADDR=127.0.0.1:8081 cargo run --release
+curl 'http://127.0.0.1:8081/prices/SKU-002?quantity=50'
 ```
 
 ## Image

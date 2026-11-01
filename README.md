@@ -36,11 +36,61 @@ deploy/
       otel-values-traefik-logs.yaml  release otel (3d) : parsing des access logs JSON de Traefik
       otel-values-patch.yaml         release otel (4a) : Service OTLP, traces, exclusion du namespace demo du filelog
       otel-values-filter-probes.yaml release otel (4d) : retire les spans et métriques des sondes Actuator d'order-service
+compose.yaml                     point d'entrée Compose : inclut le socle et les trois services
 services/
+  compose.yaml                   socle mutualisé : Postgres (bases inventory et orders) + Collector OTLP/HTTP
+  otel-collector.yaml            config du Collector (exporte la télémétrie en logs, exporter debug)
+  postgres/initdb/               initialisation des rôles, bases et schémas au premier démarrage
   inventory-service/             Go + Gin
-  pricing-service/               Rust + Axum
   order-service/                 Java 27 + Spring Boot + agent OpenTelemetry
+  pricing-service/               Rust + Axum
 .github/workflows/images.yml     build et push des images vers GHCR
+```
+
+## Développement local avec Docker Compose
+
+Le socle `services/compose.yaml` est mutualisé par les trois services : une instance Postgres 18 avec
+les bases `inventory` et `orders` (schémas et données de démonstration chargés au premier démarrage,
+comme le `postgres-initdb` de `deploy/k8s/postgres`) et un Collector OpenTelemetry OTLP/HTTP sur
+`http://localhost:4318` qui affiche la télémétrie reçue dans ses logs. Chaque service a son propre
+`services/<service>/compose.yaml` qui inclut ce socle via `include` ; le `compose.yaml` racine les
+inclut tous. Docker Compose v2.20 ou supérieur est requis.
+
+Depuis la racine du dépôt :
+
+```bash
+docker compose up --build                                  # toute la chaîne + le socle
+docker compose up --build order-service                     # un seul service + le socle
+docker compose up --build order-service inventory-service   # un sous-ensemble
+```
+
+Depuis le dossier d'un service, son `compose.yaml` suffit (`docker compose up --build` lance le
+service et le socle) :
+
+```bash
+docker compose -f services/pricing-service/compose.yaml up --build
+```
+
+Ports publiés sur `127.0.0.1` : order-service `8080`, inventory-service `8081`, pricing-service `8082`,
+Postgres `5432`, OTLP/HTTP `4318`.
+
+```bash
+curl --fail http://localhost:8080/orders \
+  -H 'Content-Type: application/json' -d '{"sku":"SKU-001","quantity":2}'
+curl --fail http://localhost:8081/stock/SKU-001
+curl --fail 'http://localhost:8082/prices/SKU-001?quantity=2'
+docker compose logs -f otel-collector
+```
+
+`docker compose down` arrête les conteneurs et conserve les données Postgres ;
+`docker compose down -v` **supprime toutes les données locales**. Aucun fichier `.env` n'est nécessaire.
+
+En conteneur, les services se joignent par leurs noms DNS Compose (`inventory-service:8080`,
+`pricing-service:8080`). Pour faire appeler un service conteneurisé à un service lancé sur la machine
+hôte (`go run`, `cargo run`, `java -jar`), surchargez `INVENTORY_URL` ou `PRICING_URL`, par exemple :
+
+```bash
+PRICING_URL=http://host.docker.internal:8081 docker compose up --build inventory-service
 ```
 
 ## Prérequis

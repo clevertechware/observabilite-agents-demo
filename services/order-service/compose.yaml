@@ -1,0 +1,39 @@
+name: shop-local
+
+# order-service en conteneur, adossé au socle mutualisé (Postgres + Collector).
+#
+# Depuis la racine du dépôt :  docker compose up --build order-service
+# Depuis ce dossier :          docker compose up --build
+#
+# INVENTORY_URL pointe par défaut sur le conteneur inventory-service ; pour
+# appeler un inventory-service lancé sur l'hôte (go run), surcharger la variable :
+#   INVENTORY_URL=http://host.docker.internal:8081 docker compose up --build
+
+include:
+  - ../compose.yaml
+
+services:
+  order-service:
+    build: .
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orders
+      SPRING_DATASOURCE_USERNAME: orders
+      SPRING_DATASOURCE_PASSWORD: orders
+      INVENTORY_URL: ${INVENTORY_URL:-http://inventory-service:8080}
+      FAULT_HEAP_LEAK_BYTES_PER_REQUEST: "0"
+      OTEL_SERVICE_NAME: order-service
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=shop,deployment.environment.name=local
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_SEMCONV_STABILITY_OPT_IN: database
+    ports:
+      - "127.0.0.1:8080:8080"
+    tmpfs:
+      - /tmp
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started

@@ -1,31 +1,35 @@
-name: inventory-host-local
+name: shop-local
+
+# inventory-service en conteneur, adossé au socle mutualisé (Postgres + Collector).
+#
+# Depuis la racine du dépôt :  docker compose up --build inventory-service
+# Depuis ce dossier :          docker compose up --build
+#
+# PRICING_URL pointe par défaut sur le conteneur pricing-service ; pour appeler
+# un pricing-service lancé sur l'hôte (cargo run), surcharger la variable :
+#   PRICING_URL=http://host.docker.internal:8082 docker compose up --build
+
+include:
+  - ../compose.yaml
 
 services:
-  postgres:
-    image: postgres:18.6-trixie
+  inventory-service:
+    build: .
     environment:
-      POSTGRES_USER: inventory
-      POSTGRES_PASSWORD: inventory
-      POSTGRES_DB: inventory
+      DATABASE_URL: postgres://inventory:inventory@postgres:5432/inventory?sslmode=disable
+      PRICING_URL: ${PRICING_URL:-http://pricing-service:8080}
+      PORT: "8080"
+      FAULT_SLOW_QUERY_SECONDS: "0"
+      OTEL_SERVICE_NAME: inventory-service
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=shop,deployment.environment.name=local
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
     ports:
-      - "127.0.0.1:5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql
-      - ./schema.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
-      - ./seed.sql:/docker-entrypoint-initdb.d/20-seed.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U inventory -d inventory"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-
-  otel-collector:
-    image: otel/opentelemetry-collector:0.123.0
-    command: ["--config=/etc/otelcol/config.yaml"]
-    ports:
-      - "127.0.0.1:4318:4318"
-    volumes:
-      - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
-
-volumes:
-  postgres-data:
+      - "127.0.0.1:8081:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started

@@ -1,0 +1,18 @@
+name: shop-local
+
+# Point d'entrée unique : lance toute la chaîne
+# load-generator -> order-service -> inventory-service -> pricing-service
+# plus le socle mutualisé (Postgres avec les bases inventory et orders,
+# Collector OpenTelemetry) défini dans services/compose.yaml.
+#
+#   docker compose up --build            # toute la stack
+#   docker compose up --build order-service inventory-service   # un sous-ensemble
+#   docker compose -f services/order-service/compose.yaml up --build   # un seul service + le socle
+#
+# Ports publiés sur l'hôte : order-service 8080, inventory-service 8081,
+# pricing-service 8082, Postgres 5432, OTLP/HTTP 4318 (tous en 127.0.0.1).
+
+include:
+  - services/inventory-service/compose.yaml
+  - services/order-service/compose.yaml
+  - services/pricing-service/compose.yaml

@@ -17,48 +17,39 @@ L'exemple montre :
 
 ## Lancement local avec Docker Compose
 
-Depuis ce dossier (`services/inventory-service`), avec Docker Compose v2 ou supérieur :
+Le socle mutualisé (Postgres + Collector OpenTelemetry) est dans `services/compose.yaml` ; ce
+dossier ne contient plus que le service Go. Depuis la racine du dépôt, avec Docker Compose
+v2.20 ou supérieur :
 
 ```bash
-docker compose -f ./compose.yaml -f ./compose.build.yaml up --build
+docker compose up --build inventory-service
 ```
 
-Compose Postgres sur `localhost:5432` et un Collector OpenTelemetry OTLP/HTTP sur `http://localhost:4318`. Le schéma et les SKU
-de `schema.sql` et `seed.sql` sont chargés au premier démarrage. 
-Les identifiants `inventory` / `inventory` sont réservés au développement local. 
-
-> Aucun fichier `.env` n'est nécessaire.
-
-Les ports publiés par Compose ne sont accessibles que depuis la machine hôte.
-
-**Le service Rust `pricing-service` n'est pas lancé par Compose : il faut le lancer en local**
-pour utiliser les réservations. Dans un autre terminal :
+Ou depuis ce dossier, le `compose.yaml` local inclut le socle :
 
 ```bash
-cd ../pricing-service
-export LISTEN_ADDR=0.0.0.0:8081
-export OTEL_SERVICE_NAME=pricing-service
-export OTEL_RESOURCE_ATTRIBUTES=service.namespace=shop,deployment.environment.name=local
-export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
-export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-export RUST_LOG=info
-export FAULT_ERROR_RATE=0
-export FAULT_LEAK_BYTES_PER_REQUEST=0
-cargo run --release --locked
+docker compose up --build
 ```
 
-Rust 1.95 ou supérieur est requis. L'écoute sur `0.0.0.0` permet au conteneur Go de joindre
-Rust via `http://host.docker.internal:8081` (alias également configuré pour Docker sous Linux).
+Compose démarre Postgres sur `127.0.0.1:5432` (base `inventory`, schéma et SKU de `schema.sql`
+et `seed.sql` chargés au premier démarrage), le Collector OTLP/HTTP sur `http://localhost:4318`
+et le conteneur Go, publié sur `127.0.0.1:8081`. Les identifiants `inventory` / `inventory` sont
+réservés au développement local. Aucun fichier `.env` n'est nécessaire. Les ports publiés par
+Compose ne sont accessibles que depuis la machine hôte.
 
-Contrairement aux ports de Compose, ce port Rust peut être accessible depuis le réseau local :
-réserver ce lancement à un environnement de développement de confiance.
-
-Vérification depuis la machine hôte, une fois Rust démarré :
+`PRICING_URL` pointe par défaut sur le conteneur `pricing-service`
+(`docker compose up --build` à la racine lance toute la chaîne, pricing compris). Pour appeler
+un `pricing-service` lancé sur la machine hôte (voir ci-dessous) :
 
 ```bash
+PRICING_URL=http://host.docker.internal:8081 docker compose up --build inventory-service
+```
 
-curl --fail http://localhost:8080/stock/SKU-001
-curl --fail http://localhost:8080/reservations \
+Vérification depuis la machine hôte, une fois la stack démarrée :
+
+```bash
+curl --fail http://localhost:8081/stock/SKU-001
+curl --fail http://localhost:8081/reservations \
   -H 'Content-Type: application/json' \
   -d '{"sku":"SKU-001","quantity":2}'
 docker compose logs -f otel-collector
@@ -67,41 +58,34 @@ docker compose logs -f otel-collector
 Ou avec [HTTPie](https://httpie.io) :
 
 ```bash
-http :8080/healthz
-http :8080/stock/SKU-001
-http :8080/reservations sku=SKU-001 quantity:=2
-docker compose -f ./compose.yaml logs -f otel-collector
+http :8081/healthz
+http :8081/stock/SKU-001
+http :8081/reservations sku=SKU-001 quantity:=2
 ```
 
 Le Collector affiche la télémétrie reçue dans ses logs ; aucun compte OpenObserve n'est requis.
 `docker compose down` arrête les conteneurs et conserve les données. Pour réinitialiser le
 stock et rejouer les scripts, `docker compose down -v` **supprime toutes les données locales**.
-Arrêter Rust séparément avec `Ctrl+C`.
 
 ## Lancer inventory-service directement sur la machine hôte
 
-Le second fichier `compose.yaml` est autonome : il lance uniquement Postgres et le
-Collector, sans conteneur Go ni Rust. Ne pas le combiner avec `compose.build.yaml` via plusieurs
-options `-f`, car cela ajouterait le service Go du premier fichier.
-
-Depuis ce dossier (`services/inventory-service`), arrêter d'abord l'autre Compose s'il est
-lancé : les deux configurations utilisent les mêmes ports Postgres et OTLP.
+Lancer d'abord uniquement le socle (Postgres + Collector), depuis la racine du dépôt :
 
 ```bash
-docker compose down
-docker compose
+docker compose -f services/compose.yaml up -d --wait
 ```
 
-Ce Compose utilise un projet et un volume Postgres distincts : les données du premier
-Compose sont conservées, mais ne sont pas partagées. Le schéma et les données de démonstration
-sont chargés au premier démarrage du nouveau volume. Aucun fichier `.env` n'est nécessaire.
+`up --wait` attend que Postgres soit `healthy` avant de rendre la main. Le schéma et les données
+de démonstration sont chargés au premier démarrage.
 
-Lancer `pricing-service` dans un autre terminal avec les variables Rust indiquées plus haut.
-Pour ce mode entièrement local, utiliser `export LISTEN_ADDR=127.0.0.1:8081` plutôt que
-`0.0.0.0:8081`, car aucun conteneur n'a besoin de joindre Rust.
+Deux choix pour `pricing-service` :
+
+- en conteneur : `docker compose up --build pricing-service`, puis `export PRICING_URL=http://localhost:8082` ;
+- sur la machine hôte : `export LISTEN_ADDR=127.0.0.1:8081` dans `../pricing-service` puis
+  `cargo run --release --locked`, et `export PRICING_URL=http://localhost:8081` (Rust 1.95+ requis).
 
 Puis lancer Go depuis `services/inventory-service`, avec ces variables d'environnement
-(également utilisables dans la configuration d'exécution de l'IDE) :
+(également utilisables dans la configuration d'exécution de l'IDE, voir `.run/Run.run.xml`) :
 
 ```bash
 export DATABASE_URL='postgres://inventory:inventory@localhost:5432/inventory?sslmode=disable'
@@ -116,17 +100,16 @@ export GIN_MODE=debug
 go run .
 ```
 
-La commande `up --wait` attend que Postgres soit `healthy` avant de rendre la main.
-Les commandes `curl` ci-dessus restent valables. Pour consulter la télémétrie ou arrêter
-les dépendances :
+Les commandes `curl` ci-dessus restent valables avec `localhost:8080`. Pour consulter la
+télémétrie ou arrêter les dépendances :
 
 ```bash
-docker compose -f compose.yaml logs -f otel-collector
-docker compose -f compose.yaml down
+docker compose -f services/compose.yaml logs -f otel-collector
+docker compose -f services/compose.yaml down
 ```
 
 Arrêter Go et Rust séparément avec `Ctrl+C`. L'arrêt conserve les données ;
-`docker compose -f compose.local.yaml down -v` **supprime les données de ce Compose local**.
+`docker compose -f services/compose.yaml down -v` **supprime les données du socle**.
 Depuis l'hôte, toutes les URLs utilisent `localhost`, sans noms DNS Docker.
 
 ## API

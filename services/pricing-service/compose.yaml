@@ -1,0 +1,28 @@
+name: shop-local
+
+# pricing-service en conteneur, adossé au socle mutualisé (Postgres + Collector).
+# Postgres n'est pas une dépendance : le service est sans état.
+#
+# Depuis la racine du dépôt :  docker compose up --build pricing-service
+# Depuis ce dossier :          docker compose up --build
+
+include:
+  - ../compose.yaml
+
+services:
+  pricing-service:
+    build: .
+    environment:
+      LISTEN_ADDR: 0.0.0.0:8080
+      RUST_LOG: info
+      FAULT_ERROR_RATE: "0"
+      FAULT_LEAK_BYTES_PER_REQUEST: "0"
+      OTEL_SERVICE_NAME: pricing-service
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=shop,deployment.environment.name=local
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+    ports:
+      - "127.0.0.1:8082:8080"
+    depends_on:
+      otel-collector:
+        condition: service_started

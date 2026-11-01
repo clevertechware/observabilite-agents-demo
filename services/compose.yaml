@@ -1,0 +1,45 @@
+name: shop-local
+
+# Socle mutualisé par tous les services : une seule instance Postgres avec les
+# bases `inventory` et `orders` (comme le StatefulSet de deploy/k8s/postgres)
+# et un Collector OpenTelemetry OTLP/HTTP qui affiche la télémétrie en logs.
+#
+# Chaque service inclut ce fichier :
+#   include:
+#     - ../compose.yaml
+# et le point d'entrée du dépôt (compose.yaml à la racine) inclut tous les services.
+
+services:
+  postgres:
+    image: postgres:18.6-trixie
+    environment:
+      POSTGRES_USER: inventory
+      POSTGRES_PASSWORD: inventory
+      POSTGRES_DB: inventory
+      ORDERS_PASSWORD: orders
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      # Les schémas restent dans leur service ; ils sont montés à part car un
+      # fichier ne peut pas être monté par-dessus le dossier initdb.d (virtiofs).
+      - ./postgres/initdb:/docker-entrypoint-initdb.d:ro
+      - ./inventory-service/schema.sql:/opt/initdb/inventory-schema.sql:ro
+      - ./inventory-service/seed.sql:/opt/initdb/inventory-seed.sql:ro
+      - ./order-service/schema.sql:/opt/initdb/orders-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory -d inventory"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.123.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    ports:
+      - "127.0.0.1:4318:4318"
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
+
+volumes:
+  postgres-data:

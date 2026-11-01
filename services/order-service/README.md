@@ -21,7 +21,41 @@ Le code ne contient aucune dépendance OpenTelemetry. La télémétrie est produ
 Les tests lancent PostgreSQL 18.6 avec Testcontainers et simulent `inventory-service` avec WireMock.
 L'agent OpenTelemetry n'est pas chargé pendant les tests.
 
-## Lancer en local avec l'agent
+## Lancer en local avec Docker Compose
+
+Depuis la racine du dépôt (Docker Compose v2.20+), le `compose.yaml` de ce dossier inclut le socle
+mutualisé `services/compose.yaml` (Postgres avec la base `orders`, Collector OTLP/HTTP) :
+
+```bash
+docker compose up --build order-service
+```
+
+Ou depuis ce dossier : `docker compose up --build`.
+
+L'image (`Dockerfile`) embarque l'agent OpenTelemetry : aucune étape manuelle. Le conteneur est
+publié sur `127.0.0.1:8080`, se connecte à `jdbc:postgresql://postgres:5432/orders` (rôle `orders`,
+mot de passe `orders`, réservés au développement local) et appelle `http://inventory-service:8080`
+par défaut. `INVENTORY_URL` est surchargeable, par exemple pour un inventory-service lancé sur la
+machine hôte (`go run`) :
+
+```bash
+INVENTORY_URL=http://host.docker.internal:8081 docker compose up --build order-service
+```
+
+Vérification depuis la machine hôte :
+
+```bash
+curl --fail http://localhost:8080/orders \
+  -H 'Content-Type: application/json' -d '{"sku":"SKU-001","quantity":2}'
+docker compose logs -f otel-collector
+```
+
+`docker compose down` conserve les données ; `docker compose down -v` **supprime toutes les données locales**.
+
+## Lancer en local sans Compose
+
+Le socle seul se lance depuis la racine avec `docker compose -f services/compose.yaml up -d --wait`.
+Puis, depuis ce dossier :
 
 ```bash
 ./mvnw -DskipTests package
