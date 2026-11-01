@@ -19,8 +19,12 @@ func (f priceProviderFunc) Price(ctx context.Context, sku string, quantity int) 
 }
 
 func TestReserveStockRejectsInvalidQuantity(t *testing.T) {
+	t.Parallel()
+
 	for _, quantity := range []int{0, -3} {
 		t.Run(fmt.Sprint(quantity), func(t *testing.T) {
+			t.Parallel()
+
 			repository := mocks.NewMockStockRepository(t)
 			provider := priceProviderFunc(func(context.Context, string, int) (inventory.Price, error) {
 				t.Fatal("pricing must not be called for an invalid quantity")
@@ -39,6 +43,8 @@ func TestReserveStockRejectsInvalidQuantity(t *testing.T) {
 }
 
 func TestReserveStock(t *testing.T) {
+	t.Parallel()
+
 	dependencyErr := errors.New("dependency unavailable")
 	tests := []struct {
 		name        string
@@ -60,6 +66,8 @@ func TestReserveStock(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ctx := context.Background()
 			repository := mocks.NewMockStockRepository(t)
 			repository.EXPECT().Quantity(ctx, "SKU-42").Return(tt.available, tt.quantityErr).Once()

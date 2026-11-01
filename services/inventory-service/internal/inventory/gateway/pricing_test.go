@@ -38,6 +38,8 @@ func startRemotePricing(t *testing.T, status int, body string) *remotePricing {
 }
 
 func TestPriceCallsGetPricesWithSkuInPathAndQuantityInQuery(t *testing.T) {
+	t.Parallel()
+
 	remote := startRemotePricing(t, http.StatusOK, pricingServiceResponse)
 
 	_, err := gateway.NewPricingHTTPClient(remote.server.URL).Price(context.Background(), "SKU-001", 2)
@@ -49,6 +51,8 @@ func TestPriceCallsGetPricesWithSkuInPathAndQuantityInQuery(t *testing.T) {
 }
 
 func TestPriceEscapesTheSkuInThePath(t *testing.T) {
+	t.Parallel()
+
 	remote := startRemotePricing(t, http.StatusOK, pricingServiceResponse)
 
 	_, err := gateway.NewPricingHTTPClient(remote.server.URL).Price(context.Background(), "SKU/1 ?", 1)
@@ -58,6 +62,8 @@ func TestPriceEscapesTheSkuInThePath(t *testing.T) {
 }
 
 func TestPriceReadsUnitPriceAndTotalFromTheCamelCaseResponse(t *testing.T) {
+	t.Parallel()
+
 	remote := startRemotePricing(t, http.StatusOK, pricingServiceResponse)
 
 	price, err := gateway.NewPricingHTTPClient(remote.server.URL).Price(context.Background(), "SKU-001", 2)
@@ -67,6 +73,8 @@ func TestPriceReadsUnitPriceAndTotalFromTheCamelCaseResponse(t *testing.T) {
 }
 
 func TestPriceFailsWithPriceNotFoundWhenPricingAnswersNotFound(t *testing.T) {
+	t.Parallel()
+
 	remote := startRemotePricing(t, http.StatusNotFound, `{"error":"unknown sku"}`)
 
 	_, err := gateway.NewPricingHTTPClient(remote.server.URL).Price(context.Background(), "SKU-999", 1)
@@ -75,8 +83,12 @@ func TestPriceFailsWithPriceNotFoundWhenPricingAnswersNotFound(t *testing.T) {
 }
 
 func TestPriceFailsWithTheStatusWhenPricingAnswersAnotherError(t *testing.T) {
+	t.Parallel()
+
 	for _, status := range []int{http.StatusBadRequest, http.StatusInternalServerError, http.StatusBadGateway} {
 		t.Run(http.StatusText(status), func(t *testing.T) {
+			t.Parallel()
+
 			remote := startRemotePricing(t, status, `{}`)
 
 			_, err := gateway.NewPricingHTTPClient(remote.server.URL).Price(context.Background(), "SKU-001", 1)
@@ -89,6 +101,8 @@ func TestPriceFailsWithTheStatusWhenPricingAnswersAnotherError(t *testing.T) {
 }
 
 func TestPriceFailsWhenTheSuccessfulResponseIsNotJson(t *testing.T) {
+	t.Parallel()
+
 	remote := startRemotePricing(t, http.StatusOK, `not json`)
 
 	_, err := gateway.NewPricingHTTPClient(remote.server.URL).Price(context.Background(), "SKU-001", 1)
@@ -97,6 +111,8 @@ func TestPriceFailsWhenTheSuccessfulResponseIsNotJson(t *testing.T) {
 }
 
 func TestPriceFailsWhenPricingIsUnreachable(t *testing.T) {
+	t.Parallel()
+
 	remote := startRemotePricing(t, http.StatusOK, pricingServiceResponse)
 	remote.server.Close()
 
@@ -106,6 +122,8 @@ func TestPriceFailsWhenPricingIsUnreachable(t *testing.T) {
 }
 
 func TestPriceFailsWhenTheContextIsCancelled(t *testing.T) {
+	t.Parallel()
+
 	remote := startRemotePricing(t, http.StatusOK, pricingServiceResponse)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -116,6 +134,8 @@ func TestPriceFailsWhenTheContextIsCancelled(t *testing.T) {
 }
 
 func TestPriceSendsTheTraceParentOfTheCurrentSpan(t *testing.T) {
+	t.Parallel()
+
 	remote := startRemotePricing(t, http.StatusOK, pricingServiceResponse)
 	spans := tracetest.NewInMemoryExporter()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSyncer(spans))

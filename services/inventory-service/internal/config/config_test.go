@@ -10,6 +10,8 @@ import (
 )
 
 func TestLoad(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		env     map[string]string
@@ -64,6 +66,8 @@ func TestLoad(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := config.Load(func(key string) string { return tt.env[key] })
 			if tt.wantErr {
 				require.Error(t, err)

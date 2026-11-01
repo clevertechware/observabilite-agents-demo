@@ -113,6 +113,8 @@ func (f *fixture) spanByKind(t *testing.T, kind oteltrace.SpanKind) tracetest.Sp
 const priceBody = `{"unitPrice": 12.5, "total": 25}`
 
 func TestServerSpanCarriesRouteTemplate(t *testing.T) {
+	t.Parallel()
+
 	f := newFixture(t, http.StatusOK, priceBody)
 	f.hasStock("SKU-42", 10)
 
@@ -123,6 +125,8 @@ func TestServerSpanCarriesRouteTemplate(t *testing.T) {
 }
 
 func TestServerDurationMetricCarriesRouteMethodAndStatus(t *testing.T) {
+	t.Parallel()
+
 	f := newFixture(t, http.StatusOK, priceBody)
 	f.hasStock("SKU-42", 10)
 
@@ -159,6 +163,8 @@ func assertAttribute(t *testing.T, set attribute.Set, key, want string) {
 }
 
 func TestHealthzIsNotTraced(t *testing.T) {
+	t.Parallel()
+
 	f := newFixture(t, http.StatusOK, priceBody)
 
 	response := f.do(http.MethodGet, "/healthz", "")
@@ -168,6 +174,8 @@ func TestHealthzIsNotTraced(t *testing.T) {
 }
 
 func TestReservationPropagatesTraceContextToPricing(t *testing.T) {
+	t.Parallel()
+
 	f := newFixture(t, http.StatusOK, priceBody)
 	f.hasStock("SKU-42", 10)
 	f.repository.EXPECT().Reserve(mock.Anything, "SKU-42", 2).Return(nil)
@@ -189,6 +197,8 @@ func TestReservationPropagatesTraceContextToPricing(t *testing.T) {
 }
 
 func TestReservationRoutesTemplateOnServerSpan(t *testing.T) {
+	t.Parallel()
+
 	f := newFixture(t, http.StatusOK, priceBody)
 	f.hasStock("SKU-42", 10)
 	f.repository.EXPECT().Reserve(mock.Anything, "SKU-42", 2).Return(nil)
@@ -200,6 +210,8 @@ func TestReservationRoutesTemplateOnServerSpan(t *testing.T) {
 }
 
 func TestReservationCallsPricingWithSkuAndQuantity(t *testing.T) {
+	t.Parallel()
+
 	f := newFixture(t, http.StatusOK, priceBody)
 	f.hasStock("SKU-42", 10)
 	f.repository.EXPECT().Reserve(mock.Anything, "SKU-42", 2).Return(nil)
@@ -213,6 +225,8 @@ func TestReservationCallsPricingWithSkuAndQuantity(t *testing.T) {
 }
 
 func TestReservationReturnsPriceAndDecrementsStock(t *testing.T) {
+	t.Parallel()
+
 	f := newFixture(t, http.StatusOK, priceBody)
 	f.hasStock("SKU-42", 10)
 	f.repository.EXPECT().Reserve(mock.Anything, "SKU-42", 2).Return(nil).Once()
@@ -226,6 +240,8 @@ func TestReservationReturnsPriceAndDecrementsStock(t *testing.T) {
 }
 
 func TestReservationRejectedWithConflictWhenStockIsInsufficient(t *testing.T) {
+	t.Parallel()
+
 	f := newFixture(t, http.StatusOK, priceBody)
 	f.hasStock("SKU-42", 10)
 
@@ -236,6 +252,8 @@ func TestReservationRejectedWithConflictWhenStockIsInsufficient(t *testing.T) {
 }
 
 func TestReservationRejectedWithNotFoundWhenSkuIsUnknownToInventory(t *testing.T) {
+	t.Parallel()
+
 	f := newFixture(t, http.StatusOK, priceBody)
 	f.repository.EXPECT().Quantity(mock.Anything, "SKU-NONE").Return(0, inventory.ErrSkuNotFound)
 
@@ -246,6 +264,8 @@ func TestReservationRejectedWithNotFoundWhenSkuIsUnknownToInventory(t *testing.T
 }
 
 func TestReservationRejectedWithNotFoundWhenPricingDoesNotKnowSku(t *testing.T) {
+	t.Parallel()
+
 	f := newFixture(t, http.StatusNotFound, `{}`)
 	f.hasStock("SKU-42", 10)
 
@@ -256,6 +276,8 @@ func TestReservationRejectedWithNotFoundWhenPricingDoesNotKnowSku(t *testing.T) 
 }
 
 func TestReservationFailsWithServerErrorWhenPricingIsDown(t *testing.T) {
+	t.Parallel()
+
 	f := newFixture(t, http.StatusInternalServerError, `{}`)
 	f.hasStock("SKU-42", 10)
 
@@ -266,6 +288,8 @@ func TestReservationFailsWithServerErrorWhenPricingIsDown(t *testing.T) {
 }
 
 func TestReservationRejectsInvalidBodies(t *testing.T) {
+	t.Parallel()
+
 	tests := map[string]string{
 		"malformed json":    `{`,
 		"empty body":        ``,
@@ -277,6 +301,8 @@ func TestReservationRejectsInvalidBodies(t *testing.T) {
 	}
 	for name, body := range tests {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			f := newFixture(t, http.StatusOK, priceBody)
 
 			response := f.do(http.MethodPost, "/reservations", body)
@@ -288,6 +314,8 @@ func TestReservationRejectsInvalidBodies(t *testing.T) {
 }
 
 func TestGetStockReturnsQuantity(t *testing.T) {
+	t.Parallel()
+
 	f := newFixture(t, http.StatusOK, priceBody)
 	f.hasStock("SKU-42", 10)
 
@@ -298,6 +326,8 @@ func TestGetStockReturnsQuantity(t *testing.T) {
 }
 
 func TestGetStockReturnsNotFoundForUnknownSku(t *testing.T) {
+	t.Parallel()
+
 	f := newFixture(t, http.StatusOK, priceBody)
 	f.repository.EXPECT().Quantity(mock.Anything, "SKU-NONE").Return(0, inventory.ErrSkuNotFound)
 
@@ -308,8 +338,12 @@ func TestGetStockReturnsNotFoundForUnknownSku(t *testing.T) {
 }
 
 func TestInventoryLookupFailuresReturnGenericServerError(t *testing.T) {
+	t.Parallel()
+
 	for _, method := range []string{http.MethodGet, http.MethodPost} {
 		t.Run(method, func(t *testing.T) {
+			t.Parallel()
+
 			f := newFixture(t, http.StatusOK, priceBody)
 			f.repository.EXPECT().Quantity(mock.Anything, "SKU-42").Return(0, errors.New("private database details"))
 			target := "/stock/SKU-42"
