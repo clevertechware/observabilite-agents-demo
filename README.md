@@ -186,9 +186,9 @@ vers `ghcr.io/clevertechware/observabilite-agents-demo/<service>`.
 | Événement | Tags |
 |---|---|
 | push sur `main` | SHA complet du commit |
-| tag git `v0.2.0` | `0.2.0` et SHA complet |
+| tag git `v0.3.0` | `0.3.0` et SHA complet |
 
-Les manifestes référencent le tag `0.2.0` : créer le tag git `v0.2.0` avant le premier déploiement. Les paquets GHCR d'un
+Les manifestes référencent le tag `0.3.0` : créer le tag git `v0.3.0` avant le premier déploiement. Les paquets GHCR d'un
 dépôt privé restent privés ; le Secret `ghcr-pull` donne au cluster le droit de les lire.
 
 ## Configuration des services
