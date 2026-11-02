@@ -18,4 +18,5 @@ COPY --from=agent /otel/opentelemetry-javaagent.jar /otel/opentelemetry-javaagen
 COPY --from=build /workspace/target/order-service.jar /app/order-service.jar
 USER 10001:10001
 EXPOSE 8080
-ENTRYPOINT ["java", "-javaagent:/otel/opentelemetry-javaagent.jar", "-XX:MaxRAMPercentage=75", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/order-service.jar"]
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75"
+ENTRYPOINT ["java", "-javaagent:/otel/opentelemetry-javaagent.jar", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/order-service.jar"]

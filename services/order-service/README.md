@@ -91,7 +91,8 @@ docker build -t order-service:dev .
 
 L'agent est téléchargé depuis Maven Central. Le build échoue si son empreinte SHA-256 diffère de
 `OTEL_AGENT_SHA256` (valeur par défaut épinglée dans le Dockerfile, surchargeable avec `--build-arg`).
-Les options JVM (`-javaagent`, `-XX:MaxRAMPercentage=75`, `-XX:+ExitOnOutOfMemoryError`) sont dans l'`ENTRYPOINT`.
+Les options JVM `-javaagent` et `-XX:+ExitOnOutOfMemoryError` sont dans l'`ENTRYPOINT`. `-XX:MaxRAMPercentage=75` est la valeur par
+défaut de `JAVA_TOOL_OPTIONS` dans l'image : une variable d'environnement `JAVA_TOOL_OPTIONS` dans le Deployment la remplace.
 L'image s'exécute avec l'utilisateur 10001.
 
 ## API
@@ -128,5 +129,6 @@ Le service attend que la base `orders` et son rôle existent.
 
 Avec `FAULT_HEAP_LEAK_BYTES_PER_REQUEST=1048576`, chaque requête retient 1 Mio. Le heap se remplit, la JVM lève
 `OutOfMemoryError` puis s'arrête (`-XX:+ExitOnOutOfMemoryError`, code de sortie 3). Avec une limite de conteneur de
-768 Mi et `MaxRAMPercentage=75`, le heap est plafonné à 576 Mi : la JVM s'arrête d'elle-même avant que le noyau
-atteigne la limite du conteneur.
+768 Mi et `MaxRAMPercentage=75`, le heap est plafonné à 576 Mi. En local sous Docker, la JVM s'arrête d'elle-même avec le
+code 3. Sur le cluster, le noyau a terminé le conteneur (`OOMKilled`, code 137) avant la JVM : baisser le pourcentage avec
+`JAVA_TOOL_OPTIONS` laisse plus de marge hors heap.
