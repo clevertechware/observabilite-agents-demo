@@ -23,7 +23,7 @@ spec:
         - name: ghcr-pull
       containers:
         - name: order-service
-          image: ghcr.io/clevertechware/observabilite-agents-demo/order-service:0.1.0
+          image: ghcr.io/clevertechware/observabilite-agents-demo/order-service:0.2.0
           ports:
             - name: http
               containerPort: 8080
@@ -34,7 +34,7 @@ spec:
             - name: OTEL_SERVICE_NAME
               value: order-service
             - name: OTEL_RESOURCE_ATTRIBUTES
-              value: service.namespace=shop,service.version=0.1.0,deployment.environment.name=demo
+              value: service.namespace=shop,service.version=0.2.0,deployment.environment.name=demo
             - name: OTEL_SEMCONV_STABILITY_OPT_IN
               value: database
             - name: SPRING_DATASOURCE_URL
