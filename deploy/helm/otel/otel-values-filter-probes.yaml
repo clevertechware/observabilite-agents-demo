@@ -7,12 +7,18 @@ config:
       metric_conditions:
         - 'metric.name == "http.server.request.duration" and datapoint.attributes["http.route"] == "/actuator/health/**"'
 
+    filter/jdbc-validation:
+      error_mode: ignore
+      trace_conditions:
+        - 'span.kind == SPAN_KIND_CLIENT and span.attributes["db.system.name"] == "postgresql" and span.attributes["db.query.text"] == ""'
+
   service:
     pipelines:
       traces:
         processors:
           - memory_limiter
           - filter/probes
+          - filter/jdbc-validation
           - batch
         exporters:
           - otlp_http/openobserve
