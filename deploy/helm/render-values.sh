@@ -14,7 +14,6 @@ readonly TEMPLATES=(
   traefik/ip-allowlist.yaml
   o2/openobserve-ingress.yaml
   traefik/traefik-values.yaml
-  traefik/order-service-middlewares.yaml
   traefik/order-service-ingress.yaml
 )
 

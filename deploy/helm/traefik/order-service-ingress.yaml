@@ -6,7 +6,7 @@ metadata:
   namespace: demo
   annotations:
     traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
-    traefik.ingress.kubernetes.io/router.middlewares: demo-ip-allowlist@kubernetescrd,demo-rate-limit@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: openobserve-ip-allowlist@kubernetescrd,demo-rate-limit@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:

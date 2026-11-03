@@ -1,0 +1,11 @@
+# order-service-rate-limit.yaml
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: rate-limit
+  namespace: demo
+spec:
+  rateLimit:
+    average: 5
+    period: 1s
+    burst: 10
