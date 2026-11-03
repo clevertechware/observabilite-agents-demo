@@ -14,6 +14,8 @@ readonly TEMPLATES=(
   traefik/ip-allowlist.yaml
   o2/openobserve-ingress.yaml
   traefik/traefik-values.yaml
+  traefik/order-service-middlewares.yaml
+  traefik/order-service-ingress.yaml
 )
 
 check() {
@@ -32,6 +34,7 @@ fi
 source "$config"
 
 check O2_HOST "${O2_HOST:-}" "$HOST_PATTERN"
+check SHOP_HOST "${SHOP_HOST:-}" "$HOST_PATTERN"
 check ALLOWED_IPV4 "${ALLOWED_IPV4:-}" "$IPV4_CIDR_PATTERN"
 check ALLOWED_IPV6 "${ALLOWED_IPV6:-}" "$IPV6_CIDR_PATTERN"
 check PRIVATE_NETWORK_CIDR "${PRIVATE_NETWORK_CIDR:-}" "$IPV4_CIDR_PATTERN"
@@ -48,6 +51,7 @@ mkdir -p "$workspace"
 for template in "${TEMPLATES[@]}"; do
   content="$(<"$helm_dir/$template")"
   replace "o2.example.com" "$O2_HOST"
+  replace "shop.example.com" "$SHOP_HOST"
   replace "203.0.113.0/24" "$ALLOWED_IPV4"
   replace "2001:db8:1234:5678::/64" "$ALLOWED_IPV6"
   replace "<CIDR_PRIVATE_NETWORK>" "$PRIVATE_NETWORK_CIDR"

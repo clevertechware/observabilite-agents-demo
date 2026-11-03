@@ -1,0 +1,8 @@
+tracing:
+  resourceAttributes:
+    deployment.environment.name: demo
+  otlp:
+    enabled: true
+    http:
+      enabled: true
+      endpoint: http://otel-opentelemetry-collector.otel.svc:4318/v1/traces
