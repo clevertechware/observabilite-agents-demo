@@ -33,13 +33,14 @@ export KUBECONFIG=$PWD/kubeconfig.yaml
 
 ```bash
 ./down.sh
-./up.sh chemin/vers/traefik-values.yaml
+./up.sh chemin/vers/traefik-values.yaml [chemin/vers/autres-values.yaml ...]
 ```
 
 `down.sh` désinstalle Traefik, ce qui supprime le load balancer, puis supprime le pool de nœuds (`running=false`). Le
 cluster, les volumes et les IP réservées restent. `up.sh` recrée le pool puis réinstalle Traefik avec ses values
-(`traefik-values.yaml` dans le répertoire courant par défaut). Les deux scripts attendent `KUBECONFIG` et les
-identifiants Scaleway dans l'environnement.
+(`traefik-values.yaml` dans le répertoire courant par défaut). Les fichiers sont passés à Helm dans l'ordre, et la
+release perd toute valeur qui n'y figure pas, par exemple `traefik-values-tracing.yaml`. Les deux scripts attendent
+`KUBECONFIG` et les identifiants Scaleway dans l'environnement.
 
 ## Variables
 
