@@ -1,3 +1,4 @@
+# traefik-values-tracing.yaml
 tracing:
   resourceAttributes:
     deployment.environment.name: demo
