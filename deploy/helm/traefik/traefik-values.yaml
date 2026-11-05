@@ -32,7 +32,7 @@ podSecurityContext:
 certificatesResolvers:
   letsencrypt:
     acme:
-      email: admin@o2.example.com
+      email: acme@example.com
       storage: /data/acme.json
       httpChallenge:
         entryPoint: web
