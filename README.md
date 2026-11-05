@@ -29,6 +29,17 @@ deploy/
     order-service.yaml           Deployment + Service
     load-generator.yaml          Deployment, une commande par seconde vers order-service
   helm/
+    config.env.example               modèle de config.env (ignoré par git) : hôtes, e-mail ACME, plages d'adresses autorisées
+    render-values.sh                 valide config.env et rend les manifestes à valeurs dans workspace/ (ignoré par git)
+    o2/
+      openobserve-values.yaml        release openobserve (3a)
+      openobserve-ingress.yaml       Ingress d'OpenObserve (3a), rendu dans workspace/
+    traefik/
+      traefik-values.yaml            release traefik (3a), rendu dans workspace/
+      ip-allowlist.yaml              Middleware ip-allowlist du namespace openobserve (3a), rendu dans workspace/
+      order-service-ingress.yaml     Ingress d'order-service limité à /orders (4e), rendu dans workspace/
+      order-service-rate-limit.yaml  Middleware rate-limit du namespace demo (4e)
+      traefik-values-tracing.yaml    export OTLP des traces de Traefik vers le Collector (4e)
     otel/
       otel-daemonset-values.yaml     release otel (3b) : logs de tous les pods vers OpenObserve
       otel-values-metrics.yaml       release otel (3c) : métriques kubelet des nœuds, pods et conteneurs
@@ -177,6 +188,27 @@ kubectl -n demo get pods
 
 Les scripts de `postgres-initdb` ne s'exécutent que sur un répertoire de données vide. Pour les rejouer, supprimer le PVC
 `data-postgres-0` ; la classe `scw-bssd-retain` conserve le volume sous-jacent, qu'il faut supprimer séparément.
+
+### 6. Exposer `order-service` par Traefik (article 4e)
+
+Traefik est installé comme dans l'article 3a, avec l'allowlist du namespace `openobserve` et le Collector `otel` en
+place. Les manifestes qui contiennent un nom d'hôte, une adresse ou un e-mail sont rendus dans `deploy/helm/workspace/`
+à partir de `config.env`. `SHOP_HOST` doit avoir un enregistrement `A` et `AAAA` vers le load balancer, ou être couvert
+par un wildcard, et `ACME_EMAIL` doit être l'adresse du compte Let's Encrypt de l'installation de Traefik.
+
+```bash
+cd deploy/helm
+cp -n config.env.example config.env   # renseigner toutes les valeurs, dont SHOP_HOST et ACME_EMAIL
+./render-values.sh
+kubectl apply -f traefik/order-service-rate-limit.yaml -f workspace/order-service-ingress.yaml
+helm upgrade traefik traefik/traefik -n traefik --version 41.6.1 \
+  -f workspace/traefik-values.yaml -f traefik/traefik-values-tracing.yaml
+```
+
+Le middleware `rate-limit` s'applique avant l'`Ingress`. `helm upgrade --reuse-values` échoue : le schéma du chart rejette
+`updateStrategy.rollingUpdate: null`, d'où les deux fichiers de values. `infra/up.sh` réinstalle Traefik à chaque
+rallumage : il doit recevoir les mêmes fichiers (`workspace/traefik-values.yaml` et `traefik/traefik-values-tracing.yaml`),
+sinon la release perd le tracing. Le `load-generator` continue de viser le Service interne.
 
 ## Images
 
