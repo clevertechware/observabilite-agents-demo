@@ -33,7 +33,13 @@ spec:
                     --header 'Content-Type: application/json' \
                     --post-data "{\"sku\":\"$sku\",\"quantity\":1}" \
                     http://order-service.demo.svc:8080/orders
-                  sleep 1
+                  case $((RANDOM % 4)) in
+                    0) delay=5 ;;
+                    1) delay=10 ;;
+                    2) delay=30 ;;
+                    *) delay=60 ;;
+                  esac
+                  sleep "$delay"
                 done
               done
           securityContext:
