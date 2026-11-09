@@ -1,0 +1,472 @@
+{
+  "dashboardId": "apm",
+  "version": 8,
+  "title": "APM",
+  "description": "Santé des services de la démo : CPU, mémoire, latence, débit, réseau et disque",
+  "variables": {
+    "list": [
+      {
+        "type": "query_values",
+        "name": "namespace_name",
+        "label": "namespace_name",
+        "query_data": {
+          "stream_type": "metrics",
+          "stream": "k8s_pod_cpu_usage",
+          "field": "k8s_namespace_name",
+          "max_record_size": 50,
+          "filter": []
+        },
+        "value": "",
+        "multiSelect": true,
+        "selectAllValueForMultiSelect": "all"
+      },
+      {
+        "type": "query_values",
+        "name": "deployment_name",
+        "label": "deployment_name",
+        "query_data": {
+          "stream_type": "metrics",
+          "stream": "k8s_pod_cpu_usage",
+          "field": "k8s_deployment_name",
+          "max_record_size": 50,
+          "filter": [
+            {
+              "name": "k8s_namespace_name",
+              "operator": "IN",
+              "value": "$namespace_name"
+            }
+          ]
+        },
+        "value": "",
+        "multiSelect": true,
+        "selectAllValueForMultiSelect": "all"
+      },
+      {
+        "type": "query_values",
+        "name": "instance",
+        "label": "instance",
+        "query_data": {
+          "stream_type": "metrics",
+          "stream": "k8s_pod_cpu_usage",
+          "field": "k8s_pod_name",
+          "max_record_size": 50,
+          "filter": [
+            {
+              "name": "k8s_deployment_name",
+              "operator": "IN",
+              "value": "$deployment_name"
+            },
+            {
+              "name": "k8s_namespace_name",
+              "operator": "IN",
+              "value": "$namespace_name"
+            }
+          ]
+        },
+        "value": "",
+        "multiSelect": true,
+        "selectAllValueForMultiSelect": "all"
+      }
+    ],
+    "showDynamicFilters": false
+  },
+  "tabs": [
+    {
+      "tabId": "overview",
+      "name": "Overview",
+      "panels": [
+        {
+          "id": "Panel_ID1",
+          "type": "metric",
+          "title": "CPU moyen",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "numbers",
+            "decimals": 3
+          },
+          "queries": [
+            {
+              "query": "avg(avg_over_time(k8s_pod_cpu_usage{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"}[$__range]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_cpu_usage",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 8,
+            "i": 1
+          }
+        },
+        {
+          "id": "Panel_ID2",
+          "type": "metric",
+          "title": "Mémoire moyenne",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "bytes",
+            "decimals": 1
+          },
+          "queries": [
+            {
+              "query": "avg(avg_over_time(k8s_pod_memory_rss{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"}[$__range]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_memory_rss",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 48,
+            "y": 0,
+            "w": 48,
+            "h": 8,
+            "i": 2
+          }
+        },
+        {
+          "id": "Panel_ID3",
+          "type": "metric",
+          "title": "Latence P90",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "seconds",
+            "decimals": 3
+          },
+          "queries": [
+            {
+              "query": "histogram_quantile(0.9, sum by (le) (rate(http_server_request_duration_bucket{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"}[$__range])))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "http_server_request_duration_bucket",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 96,
+            "y": 0,
+            "w": 48,
+            "h": 8,
+            "i": 3
+          }
+        },
+        {
+          "id": "Panel_ID4",
+          "type": "metric",
+          "title": "Débit de requêtes",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "custom",
+            "decimals": 3,
+            "unit_custom": "req/s"
+          },
+          "queries": [
+            {
+              "query": "sum(rate(http_server_request_duration_count{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"}[$__range]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "http_server_request_duration_count",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 144,
+            "y": 0,
+            "w": 48,
+            "h": 8,
+            "i": 4
+          }
+        }
+      ]
+    },
+    {
+      "tabId": "resources",
+      "name": "Resources",
+      "panels": [
+        {
+          "id": "Panel_ID5",
+          "type": "line",
+          "title": "CPU par déploiement",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "numbers",
+            "decimals": 4
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_deployment_name) (k8s_pod_cpu_usage{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_cpu_usage",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_deployment_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 96,
+            "h": 16,
+            "i": 5
+          }
+        },
+        {
+          "id": "Panel_ID6",
+          "type": "line",
+          "title": "Mémoire RSS par déploiement",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "bytes",
+            "decimals": 2
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_deployment_name) (k8s_pod_memory_rss{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_memory_rss",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_deployment_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 96,
+            "y": 0,
+            "w": 96,
+            "h": 16,
+            "i": 6
+          }
+        },
+        {
+          "id": "Panel_ID7",
+          "type": "line",
+          "title": "Réseau par déploiement",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "bps",
+            "decimals": 2
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_deployment_name, direction) (rate(k8s_pod_network_io{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"}[$__rate_interval]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_network_io",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_deployment_name} {direction}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 16,
+            "w": 192,
+            "h": 16,
+            "i": 7
+          }
+        },
+        {
+          "id": "Panel_ID8",
+          "type": "line",
+          "title": "Débit disque en écriture par pod",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "bps",
+            "decimals": 2
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_pod_name) (rate(container_fs_writes_bytes_total{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"}[$__rate_interval]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "container_fs_writes_bytes_total",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_pod_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 32,
+            "w": 96,
+            "h": 16,
+            "i": 8
+          }
+        },
+        {
+          "id": "Panel_ID9",
+          "type": "line",
+          "title": "Occupation du disque par pod",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "bytes",
+            "decimals": 2
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_pod_name) (k8s_pod_filesystem_usage{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_filesystem_usage",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_pod_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 96,
+            "y": 32,
+            "w": 96,
+            "h": 16,
+            "i": 9
+          }
+        }
+      ]
+    }
+  ],
+  "defaultDatetimeDuration": {
+    "type": "relative",
+    "relativeTimePeriod": "1h",
+    "startTime": 0,
+    "endTime": 0
+  }
+}

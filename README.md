@@ -28,6 +28,9 @@ deploy/
     pricing-service.yaml         Deployment + Service
     order-service.yaml           Deployment + Service
     load-generator.yaml          Deployment, une commande par seconde vers order-service
+  o2/
+    dashboards/
+      apm.dashboard.json         dashboard APM d'OpenObserve (article 5b), schéma v8, à importer par l'interface
   helm/
     config.env.example               modèle de config.env (ignoré par git) : hôtes, e-mail ACME, plages d'adresses autorisées
     render-values.sh                 valide config.env et rend les manifestes à valeurs dans workspace/ (ignoré par git)
@@ -252,6 +255,25 @@ Retour à la normale : remettre la variable à `0`.
 ```bash
 kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0 FAULT_LEAK_BYTES_PER_REQUEST=0
 ```
+
+## Dashboard APM d'OpenObserve (article 5b)
+
+`deploy/o2/dashboards/apm.dashboard.json` est écrit à la main au schéma d'export OpenObserve `version: 8` ; il n'a pas
+été comparé à un export réel de l'interface. Il contient deux onglets, Overview (4 tuiles) et Resources (5 panneaux),
+et trois variables chaînées lues dans le stream `k8s_pod_cpu_usage` : `namespace_name`, `deployment_name` puis
+`instance`. Tous les panneaux sont en PromQL.
+
+Prérequis : OpenObserve v1.1.1 et les métriques `k8s_pod_*`, `container_fs_*` et `http_server_request_duration_*`
+(articles 3c et 4).
+
+Import par l'interface, dans le menu Dashboards :
+
+1. ouvrir « Import Dashboard » ;
+2. dans l'onglet « File Upload / JSON », choisir `apm.dashboard.json` ;
+3. choisir le dossier `default`, puis « Import ».
+
+Seul cet import par fichier a été testé, sur OpenObserve v1.1.1. L'import exige un `dashboardId` dans le JSON et le
+remplace par un identifiant généré. Le collage du JSON dans l'éditeur et l'onglet « URL Import » n'ont pas été testés.
 
 ## Validation des manifestes
 
