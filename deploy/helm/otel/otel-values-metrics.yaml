@@ -12,6 +12,8 @@ config:
   receivers:
     kubeletstats:
       insecure_skip_verify: true
+      metric_groups: [container, pod, node, volume]
+      extra_metadata_labels: [k8s.volume.type]
       metrics:
         k8s.container.cpu_limit_utilization:
           enabled: true

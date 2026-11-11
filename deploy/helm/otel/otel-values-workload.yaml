@@ -1,0 +1,42 @@
+config:
+  processors:
+    transform/workload:
+      error_mode: ignore
+      metric_statements:
+        - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.daemonset.name"]) where resource.attributes["k8s.daemonset.name"] != nil
+        - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.statefulset.name"] != nil
+        - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
+      trace_statements:
+        - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.daemonset.name"]) where resource.attributes["k8s.daemonset.name"] != nil
+        - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.statefulset.name"] != nil
+        - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
+
+  service:
+    pipelines:
+      metrics:
+        processors:
+          - memory_limiter
+          - filter/probes
+          - transform/workload
+          - batch
+        exporters:
+          - otlp_http/openobserve
+      metrics/cadvisor:
+        processors:
+          - memory_limiter
+          - groupbyattrs/cadvisor
+          - transform/cadvisor
+          - k8s_attributes
+          - transform/workload
+          - batch
+        exporters:
+          - otlp_http/openobserve
+      traces:
+        processors:
+          - memory_limiter
+          - filter/probes
+          - filter/jdbc-validation
+          - transform/workload
+          - batch
+        exporters:
+          - otlp_http/openobserve

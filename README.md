@@ -51,6 +51,7 @@ deploy/
       otel-values-patch.yaml         release otel (4a) : Service OTLP, traces, exclusion du namespace demo du filelog
       otel-values-filter-probes.yaml release otel (4d) : retire les spans et métriques des sondes Actuator d'order-service
       otel-values-disk-io.yaml       release otel (5b) : scrape cAdvisor pour les débits disque en lecture et en écriture
+      otel-values-workload.yaml      release otel (5c) : attribut k8s.workload.name sur les métriques et les traces
 compose.yaml                     point d'entrée Compose : inclut le socle et les trois services
 services/
   compose.yaml                   socle mutualisé : Postgres (bases inventory et orders) + Collector OTLP/HTTP
@@ -177,7 +178,8 @@ helm upgrade otel open-telemetry/opentelemetry-collector \
   --values deploy/helm/otel/otel-values-traefik-logs.yaml \
   --values deploy/helm/otel/otel-values-patch.yaml \
   --values deploy/helm/otel/otel-values-filter-probes.yaml \
-  --values deploy/helm/otel/otel-values-disk-io.yaml
+  --values deploy/helm/otel/otel-values-disk-io.yaml \
+  --values deploy/helm/otel/otel-values-workload.yaml
 ```
 
 ### 5. Postgres, services et générateur de trafic
@@ -261,12 +263,13 @@ kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0 FAULT_LEAK_BYT
 ## Dashboard APM d'OpenObserve (article 5b)
 
 `deploy/o2/dashboards/apm.dashboard.json` est écrit à la main au schéma d'export OpenObserve `version: 8` ; il n'a pas
-été comparé à un export réel de l'interface. Il contient deux onglets, Overview (4 tuiles) et Resources (6 panneaux),
-et trois variables chaînées lues dans le stream `k8s_pod_cpu_usage` : `namespace_name`, `deployment_name` puis
-`instance`. Tous les panneaux sont en PromQL.
+été comparé à un export réel de l'interface. Il contient deux onglets, Overview (4 tuiles) et Resources (7 panneaux),
+et trois variables chaînées lues dans le stream `k8s_pod_cpu_usage` : `namespace_name`, `workload` (champ
+`k8s_workload_name`, Deployment, StatefulSet ou DaemonSet) puis `instance`. Tous les panneaux sont en PromQL.
+Le panneau « Espace libre des volumes » lit `k8s_volume_available` pour les volumes `persistentVolumeClaim`.
 
 Prérequis : OpenObserve v1.1.1 et les métriques `k8s_pod_*`, `container_fs_*` et `http_server_request_duration_*`
-(articles 3c et 4).
+(articles 3c et 4), ainsi que `k8s_volume_*` et l'attribut `k8s_workload_name` (article 5c).
 
 Import par l'interface, dans le menu Dashboards :
 

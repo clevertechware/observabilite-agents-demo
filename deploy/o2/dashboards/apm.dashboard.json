@@ -22,12 +22,12 @@
       },
       {
         "type": "query_values",
-        "name": "deployment_name",
-        "label": "deployment_name",
+        "name": "workload",
+        "label": "workload",
         "query_data": {
           "stream_type": "metrics",
           "stream": "k8s_pod_cpu_usage",
-          "field": "k8s_deployment_name",
+          "field": "k8s_workload_name",
           "max_record_size": 50,
           "filter": [
             {
@@ -52,9 +52,9 @@
           "max_record_size": 50,
           "filter": [
             {
-              "name": "k8s_deployment_name",
+              "name": "k8s_workload_name",
               "operator": "IN",
-              "value": "$deployment_name"
+              "value": "$workload"
             },
             {
               "name": "k8s_namespace_name",
@@ -89,7 +89,7 @@
           },
           "queries": [
             {
-              "query": "avg(avg_over_time(k8s_pod_cpu_usage{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"}[$__range]))",
+              "query": "avg(avg_over_time(k8s_pod_cpu_usage{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[$__range]))",
               "vrlFunctionQuery": "",
               "customQuery": true,
               "fields": {
@@ -131,7 +131,7 @@
           },
           "queries": [
             {
-              "query": "avg(avg_over_time(k8s_pod_memory_rss{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"}[$__range]))",
+              "query": "avg(avg_over_time(k8s_pod_memory_rss{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[$__range]))",
               "vrlFunctionQuery": "",
               "customQuery": true,
               "fields": {
@@ -173,7 +173,7 @@
           },
           "queries": [
             {
-              "query": "histogram_quantile(0.9, sum by (le) (rate(http_server_request_duration_bucket{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"}[$__range])))",
+              "query": "histogram_quantile(0.9, sum by (le) (rate(http_server_request_duration_bucket{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[$__range])))",
               "vrlFunctionQuery": "",
               "customQuery": true,
               "fields": {
@@ -216,7 +216,7 @@
           },
           "queries": [
             {
-              "query": "sum(rate(http_server_request_duration_count{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"}[$__range]))",
+              "query": "sum(rate(http_server_request_duration_count{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[$__range]))",
               "vrlFunctionQuery": "",
               "customQuery": true,
               "fields": {
@@ -253,7 +253,7 @@
         {
           "id": "Panel_ID5",
           "type": "line",
-          "title": "CPU par déploiement",
+          "title": "CPU par workload",
           "description": "",
           "queryType": "promql",
           "config": {
@@ -264,7 +264,7 @@
           },
           "queries": [
             {
-              "query": "sum by (k8s_deployment_name) (k8s_pod_cpu_usage{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"})",
+              "query": "sum by (k8s_workload_name) (k8s_pod_cpu_usage{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"})",
               "vrlFunctionQuery": "",
               "customQuery": true,
               "fields": {
@@ -280,7 +280,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{k8s_deployment_name}"
+                "promql_legend": "{k8s_workload_name}"
               }
             }
           ],
@@ -295,7 +295,7 @@
         {
           "id": "Panel_ID6",
           "type": "line",
-          "title": "Mémoire RSS par déploiement",
+          "title": "Mémoire RSS par workload",
           "description": "",
           "queryType": "promql",
           "config": {
@@ -306,7 +306,7 @@
           },
           "queries": [
             {
-              "query": "sum by (k8s_deployment_name) (k8s_pod_memory_rss{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"})",
+              "query": "sum by (k8s_workload_name) (k8s_pod_memory_rss{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"})",
               "vrlFunctionQuery": "",
               "customQuery": true,
               "fields": {
@@ -322,7 +322,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{k8s_deployment_name}"
+                "promql_legend": "{k8s_workload_name}"
               }
             }
           ],
@@ -337,7 +337,7 @@
         {
           "id": "Panel_ID7",
           "type": "line",
-          "title": "Réseau par déploiement",
+          "title": "Réseau par workload",
           "description": "",
           "queryType": "promql",
           "config": {
@@ -348,7 +348,7 @@
           },
           "queries": [
             {
-              "query": "sum by (k8s_deployment_name, direction) (rate(k8s_pod_network_io{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"}[$__rate_interval]))",
+              "query": "sum by (k8s_workload_name, direction) (rate(k8s_pod_network_io{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[$__rate_interval]))",
               "vrlFunctionQuery": "",
               "customQuery": true,
               "fields": {
@@ -364,7 +364,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{k8s_deployment_name} {direction}"
+                "promql_legend": "{k8s_workload_name} {direction}"
               }
             }
           ],
@@ -390,7 +390,7 @@
           },
           "queries": [
             {
-              "query": "sum by (k8s_pod_name) (rate(container_fs_writes_bytes_total{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"}[$__rate_interval]))",
+              "query": "sum by (k8s_pod_name) (rate(container_fs_writes_bytes_total{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[$__rate_interval]))",
               "vrlFunctionQuery": "",
               "customQuery": true,
               "fields": {
@@ -432,7 +432,7 @@
           },
           "queries": [
             {
-              "query": "sum by (k8s_pod_name) (rate(container_fs_reads_bytes_total{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"}[$__rate_interval]))",
+              "query": "sum by (k8s_pod_name) (rate(container_fs_reads_bytes_total{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[$__rate_interval]))",
               "vrlFunctionQuery": "",
               "customQuery": true,
               "fields": {
@@ -474,7 +474,7 @@
           },
           "queries": [
             {
-              "query": "sum by (k8s_pod_name) (k8s_pod_filesystem_usage{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"})",
+              "query": "sum by (k8s_pod_name) (k8s_pod_filesystem_usage{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"})",
               "vrlFunctionQuery": "",
               "customQuery": true,
               "fields": {
@@ -500,6 +500,48 @@
             "w": 192,
             "h": 16,
             "i": 9
+          }
+        },
+        {
+          "id": "Panel_ID11",
+          "type": "line",
+          "title": "Espace libre des volumes",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "bytes",
+            "decimals": 2
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_persistentvolumeclaim_name) (k8s_volume_available{k8s_volume_type=\"persistentVolumeClaim\", k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_volume_available",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_persistentvolumeclaim_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 64,
+            "w": 192,
+            "h": 16,
+            "i": 11
           }
         }
       ]
