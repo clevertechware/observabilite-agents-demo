@@ -50,6 +50,7 @@ deploy/
       otel-values-traefik-logs.yaml  release otel (3d) : parsing des access logs JSON de Traefik
       otel-values-patch.yaml         release otel (4a) : Service OTLP, traces, exclusion du namespace demo du filelog
       otel-values-filter-probes.yaml release otel (4d) : retire les spans et métriques des sondes Actuator d'order-service
+      otel-values-disk-io.yaml       release otel (5b) : scrape cAdvisor pour les débits disque en lecture et en écriture
 compose.yaml                     point d'entrée Compose : inclut le socle et les trois services
 services/
   compose.yaml                   socle mutualisé : Postgres (bases inventory et orders) + Collector OTLP/HTTP
@@ -175,7 +176,8 @@ helm upgrade otel open-telemetry/opentelemetry-collector \
   --values deploy/helm/otel/otel-values-metrics.yaml \
   --values deploy/helm/otel/otel-values-traefik-logs.yaml \
   --values deploy/helm/otel/otel-values-patch.yaml \
-  --values deploy/helm/otel/otel-values-filter-probes.yaml
+  --values deploy/helm/otel/otel-values-filter-probes.yaml \
+  --values deploy/helm/otel/otel-values-disk-io.yaml
 ```
 
 ### 5. Postgres, services et générateur de trafic
@@ -259,7 +261,7 @@ kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0 FAULT_LEAK_BYT
 ## Dashboard APM d'OpenObserve (article 5b)
 
 `deploy/o2/dashboards/apm.dashboard.json` est écrit à la main au schéma d'export OpenObserve `version: 8` ; il n'a pas
-été comparé à un export réel de l'interface. Il contient deux onglets, Overview (4 tuiles) et Resources (5 panneaux),
+été comparé à un export réel de l'interface. Il contient deux onglets, Overview (4 tuiles) et Resources (6 panneaux),
 et trois variables chaînées lues dans le stream `k8s_pod_cpu_usage` : `namespace_name`, `deployment_name` puis
 `instance`. Tous les panneaux sont en PromQL.
 

@@ -419,6 +419,48 @@
           }
         },
         {
+          "id": "Panel_ID10",
+          "type": "line",
+          "title": "Débit disque en lecture par pod",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "bps",
+            "decimals": 2
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_pod_name) (rate(container_fs_reads_bytes_total{k8s_namespace_name=~\"$namespace_name\", k8s_deployment_name=~\"$deployment_name\", k8s_pod_name=~\"$instance\"}[$__rate_interval]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "container_fs_reads_bytes_total",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_pod_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 96,
+            "y": 32,
+            "w": 96,
+            "h": 16,
+            "i": 10
+          }
+        },
+        {
           "id": "Panel_ID9",
           "type": "line",
           "title": "Occupation du disque par pod",
@@ -453,9 +495,9 @@
             }
           ],
           "layout": {
-            "x": 96,
-            "y": 32,
-            "w": 96,
+            "x": 0,
+            "y": 48,
+            "w": 192,
             "h": 16,
             "i": 9
           }
