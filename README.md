@@ -30,7 +30,7 @@ deploy/
     load-generator.yaml          Deployment, une commande par seconde vers order-service
   o2/
     dashboards/
-      apm.dashboard.json         dashboard APM d'OpenObserve (articles 5b à 5d), schéma v8, rendu dans helm/workspace/
+      apm.dashboard.json         dashboard APM d'OpenObserve (articles 5b à 5e), schéma v8, rendu dans helm/workspace/
   helm/
     config.env.example               modèle de config.env (ignoré par git) : hôtes, e-mail ACME, plages d'adresses autorisées
     render-values.sh                 valide config.env et rend les manifestes à valeurs dans workspace/ (ignoré par git)
@@ -260,11 +260,11 @@ Retour à la normale : remettre la variable à `0`.
 kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0 FAULT_LEAK_BYTES_PER_REQUEST=0
 ```
 
-## Dashboard APM d'OpenObserve (articles 5b à 5d)
+## Dashboard APM d'OpenObserve (articles 5b à 5e)
 
 `deploy/o2/dashboards/apm.dashboard.json` est écrit à la main au schéma d'export OpenObserve `version: 8` ; il n'a pas
-été comparé à un export réel de l'interface. Il contient trois onglets, Overview (4 tuiles), Resources (7 panneaux) et
-HTTP (7 panneaux), et trois variables chaînées lues dans le stream `k8s_pod_cpu_usage` : `namespace_name`, `workload`
+été comparé à un export réel de l'interface. Il contient quatre onglets, Overview (4 tuiles), Resources (7 panneaux),
+HTTP (7 panneaux) et Databases (1 panneau), et trois variables chaînées lues dans le stream `k8s_pod_cpu_usage` : `namespace_name`, `workload`
 (champ `k8s_workload_name`, Deployment, StatefulSet ou DaemonSet) puis `instance`. Les panneaux de Overview et de
 Resources sont en PromQL. Le panneau « Espace libre des volumes » lit `k8s_volume_available` pour les volumes
 `persistentVolumeClaim`.
@@ -277,8 +277,12 @@ L'onglet HTTP (article 5d) lit deux sources avec les mêmes variables :
 - le stream des traces (`default`), en SQL sur les spans serveur (`span_kind = '2'`) : les 50 requêtes les plus lentes,
   les 50 dernières 5xx et le top 20 des routes en P50, P90, P95 et P99.
 
-Les deux tableaux ont un drilldown « Ouvrir la trace » de type `byUrl`. L'URL doit être absolue : le JSON versionné
-contient l'hôte `o2.example.com` dans les deux drilldowns (`config.drilldown[0].data.url`).
+L'onglet Databases (article 5e) contient un tableau SQL, « Requêtes SQL les plus lentes », sur les spans clients
+(`span_kind = '3'`) qui portent un texte SQL : les 100 exécutions les plus longues, une ligne par exécution, paginées
+par 50 (`table_pagination_rows_per_page`). Il utilise les mêmes variables et le même drilldown que l'onglet HTTP.
+
+Les trois tableaux ont un drilldown « Ouvrir la trace » de type `byUrl`. L'URL doit être absolue : le JSON versionné
+contient l'hôte `o2.example.com` dans les trois drilldowns (`config.drilldown[0].data.url`).
 `deploy/helm/render-values.sh` le remplace par `O2_HOST` de `config.env` et écrit le dashboard à importer dans
 `deploy/helm/workspace/apm.dashboard.json`. Les spans de Traefik ont `traefik` pour namespace et pour workload : le
 filtre `namespace_name = demo` les écarte.

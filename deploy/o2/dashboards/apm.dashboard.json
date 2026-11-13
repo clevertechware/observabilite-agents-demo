@@ -1099,6 +1099,112 @@
           }
         }
       ]
+    },
+    {
+      "tabId": "databases",
+      "name": "Databases",
+      "panels": [
+        {
+          "id": "Panel_ID19",
+          "type": "table",
+          "title": "Requêtes SQL les plus lentes",
+          "description": "",
+          "queryType": "sql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "microseconds",
+            "decimals": 2,
+            "table_pagination": true,
+            "table_pagination_rows_per_page": 50,
+            "drilldown": [
+              {
+                "name": "Ouvrir la trace",
+                "type": "byUrl",
+                "targetBlank": true,
+                "findBy": "name",
+                "data": {
+                  "url": "https://o2.example.com/web/traces/trace-details?org_identifier=default&stream=default&trace_id=${row.field.trace_id}&from=${start_time}&to=${end_time}",
+                  "folder": "",
+                  "dashboard": "",
+                  "tab": "",
+                  "passAllVariables": true,
+                  "variables": [],
+                  "logsMode": "auto",
+                  "logsQuery": ""
+                }
+              }
+            ]
+          },
+          "queries": [
+            {
+              "query": "SELECT _timestamp, service_name, operation_name, db_query_text, duration, trace_id\nFROM \"default\"\nWHERE span_kind = '3' AND db_system_name IS NOT NULL AND db_query_text != ''\n  AND service_k8s_namespace_name IN ($namespace_name) AND service_k8s_workload_name IN ($workload) AND service_k8s_pod_name IN ($instance)\nORDER BY duration DESC\nLIMIT 100",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "default",
+                "stream_type": "traces",
+                "x": [
+                  {
+                    "label": "_timestamp",
+                    "alias": "_timestamp",
+                    "column": "_timestamp",
+                    "color": null
+                  },
+                  {
+                    "label": "service_name",
+                    "alias": "service_name",
+                    "column": "service_name",
+                    "color": null
+                  },
+                  {
+                    "label": "operation_name",
+                    "alias": "operation_name",
+                    "column": "operation_name",
+                    "color": null
+                  },
+                  {
+                    "label": "db_query_text",
+                    "alias": "db_query_text",
+                    "column": "db_query_text",
+                    "color": null
+                  },
+                  {
+                    "label": "trace_id",
+                    "alias": "trace_id",
+                    "column": "trace_id",
+                    "color": null
+                  }
+                ],
+                "y": [
+                  {
+                    "label": "duration",
+                    "alias": "duration",
+                    "column": "duration",
+                    "color": null
+                  }
+                ],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 192,
+            "h": 30,
+            "i": 19
+          }
+        }
+      ]
     }
   ],
   "defaultDatetimeDuration": {
