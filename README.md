@@ -30,7 +30,7 @@ deploy/
     load-generator.yaml          Deployment, une commande par seconde vers order-service
   o2/
     dashboards/
-      apm.dashboard.json         dashboard APM d'OpenObserve (article 5b), schéma v8, à importer par l'interface
+      apm.dashboard.json         dashboard APM d'OpenObserve (articles 5b à 5d), schéma v8, rendu dans helm/workspace/
   helm/
     config.env.example               modèle de config.env (ignoré par git) : hôtes, e-mail ACME, plages d'adresses autorisées
     render-values.sh                 valide config.env et rend les manifestes à valeurs dans workspace/ (ignoré par git)
@@ -260,13 +260,28 @@ Retour à la normale : remettre la variable à `0`.
 kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0 FAULT_LEAK_BYTES_PER_REQUEST=0
 ```
 
-## Dashboard APM d'OpenObserve (article 5b)
+## Dashboard APM d'OpenObserve (articles 5b à 5d)
 
 `deploy/o2/dashboards/apm.dashboard.json` est écrit à la main au schéma d'export OpenObserve `version: 8` ; il n'a pas
-été comparé à un export réel de l'interface. Il contient deux onglets, Overview (4 tuiles) et Resources (7 panneaux),
-et trois variables chaînées lues dans le stream `k8s_pod_cpu_usage` : `namespace_name`, `workload` (champ
-`k8s_workload_name`, Deployment, StatefulSet ou DaemonSet) puis `instance`. Tous les panneaux sont en PromQL.
-Le panneau « Espace libre des volumes » lit `k8s_volume_available` pour les volumes `persistentVolumeClaim`.
+été comparé à un export réel de l'interface. Il contient trois onglets, Overview (4 tuiles), Resources (7 panneaux) et
+HTTP (7 panneaux), et trois variables chaînées lues dans le stream `k8s_pod_cpu_usage` : `namespace_name`, `workload`
+(champ `k8s_workload_name`, Deployment, StatefulSet ou DaemonSet) puis `instance`. Les panneaux de Overview et de
+Resources sont en PromQL. Le panneau « Espace libre des volumes » lit `k8s_volume_available` pour les volumes
+`persistentVolumeClaim`.
+
+L'onglet HTTP (article 5d) lit deux sources avec les mêmes variables :
+
+- la métrique `http_server_request_duration`, en PromQL avec la fenêtre `$__percentile_interval` : débit par service,
+  latence P50, P90 et P99 (exemplars activés), taux de 5xx (`or vector(0)` pour une courbe à 0 sans erreur) et nombre de
+  requêtes 2xx, 4xx et 5xx ;
+- le stream des traces (`default`), en SQL sur les spans serveur (`span_kind = '2'`) : les 50 requêtes les plus lentes,
+  les 50 dernières 5xx et le top 20 des routes en P50, P90, P95 et P99.
+
+Les deux tableaux ont un drilldown « Ouvrir la trace » de type `byUrl`. L'URL doit être absolue : le JSON versionné
+contient l'hôte `o2.example.com` dans les deux drilldowns (`config.drilldown[0].data.url`).
+`deploy/helm/render-values.sh` le remplace par `O2_HOST` de `config.env` et écrit le dashboard à importer dans
+`deploy/helm/workspace/apm.dashboard.json`. Les spans de Traefik ont `traefik` pour namespace et pour workload : le
+filtre `namespace_name = demo` les écarte.
 
 Prérequis : OpenObserve v1.1.1 et les métriques `k8s_pod_*`, `container_fs_*` et `http_server_request_duration_*`
 (articles 3c et 4), ainsi que `k8s_volume_*` et l'attribut `k8s_workload_name` (article 5c).
@@ -274,7 +289,8 @@ Prérequis : OpenObserve v1.1.1 et les métriques `k8s_pod_*`, `container_fs_*` 
 Import par l'interface, dans le menu Dashboards :
 
 1. ouvrir « Import Dashboard » ;
-2. dans l'onglet « File Upload / JSON », choisir `apm.dashboard.json` ;
+2. dans l'onglet « File Upload / JSON », choisir `deploy/helm/workspace/apm.dashboard.json`, rendu par
+   `render-values.sh` ;
 3. choisir le dossier `default`, puis « Import ».
 
 Seul cet import par fichier a été testé, sur OpenObserve v1.1.1. L'import exige un `dashboardId` dans le JSON et le

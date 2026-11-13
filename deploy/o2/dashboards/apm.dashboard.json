@@ -545,6 +545,560 @@
           }
         }
       ]
+    },
+    {
+      "tabId": "http",
+      "name": "HTTP",
+      "panels": [
+        {
+          "id": "Panel_ID12",
+          "type": "line",
+          "title": "Débit par service",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "custom",
+            "unit_custom": "req/s",
+            "decimals": 3
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_workload_name) (rate(http_server_request_duration_count{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[$__percentile_interval]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "http_server_request_duration_count",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_workload_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 96,
+            "h": 16,
+            "i": 12
+          }
+        },
+        {
+          "id": "Panel_ID13",
+          "type": "line",
+          "title": "Latence P50, P90, P99",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "seconds",
+            "decimals": 3,
+            "show_exemplars": true
+          },
+          "queries": [
+            {
+              "query": "histogram_quantile(0.5, sum by (le) (rate(http_server_request_duration_bucket{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[$__percentile_interval])))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "http_server_request_duration_bucket",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "P50"
+              }
+            },
+            {
+              "query": "histogram_quantile(0.9, sum by (le) (rate(http_server_request_duration_bucket{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[$__percentile_interval])))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "http_server_request_duration_bucket",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "P90"
+              }
+            },
+            {
+              "query": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_bucket{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[$__percentile_interval])))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "http_server_request_duration_bucket",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "P99"
+              }
+            }
+          ],
+          "layout": {
+            "x": 96,
+            "y": 0,
+            "w": 96,
+            "h": 16,
+            "i": 13
+          }
+        },
+        {
+          "id": "Panel_ID14",
+          "type": "line",
+          "title": "Taux de 5xx",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "percent-1",
+            "decimals": 1
+          },
+          "queries": [
+            {
+              "query": "(sum(rate(http_server_request_duration_count{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\", http_response_status_code=~\"5..\"}[$__percentile_interval])) or vector(0)) / sum(rate(http_server_request_duration_count{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[$__percentile_interval]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "http_server_request_duration_count",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "5xx"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 16,
+            "w": 96,
+            "h": 16,
+            "i": 14
+          }
+        },
+        {
+          "id": "Panel_ID15",
+          "type": "line",
+          "title": "Requêtes par classe de statut",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "numbers",
+            "decimals": 0
+          },
+          "queries": [
+            {
+              "query": "sum(increase(http_server_request_duration_count{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\", http_response_status_code=~\"2..\"}[$__percentile_interval]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "http_server_request_duration_count",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "2xx"
+              }
+            },
+            {
+              "query": "sum(increase(http_server_request_duration_count{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\", http_response_status_code=~\"4..\"}[$__percentile_interval]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "http_server_request_duration_count",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "4xx"
+              }
+            },
+            {
+              "query": "sum(increase(http_server_request_duration_count{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\", http_response_status_code=~\"5..\"}[$__percentile_interval]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "http_server_request_duration_count",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "5xx"
+              }
+            }
+          ],
+          "layout": {
+            "x": 96,
+            "y": 16,
+            "w": 96,
+            "h": 16,
+            "i": 15
+          }
+        },
+        {
+          "id": "Panel_ID16",
+          "type": "table",
+          "title": "Requêtes les plus lentes",
+          "description": "",
+          "queryType": "sql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "microseconds",
+            "decimals": 2,
+            "table_pagination": true,
+            "table_pagination_rows_per_page": 25,
+            "drilldown": [
+              {
+                "name": "Ouvrir la trace",
+                "type": "byUrl",
+                "targetBlank": true,
+                "findBy": "name",
+                "data": {
+                  "url": "https://o2.example.com/web/traces/trace-details?org_identifier=default&stream=default&trace_id=${row.field.trace_id}&from=${start_time}&to=${end_time}",
+                  "folder": "",
+                  "dashboard": "",
+                  "tab": "",
+                  "passAllVariables": true,
+                  "variables": [],
+                  "logsMode": "auto",
+                  "logsQuery": ""
+                }
+              }
+            ]
+          },
+          "queries": [
+            {
+              "query": "SELECT _timestamp, service_name, http_request_method, http_route, url_path,\n       http_response_status_code, duration, trace_id\nFROM \"default\"\nWHERE span_kind = '2' AND service_k8s_namespace_name IN ($namespace_name) AND service_k8s_workload_name IN ($workload) AND service_k8s_pod_name IN ($instance)\nORDER BY duration DESC\nLIMIT 50",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "default",
+                "stream_type": "traces",
+                "x": [
+                  {
+                    "label": "_timestamp",
+                    "alias": "_timestamp",
+                    "column": "_timestamp",
+                    "color": null
+                  },
+                  {
+                    "label": "service_name",
+                    "alias": "service_name",
+                    "column": "service_name",
+                    "color": null
+                  },
+                  {
+                    "label": "http_request_method",
+                    "alias": "http_request_method",
+                    "column": "http_request_method",
+                    "color": null
+                  },
+                  {
+                    "label": "http_route",
+                    "alias": "http_route",
+                    "column": "http_route",
+                    "color": null
+                  },
+                  {
+                    "label": "url_path",
+                    "alias": "url_path",
+                    "column": "url_path",
+                    "color": null
+                  },
+                  {
+                    "label": "http_response_status_code",
+                    "alias": "http_response_status_code",
+                    "column": "http_response_status_code",
+                    "color": null
+                  },
+                  {
+                    "label": "trace_id",
+                    "alias": "trace_id",
+                    "column": "trace_id",
+                    "color": null
+                  }
+                ],
+                "y": [
+                  {
+                    "label": "duration",
+                    "alias": "duration",
+                    "column": "duration",
+                    "color": null
+                  }
+                ],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 32,
+            "w": 192,
+            "h": 18,
+            "i": 16
+          }
+        },
+        {
+          "id": "Panel_ID17",
+          "type": "table",
+          "title": "Requêtes en 5xx",
+          "description": "",
+          "queryType": "sql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "microseconds",
+            "decimals": 2,
+            "table_pagination": true,
+            "table_pagination_rows_per_page": 25,
+            "drilldown": [
+              {
+                "name": "Ouvrir la trace",
+                "type": "byUrl",
+                "targetBlank": true,
+                "findBy": "name",
+                "data": {
+                  "url": "https://o2.example.com/web/traces/trace-details?org_identifier=default&stream=default&trace_id=${row.field.trace_id}&from=${start_time}&to=${end_time}",
+                  "folder": "",
+                  "dashboard": "",
+                  "tab": "",
+                  "passAllVariables": true,
+                  "variables": [],
+                  "logsMode": "auto",
+                  "logsQuery": ""
+                }
+              }
+            ]
+          },
+          "queries": [
+            {
+              "query": "SELECT _timestamp, service_name, http_request_method, http_route, url_path,\n       http_response_status_code, duration, trace_id\nFROM \"default\"\nWHERE span_kind = '2' AND http_response_status_code LIKE '5%' AND service_k8s_namespace_name IN ($namespace_name) AND service_k8s_workload_name IN ($workload) AND service_k8s_pod_name IN ($instance)\nORDER BY _timestamp DESC\nLIMIT 50",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "default",
+                "stream_type": "traces",
+                "x": [
+                  {
+                    "label": "_timestamp",
+                    "alias": "_timestamp",
+                    "column": "_timestamp",
+                    "color": null
+                  },
+                  {
+                    "label": "service_name",
+                    "alias": "service_name",
+                    "column": "service_name",
+                    "color": null
+                  },
+                  {
+                    "label": "http_request_method",
+                    "alias": "http_request_method",
+                    "column": "http_request_method",
+                    "color": null
+                  },
+                  {
+                    "label": "http_route",
+                    "alias": "http_route",
+                    "column": "http_route",
+                    "color": null
+                  },
+                  {
+                    "label": "url_path",
+                    "alias": "url_path",
+                    "column": "url_path",
+                    "color": null
+                  },
+                  {
+                    "label": "http_response_status_code",
+                    "alias": "http_response_status_code",
+                    "column": "http_response_status_code",
+                    "color": null
+                  },
+                  {
+                    "label": "trace_id",
+                    "alias": "trace_id",
+                    "column": "trace_id",
+                    "color": null
+                  }
+                ],
+                "y": [
+                  {
+                    "label": "duration",
+                    "alias": "duration",
+                    "column": "duration",
+                    "color": null
+                  }
+                ],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 50,
+            "w": 192,
+            "h": 18,
+            "i": 17
+          }
+        },
+        {
+          "id": "Panel_ID18",
+          "type": "h-bar",
+          "title": "Top 20 des routes les plus lentes",
+          "description": "",
+          "queryType": "sql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "microseconds",
+            "decimals": 2
+          },
+          "queries": [
+            {
+              "query": "SELECT service_name || ' ' || http_request_method || ' ' || http_route AS route,\n       approx_percentile_cont(duration, 0.5)  AS p50,\n       approx_percentile_cont(duration, 0.9)  AS p90,\n       approx_percentile_cont(duration, 0.95) AS p95,\n       approx_percentile_cont(duration, 0.99) AS p99,\n       count(*) AS requests\nFROM \"default\"\nWHERE span_kind = '2' AND http_route IS NOT NULL AND http_route != '' AND service_k8s_namespace_name IN ($namespace_name) AND service_k8s_workload_name IN ($workload) AND service_k8s_pod_name IN ($instance)\nGROUP BY route ORDER BY p99 DESC LIMIT 20",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "default",
+                "stream_type": "traces",
+                "x": [
+                  {
+                    "label": "route",
+                    "alias": "route",
+                    "column": "route",
+                    "color": null
+                  }
+                ],
+                "y": [
+                  {
+                    "label": "p50",
+                    "alias": "p50",
+                    "column": "p50",
+                    "color": null
+                  },
+                  {
+                    "label": "p90",
+                    "alias": "p90",
+                    "column": "p90",
+                    "color": null
+                  },
+                  {
+                    "label": "p95",
+                    "alias": "p95",
+                    "column": "p95",
+                    "color": null
+                  },
+                  {
+                    "label": "p99",
+                    "alias": "p99",
+                    "column": "p99",
+                    "color": null
+                  }
+                ],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": ""
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 68,
+            "w": 192,
+            "h": 20,
+            "i": 18
+          }
+        }
+      ]
     }
   ],
   "defaultDatetimeDuration": {

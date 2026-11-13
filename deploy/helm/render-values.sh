@@ -16,6 +16,7 @@ readonly TEMPLATES=(
   o2/openobserve-ingress.yaml
   traefik/traefik-values.yaml
   traefik/order-service-ingress.yaml
+  ../o2/dashboards/apm.dashboard.json
 )
 
 check() {
