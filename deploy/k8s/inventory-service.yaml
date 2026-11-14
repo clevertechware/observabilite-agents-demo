@@ -44,6 +44,8 @@ spec:
               value: http://pricing-service.demo.svc:8080
             - name: FAULT_SLOW_QUERY_SECONDS
               value: "0"
+            - name: GOMEMLIMIT
+              value: 115MiB
           readinessProbe:
             httpGet: {path: /healthz, port: http}
             periodSeconds: 10
