@@ -1337,13 +1337,13 @@
         {
           "id": "Panel_ID22",
           "type": "line",
-          "title": "Débit d'allocation sur le tas (octets/s)",
+          "title": "Débit d'allocation sur le tas",
           "description": "",
           "queryType": "promql",
           "config": {
             "show_legends": true,
             "legends_position": null,
-            "unit": "bytes",
+            "unit": "bps",
             "decimals": 2
           },
           "queries": [
