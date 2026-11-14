@@ -1379,22 +1379,22 @@
         {
           "id": "Panel_ID23",
           "type": "line",
-          "title": "Cycles de GC estimés sur 10 min (changements de l'objectif du tas)",
+          "title": "Cycles de GC sur 10 min",
           "description": "",
           "queryType": "promql",
           "config": {
             "show_legends": true,
             "legends_position": null,
             "unit": "numbers",
-            "decimals": 0
+            "decimals": 1
           },
           "queries": [
             {
-              "query": "sum by (k8s_workload_name) (changes(go_memory_gc_goal{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[10m]))",
+              "query": "sum by (k8s_pod_name) (increase(go_memory_gc_cycles{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[10m]))",
               "vrlFunctionQuery": "",
               "customQuery": true,
               "fields": {
-                "stream": "go_memory_gc_goal",
+                "stream": "go_memory_gc_cycles",
                 "stream_type": "metrics",
                 "x": [],
                 "y": [],
@@ -1406,7 +1406,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{k8s_workload_name}"
+                "promql_legend": "{k8s_pod_name}"
               }
             }
           ],
@@ -1416,6 +1416,48 @@
             "w": 96,
             "h": 16,
             "i": 23
+          }
+        },
+        {
+          "id": "Panel_ID25",
+          "type": "line",
+          "title": "Temps CPU du runtime Go par état",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "numbers",
+            "decimals": 4
+          },
+          "queries": [
+            {
+              "query": "sum by (go_cpu_state) (rate(go_cpu_time{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\", go_cpu_state!=\"idle\"}[5m]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "go_cpu_time",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{go_cpu_state}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 32,
+            "w": 96,
+            "h": 16,
+            "i": 25
           }
         },
         {
@@ -1453,11 +1495,115 @@
             }
           ],
           "layout": {
-            "x": 0,
+            "x": 96,
             "y": 32,
             "w": 96,
             "h": 16,
             "i": 24
+          }
+        },
+        {
+          "id": "Panel_ID26",
+          "type": "line",
+          "title": "Pauses du GC sur 10 min (P50, P99)",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "seconds",
+            "decimals": 6
+          },
+          "queries": [
+            {
+              "query": "histogram_quantile(0.5, sum by (le) (increase(go_memory_gc_pause_duration_bucket{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[10m])))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "go_memory_gc_pause_duration_bucket",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "P50"
+              }
+            },
+            {
+              "query": "histogram_quantile(0.99, sum by (le) (increase(go_memory_gc_pause_duration_bucket{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[10m])))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "go_memory_gc_pause_duration_bucket",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "P99"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 48,
+            "w": 96,
+            "h": 16,
+            "i": 26
+          }
+        },
+        {
+          "id": "Panel_ID27",
+          "type": "line",
+          "title": "Attente des goroutines avant exécution (P99)",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "seconds",
+            "decimals": 6
+          },
+          "queries": [
+            {
+              "query": "histogram_quantile(0.99, sum by (le) (rate(go_schedule_duration_bucket{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[5m])))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "go_schedule_duration_bucket",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "P99"
+              }
+            }
+          ],
+          "layout": {
+            "x": 96,
+            "y": 48,
+            "w": 96,
+            "h": 16,
+            "i": 27
           }
         }
       ]

@@ -282,10 +282,12 @@ L'onglet Databases (article 5e) contient un tableau SQL, « Requêtes SQL les pl
 (`span_kind = '3'`) qui portent un texte SQL : les 100 exécutions les plus longues, une ligne par exécution, paginées
 par 50 (`table_pagination_rows_per_page`). Il utilise les mêmes variables et le même drilldown que l'onglet HTTP.
 
-L'onglet Go (article 5f) lit les métriques `go_*` que `runtime.Start()` émet pour `inventory-service`, en PromQL avec
-les mêmes variables : mémoire utilisée par type, objectif du GC et limite `GOMEMLIMIT`, débit d'allocation
-(`rate(go_memory_allocated[5m])`) et nombre de changements de l'objectif du GC sur 10 minutes, qui estime le nombre de
-cycles. Les panneaux RSS et CPU sont ceux de l'onglet Resources. `go_memory_limit` n'existe que si `GOMEMLIMIT` est
+L'onglet Go (article 5f) lit les métriques `go_*` d'`inventory-service`, en PromQL avec les mêmes variables : mémoire
+utilisée par type, objectif du GC et limite `GOMEMLIMIT`, débit d'allocation (`rate(go_memory_allocated[5m])`), cycles
+de GC sur 10 minutes (`increase(go_memory_gc_cycles[10m])`), temps CPU du runtime par état (`go_cpu_time` hors `idle`),
+pauses du GC (P50 et P99 de `go_memory_gc_pause_duration`) et attente des goroutines avant exécution (P99 de
+`go_schedule_duration`). Les quatre dernières viennent de `internal/telemetry/runtime_gc.go`, à partir de l'image
+`0.4.0`. Les panneaux RSS et CPU sont ceux de l'onglet Resources. `go_memory_limit` n'existe que si `GOMEMLIMIT` est
 défini : `deploy/k8s/inventory-service.yaml` le fixe à `27MiB`, soit 90 % de la limite mémoire du conteneur (30 Mi).
 
 L'onglet Java (article 5g) lit les métriques `jvm_*` de l'agent OpenTelemetry Java, en PromQL, avec les mêmes variables :
