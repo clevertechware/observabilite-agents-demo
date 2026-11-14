@@ -30,7 +30,7 @@ deploy/
     load-generator.yaml          Deployment, une commande par seconde vers order-service
   o2/
     dashboards/
-      apm.dashboard.json         dashboard APM d'OpenObserve (articles 5b à 5e), schéma v8, rendu dans helm/workspace/
+      apm.dashboard.json         dashboard APM d'OpenObserve (série observabilité), schéma v8, rendu dans helm/workspace/
   helm/
     config.env.example               modèle de config.env (ignoré par git) : hôtes, e-mail ACME, plages d'adresses autorisées
     render-values.sh                 valide config.env et rend les manifestes à valeurs dans workspace/ (ignoré par git)
@@ -260,7 +260,7 @@ Retour à la normale : remettre la variable à `0`.
 kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0 FAULT_LEAK_BYTES_PER_REQUEST=0
 ```
 
-## Dashboard APM d'OpenObserve (articles 5b à 5e)
+## Dashboard APM d'OpenObserve (série observabilité)
 
 `deploy/o2/dashboards/apm.dashboard.json` est écrit à la main au schéma d'export OpenObserve `version: 8` ; il n'a pas
 été comparé à un export réel de l'interface. Il contient cinq onglets, Overview (4 tuiles), Resources (7 panneaux),
@@ -285,7 +285,7 @@ L'onglet Java (article 5g) lit les métriques `jvm_*` de l'agent OpenTelemetry J
 heap par pool avec sa limite, Metaspace, Code Cache et Compressed Class Space en courbes séparées (le Metaspace inclut
 déjà la Class Space), RSS et CPU du pod (copies des panneaux de Resources), nombre de pauses du GC par collecteur et par
 action, part du temps passé en GC (`rate` de `jvm_gc_duration_sum`) et nombre de classes chargées. Les deux panneaux du
-GC utilisent la fenêtre `[30m]` : les GC sont espacés de 75 à 95 minutes sur la démo, et à 60 s d'export une fenêtre de
+GC utilisent la fenêtre `[30m]` : les GC sont espacés de 62 à 96 minutes sur la démo, et à 60 s d'export une fenêtre de
 30 minutes réduit l'extrapolation de `increase` à environ 3 %. L'onglet se lit sur une plage de 12 heures.
 
 Les trois tableaux ont un drilldown « Ouvrir la trace » de type `byUrl`. L'URL doit être absolue : le JSON versionné
