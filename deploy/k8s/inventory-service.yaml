@@ -45,7 +45,7 @@ spec:
             - name: FAULT_SLOW_QUERY_SECONDS
               value: "0"
             - name: GOMEMLIMIT
-              value: 115MiB
+              value: 27MiB
           readinessProbe:
             httpGet: {path: /healthz, port: http}
             periodSeconds: 10
@@ -59,8 +59,8 @@ spec:
             capabilities:
               drop: [ALL]
           resources:
-            requests: {cpu: 50m, memory: 64Mi}
-            limits: {memory: 128Mi}
+            requests: {cpu: 50m, memory: 20Mi}
+            limits: {memory: 30Mi}
 ---
 apiVersion: v1
 kind: Service

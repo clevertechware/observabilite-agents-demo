@@ -285,7 +285,7 @@ L'onglet Go (article 5f) lit les métriques `go_*` que `runtime.Start()` émet p
 les mêmes variables : mémoire utilisée par type, objectif du GC et limite `GOMEMLIMIT`, débit d'allocation
 (`rate(go_memory_allocated[5m])`) et nombre de changements de l'objectif du GC sur 10 minutes, qui estime le nombre de
 cycles. Les panneaux RSS et CPU sont ceux de l'onglet Resources. `go_memory_limit` n'existe que si `GOMEMLIMIT` est
-défini : `deploy/k8s/inventory-service.yaml` le fixe à `115MiB`, soit 90 % de la limite mémoire du conteneur (128 Mi).
+défini : `deploy/k8s/inventory-service.yaml` le fixe à `27MiB`, soit 90 % de la limite mémoire du conteneur (30 Mi).
 
 L'onglet Java (article 5g) lit les métriques `jvm_*` de l'agent OpenTelemetry Java, en PromQL, avec les mêmes variables :
 heap par pool avec sa limite, Metaspace, Code Cache et Compressed Class Space en courbes séparées (le Metaspace inclut
