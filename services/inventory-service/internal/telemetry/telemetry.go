@@ -37,6 +37,9 @@ func Setup(ctx context.Context) (func(context.Context) error, error) {
 	)
 	otel.SetTracerProvider(tracerProvider)
 
+	autoexport.WithFallbackMetricProducer(func(context.Context) (sdkmetric.Producer, error) {
+		return newRuntimeHistogramProducer(), nil
+	})
 	metricReader, err := autoexport.NewMetricReader(ctx)
 	if err != nil {
 		return nil, errors.Join(err, tracerProvider.Shutdown(ctx))
@@ -46,6 +49,9 @@ func Setup(ctx context.Context) (func(context.Context) error, error) {
 		sdkmetric.WithReader(metricReader),
 	)
 	otel.SetMeterProvider(meterProvider)
+	if err = registerGCMetrics(meterProvider.Meter(scopeName)); err != nil {
+		return nil, errors.Join(err, tracerProvider.Shutdown(ctx), meterProvider.Shutdown(ctx))
+	}
 
 	logExporter, err := autoexport.NewLogExporter(ctx)
 	if err != nil {

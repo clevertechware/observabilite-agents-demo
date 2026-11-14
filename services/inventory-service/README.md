@@ -5,7 +5,7 @@ Service Go (Gin, pgx) du dépôt d'exemple de la série sur OpenTelemetry. Il g�
 L'exemple montre :
 
 - l'initialisation du SDK OpenTelemetry (ressource, exporters OTLP/HTTP via `autoexport`, propagateur W3C `TraceContext` + `Baggage`, arrêt propre) ;
-- `otelgin` (span serveur et `http.server.request.duration` avec `http.route`), `otelhttp` (client sortant), `otelpgx` (SQL paramétré), `otelslog` (logs corrélés) et les métriques runtime ;
+- `otelgin` (span serveur et `http.server.request.duration` avec `http.route`), `otelhttp` (client sortant), `otelpgx` (SQL paramétré), `otelslog` (logs corrélés) et les métriques runtime. `internal/telemetry/runtime_gc.go` ajoute les métriques de la convention que contrib `runtime` v0.72.0 n'émet pas : `go.memory.gc.cycles`, `go.cpu.time` (par `go.cpu.state`), `go.memory.gc.pause.duration` et `go.schedule.duration`, ces deux histogrammes passant par un `Producer` déclaré avec `autoexport.WithFallbackMetricProducer` (ignoré si `OTEL_METRICS_PRODUCERS` est défini) ;
 - la panne `FAULT_SLOW_QUERY_SECONDS` (`pg_sleep` paramétré) ;
 - des tests avec exporters en mémoire, `ManualReader` et un vrai Postgres via testcontainers.
 
