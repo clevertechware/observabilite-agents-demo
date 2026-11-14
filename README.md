@@ -263,8 +263,8 @@ kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0 FAULT_LEAK_BYT
 ## Dashboard APM d'OpenObserve (articles 5b à 5e)
 
 `deploy/o2/dashboards/apm.dashboard.json` est écrit à la main au schéma d'export OpenObserve `version: 8` ; il n'a pas
-été comparé à un export réel de l'interface. Il contient quatre onglets, Overview (4 tuiles), Resources (7 panneaux),
-HTTP (7 panneaux) et Databases (1 panneau), et trois variables chaînées lues dans le stream `k8s_pod_cpu_usage` : `namespace_name`, `workload`
+été comparé à un export réel de l'interface. Il contient cinq onglets, Overview (4 tuiles), Resources (7 panneaux),
+HTTP (7 panneaux), Databases (1 panneau) et Java (7 panneaux), et trois variables chaînées lues dans le stream `k8s_pod_cpu_usage` : `namespace_name`, `workload`
 (champ `k8s_workload_name`, Deployment, StatefulSet ou DaemonSet) puis `instance`. Les panneaux de Overview et de
 Resources sont en PromQL. Le panneau « Espace libre des volumes » lit `k8s_volume_available` pour les volumes
 `persistentVolumeClaim`.
@@ -280,6 +280,13 @@ L'onglet HTTP (article 5d) lit deux sources avec les mêmes variables :
 L'onglet Databases (article 5e) contient un tableau SQL, « Requêtes SQL les plus lentes », sur les spans clients
 (`span_kind = '3'`) qui portent un texte SQL : les 100 exécutions les plus longues, une ligne par exécution, paginées
 par 50 (`table_pagination_rows_per_page`). Il utilise les mêmes variables et le même drilldown que l'onglet HTTP.
+
+L'onglet Java (article 5g) lit les métriques `jvm_*` de l'agent OpenTelemetry Java, en PromQL, avec les mêmes variables :
+heap par pool avec sa limite, Metaspace, Code Cache et Compressed Class Space en courbes séparées (le Metaspace inclut
+déjà la Class Space), RSS et CPU du pod (copies des panneaux de Resources), nombre de pauses du GC par collecteur et par
+action, part du temps passé en GC (`rate` de `jvm_gc_duration_sum`) et nombre de classes chargées. Les deux panneaux du
+GC utilisent la fenêtre `[30m]` : les GC sont espacés de 75 à 95 minutes sur la démo, et à 60 s d'export une fenêtre de
+30 minutes réduit l'extrapolation de `increase` à environ 3 %. L'onglet se lit sur une plage de 12 heures.
 
 Les trois tableaux ont un drilldown « Ouvrir la trace » de type `byUrl`. L'URL doit être absolue : le JSON versionné
 contient l'hôte `o2.example.com` dans les trois drilldowns (`config.drilldown[0].data.url`).
