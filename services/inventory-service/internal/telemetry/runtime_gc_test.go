@@ -5,6 +5,7 @@ import (
 	"math"
 	"runtime"
 	"runtime/metrics"
+	"slices"
 	"testing"
 	"time"
 
@@ -26,6 +27,13 @@ func collect(t *testing.T, reader *sdkmetric.ManualReader) map[string]metricdata
 		}
 	}
 	return byName
+}
+
+func sortedValues(m map[string][]string) map[string][]string {
+	for _, v := range m {
+		slices.Sort(v)
+	}
+	return m
 }
 
 func gcMetricsReader(t *testing.T) *sdkmetric.ManualReader {
@@ -58,16 +66,22 @@ func TestCPUTimeIsSplitByStateAndDetailedStateLikeTheSemanticConventions(t *test
 
 	sum := cpuTime.Data.(metricdata.Sum[float64])
 	assert.Equal(t, "s", cpuTime.Unit)
-	assert.Len(t, sum.DataPoints, len(cpuClasses))
+	detailedByState := map[string][]string{}
 	var gcSeconds float64
 	for _, dp := range sum.DataPoints {
 		state, _ := dp.Attributes.Value(attribute.Key("go.cpu.state"))
-		_, hasDetail := dp.Attributes.Value(attribute.Key("go.cpu.detailed_state"))
-		assert.True(t, hasDetail)
+		detail, _ := dp.Attributes.Value(attribute.Key("go.cpu.detailed_state"))
+		detailedByState[state.AsString()] = append(detailedByState[state.AsString()], detail.AsString())
 		if state.AsString() == "gc" {
 			gcSeconds += dp.Value
 		}
 	}
+	assert.Equal(t, map[string][]string{
+		"user":     {"user"},
+		"gc":       {"gc/mark/assist", "gc/mark/dedicated", "gc/mark/idle", "gc/pause"},
+		"scavenge": {"scavenge/assist", "scavenge/background"},
+		"idle":     {"idle"},
+	}, sortedValues(detailedByState))
 	assert.Positive(t, gcSeconds)
 }
 

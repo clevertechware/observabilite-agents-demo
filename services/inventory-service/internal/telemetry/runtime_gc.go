@@ -15,9 +15,10 @@ import (
 	"go.opentelemetry.io/otel/semconv/v1.43.0/goconv"
 )
 
-// The Go runtime metrics below are opt-in in the semantic conventions and are not emitted by contrib runtime
-// v0.72.0. They reuse the names, units and attributes of the goconv package so that a later contrib release can
-// replace this file without changing the dashboard.
+// go.memory.gc.cycles, go.cpu.time and go.memory.gc.pause.duration are opt-in in the semantic conventions and are
+// not emitted by contrib runtime v0.72.0. go.schedule.duration is recommended, but contrib only emits it through a
+// Producer that must be registered. All four reuse the names, units and attributes of the goconv package so that a
+// later contrib release can replace this file without changing the dashboard.
 
 const (
 	scopeName = "github.com/clevertechware/observabilite-agents-demo/services/inventory-service/internal/telemetry"
