@@ -1205,6 +1205,262 @@
           }
         }
       ]
+    },
+    {
+      "tabId": "go",
+      "name": "Go",
+      "panels": [
+        {
+          "id": "Panel_ID20",
+          "type": "line",
+          "title": "Mémoire du runtime Go",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "bytes",
+            "decimals": 2
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_workload_name, go_memory_type) (go_memory_used{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "go_memory_used",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_workload_name} {go_memory_type}"
+              }
+            },
+            {
+              "query": "sum by (k8s_workload_name) (go_memory_gc_goal{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "go_memory_gc_goal",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_workload_name} objectif du GC"
+              }
+            },
+            {
+              "query": "sum by (k8s_workload_name) (go_memory_limit{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "go_memory_limit",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_workload_name} GOMEMLIMIT"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 96,
+            "h": 16,
+            "i": 20
+          }
+        },
+        {
+          "id": "Panel_ID21",
+          "type": "line",
+          "title": "Mémoire RSS par workload",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "bytes",
+            "decimals": 2
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_workload_name) (k8s_pod_memory_rss{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_memory_rss",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_workload_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 96,
+            "y": 0,
+            "w": 96,
+            "h": 16,
+            "i": 21
+          }
+        },
+        {
+          "id": "Panel_ID22",
+          "type": "line",
+          "title": "Débit d'allocation sur le tas (octets/s)",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "bytes",
+            "decimals": 2
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_workload_name) (rate(go_memory_allocated{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[5m]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "go_memory_allocated",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_workload_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 16,
+            "w": 96,
+            "h": 16,
+            "i": 22
+          }
+        },
+        {
+          "id": "Panel_ID23",
+          "type": "line",
+          "title": "Cycles de GC estimés sur 10 min (changements de l'objectif du tas)",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "numbers",
+            "decimals": 0
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_workload_name) (changes(go_memory_gc_goal{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[10m]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "go_memory_gc_goal",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_workload_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 96,
+            "y": 16,
+            "w": 96,
+            "h": 16,
+            "i": 23
+          }
+        },
+        {
+          "id": "Panel_ID24",
+          "type": "line",
+          "title": "CPU par workload",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "numbers",
+            "decimals": 4
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_workload_name) (k8s_pod_cpu_usage{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_cpu_usage",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_workload_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 32,
+            "w": 96,
+            "h": 16,
+            "i": 24
+          }
+        }
+      ]
     }
   ],
   "defaultDatetimeDuration": {
