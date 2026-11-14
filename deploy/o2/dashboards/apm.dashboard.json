@@ -1461,6 +1461,366 @@
           }
         }
       ]
+    },
+    {
+      "tabId": "java",
+      "name": "Java",
+      "panels": [
+        {
+          "id": "Panel_ID30",
+          "type": "line",
+          "title": "Heap par pool",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "bytes",
+            "decimals": 1
+          },
+          "queries": [
+            {
+              "query": "sum by (jvm_memory_pool_name) (jvm_memory_used{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\", jvm_memory_type=\"heap\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "jvm_memory_used",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{jvm_memory_pool_name}"
+              }
+            },
+            {
+              "query": "sum(jvm_memory_limit{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\", jvm_memory_type=\"heap\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "jvm_memory_limit",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "Limite du heap"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 0,
+            "w": 96,
+            "h": 16,
+            "i": 30
+          }
+        },
+        {
+          "id": "Panel_ID31",
+          "type": "line",
+          "title": "Non-heap : Metaspace, Code Cache, Class Space",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "bytes",
+            "decimals": 1
+          },
+          "queries": [
+            {
+              "query": "sum(jvm_memory_used{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\", jvm_memory_pool_name=\"Metaspace\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "jvm_memory_used",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "Metaspace"
+              }
+            },
+            {
+              "query": "sum(jvm_memory_used{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\", jvm_memory_pool_name=~\"CodeHeap.*|CodeCache\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "jvm_memory_used",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "Code Cache"
+              }
+            },
+            {
+              "query": "sum(jvm_memory_used{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\", jvm_memory_pool_name=\"Compressed Class Space\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "jvm_memory_used",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "Compressed Class Space"
+              }
+            }
+          ],
+          "layout": {
+            "x": 96,
+            "y": 0,
+            "w": 96,
+            "h": 16,
+            "i": 31
+          }
+        },
+        {
+          "id": "Panel_ID32",
+          "type": "line",
+          "title": "Mémoire RSS par workload",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "bytes",
+            "decimals": 2
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_workload_name) (k8s_pod_memory_rss{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_memory_rss",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_workload_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 16,
+            "w": 96,
+            "h": 16,
+            "i": 32
+          }
+        },
+        {
+          "id": "Panel_ID33",
+          "type": "line",
+          "title": "CPU par workload",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "numbers",
+            "decimals": 4
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_workload_name) (k8s_pod_cpu_usage{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "k8s_pod_cpu_usage",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_workload_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 96,
+            "y": 16,
+            "w": 96,
+            "h": 16,
+            "i": 33
+          }
+        },
+        {
+          "id": "Panel_ID34",
+          "type": "bar",
+          "title": "Pauses du GC",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "numbers",
+            "decimals": 1
+          },
+          "queries": [
+            {
+              "query": "sum by (jvm_gc_name, jvm_gc_action) (increase(jvm_gc_duration_count{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[30m]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "jvm_gc_duration_count",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{jvm_gc_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 32,
+            "w": 96,
+            "h": 16,
+            "i": 34
+          }
+        },
+        {
+          "id": "Panel_ID35",
+          "type": "line",
+          "title": "Temps passé en GC",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "percent-1",
+            "decimals": 3
+          },
+          "queries": [
+            {
+              "query": "sum by (jvm_gc_name) (rate(jvm_gc_duration_sum{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"}[30m]))",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "jvm_gc_duration_sum",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{jvm_gc_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 96,
+            "y": 32,
+            "w": 96,
+            "h": 16,
+            "i": 35
+          }
+        },
+        {
+          "id": "Panel_ID36",
+          "type": "line",
+          "title": "Classes chargées",
+          "description": "",
+          "queryType": "promql",
+          "config": {
+            "show_legends": true,
+            "legends_position": null,
+            "unit": "numbers",
+            "decimals": 0
+          },
+          "queries": [
+            {
+              "query": "sum by (k8s_workload_name) (jvm_class_count{k8s_namespace_name=~\"$namespace_name\", k8s_workload_name=~\"$workload\", k8s_pod_name=~\"$instance\"})",
+              "vrlFunctionQuery": "",
+              "customQuery": true,
+              "fields": {
+                "stream": "jvm_class_count",
+                "stream_type": "metrics",
+                "x": [],
+                "y": [],
+                "z": [],
+                "filter": {
+                  "filterType": "group",
+                  "logicalOperator": "AND",
+                  "conditions": []
+                }
+              },
+              "config": {
+                "promql_legend": "{k8s_workload_name}"
+              }
+            }
+          ],
+          "layout": {
+            "x": 0,
+            "y": 48,
+            "w": 96,
+            "h": 16,
+            "i": 36
+          }
+        }
+      ]
     }
   ],
   "defaultDatetimeDuration": {

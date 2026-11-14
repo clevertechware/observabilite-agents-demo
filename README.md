@@ -30,7 +30,7 @@ deploy/
     load-generator.yaml          Deployment, une commande par seconde vers order-service
   o2/
     dashboards/
-      apm.dashboard.json         dashboard APM d'OpenObserve (articles 5b à 5f), schéma v8, rendu dans helm/workspace/
+      apm.dashboard.json         dashboard APM d'OpenObserve (articles 5b à 5g), schéma v8, rendu dans helm/workspace/
   helm/
     config.env.example               modèle de config.env (ignoré par git) : hôtes, e-mail ACME, plages d'adresses autorisées
     render-values.sh                 valide config.env et rend les manifestes à valeurs dans workspace/ (ignoré par git)
@@ -260,11 +260,11 @@ Retour à la normale : remettre la variable à `0`.
 kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0 FAULT_LEAK_BYTES_PER_REQUEST=0
 ```
 
-## Dashboard APM d'OpenObserve (articles 5b à 5f)
+## Dashboard APM d'OpenObserve (articles 5b à 5g)
 
 `deploy/o2/dashboards/apm.dashboard.json` est écrit à la main au schéma d'export OpenObserve `version: 8` ; il n'a pas
-été comparé à un export réel de l'interface. Il contient cinq onglets, Overview (4 tuiles), Resources (7 panneaux),
-HTTP (7 panneaux), Databases (1 panneau) et Go (5 panneaux), et trois variables chaînées lues dans le stream `k8s_pod_cpu_usage` : `namespace_name`, `workload`
+été comparé à un export réel de l'interface. Il contient six onglets, Overview (4 tuiles), Resources (7 panneaux),
+HTTP (7 panneaux), Databases (1 panneau), Go (5 panneaux) et Java (7 panneaux), et trois variables chaînées lues dans le stream `k8s_pod_cpu_usage` : `namespace_name`, `workload`
 (champ `k8s_workload_name`, Deployment, StatefulSet ou DaemonSet) puis `instance`. Les panneaux de Overview et de
 Resources sont en PromQL. Le panneau « Espace libre des volumes » lit `k8s_volume_available` pour les volumes
 `persistentVolumeClaim`.
@@ -286,6 +286,13 @@ les mêmes variables : mémoire utilisée par type, objectif du GC et limite `GO
 (`rate(go_memory_allocated[5m])`) et nombre de changements de l'objectif du GC sur 10 minutes, qui estime le nombre de
 cycles. Les panneaux RSS et CPU sont ceux de l'onglet Resources. `go_memory_limit` n'existe que si `GOMEMLIMIT` est
 défini : `deploy/k8s/inventory-service.yaml` le fixe à `115MiB`, soit 90 % de la limite mémoire du conteneur (128 Mi).
+
+L'onglet Java (article 5g) lit les métriques `jvm_*` de l'agent OpenTelemetry Java, en PromQL, avec les mêmes variables :
+heap par pool avec sa limite, Metaspace, Code Cache et Compressed Class Space en courbes séparées (le Metaspace inclut
+déjà la Class Space), RSS et CPU du pod (copies des panneaux de Resources), nombre de pauses du GC par collecteur et par
+action, part du temps passé en GC (`rate` de `jvm_gc_duration_sum`) et nombre de classes chargées. Les deux panneaux du
+GC utilisent la fenêtre `[30m]` : les GC sont espacés de 62 à 96 minutes sur la démo, et à 60 s d'export une fenêtre de
+30 minutes réduit l'extrapolation de `increase` à environ 3 %. L'onglet se lit sur une plage de 12 heures.
 
 Les trois tableaux ont un drilldown « Ouvrir la trace » de type `byUrl`. L'URL doit être absolue : le JSON versionné
 contient l'hôte `o2.example.com` dans les trois drilldowns (`config.drilldown[0].data.url`).
