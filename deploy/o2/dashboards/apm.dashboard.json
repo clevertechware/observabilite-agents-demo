@@ -1240,7 +1240,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{k8s_workload_name} {go_memory_type}"
+                "promql_legend": "{go_memory_type}"
               }
             },
             {
@@ -1260,7 +1260,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{k8s_workload_name} objectif du GC"
+                "promql_legend": "objectif du GC"
               }
             },
             {
@@ -1280,7 +1280,7 @@
                 }
               },
               "config": {
-                "promql_legend": "{k8s_workload_name} GOMEMLIMIT"
+                "promql_legend": "GOMEMLIMIT"
               }
             }
           ],
