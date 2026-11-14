@@ -1512,7 +1512,7 @@
             "show_legends": true,
             "legends_position": null,
             "unit": "seconds",
-            "decimals": 6
+            "decimals": 1
           },
           "queries": [
             {
@@ -1574,7 +1574,7 @@
             "show_legends": true,
             "legends_position": null,
             "unit": "seconds",
-            "decimals": 6
+            "decimals": 1
           },
           "queries": [
             {
