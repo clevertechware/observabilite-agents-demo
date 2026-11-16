@@ -6,6 +6,9 @@ secret.yaml
 *.pem
 *.key
 
+# kubconfig dir
+.kube/
+
 # Rust
 target/
 # Java
