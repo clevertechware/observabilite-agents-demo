@@ -352,8 +352,8 @@ Une mise à jour passe par `PUT /api/default/alerts/templates/<nom>` ou `PUT /ap
 sur un nom existant répond `Template with the same name already exists`.
 
 **4. Déclencher l'alerte.** 50 % d'erreurs sur `pricing-service` (voir « Piloter les pannes ») font dépasser le seuil de
-5 % dès que les métriques arrivent dans OpenObserve. Le message arrive dans `#alertes` deux à trois minutes après la
-panne.
+5 % dès que les métriques arrivent dans OpenObserve. Le message arrive dans `#alertes` moins de 3 min 15 s après la
+panne (1 min 55 s et 3 min 14 s mesurés).
 
 ```bash
 START="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
@@ -368,7 +368,7 @@ wait_for_alert() {
   echo "Échec : aucun message « firing » dans #alertes après 10 minutes" >&2
   return 1
 }
-wait_for_alert; STATUS=$?
+STATUS=0; wait_for_alert || STATUS=$?
 kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0
 [ "$STATUS" -eq 0 ] && rc GET "/api/v1/channels.history?roomName=alertes&count=1" | jq '.messages[0] | {msg, attachments}'
 ```
@@ -378,8 +378,8 @@ kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0
 - `period`, `frequency` et `silence` sont en minutes dans l'API v2 (`frequency_type: minutes`). Avec `frequency: 1`,
   le scheduler évalue l'alerte chaque minute. Après une notification, il n'évalue plus l'alerte pendant `silence`
   minutes, puis notifie de nouveau si la condition tient toujours.
-- Pour une alerte PromQL, `{alert_threshold}` rend le `threshold` de `trigger_condition` (ici `1`, le nombre de séries
-  attendu), pas le seuil de `promql_condition` (`0.05`). Le template ne l'affiche donc pas ; le seuil figure dans la
+- Pour une alerte PromQL, `{alert_threshold}` rend le `threshold` de `trigger_condition` (ici `1` : l'alerte se déclenche dès que
+  la requête filtrée renvoie un résultat), pas le seuil de `promql_condition` (`0.05`). Le template ne l'affiche donc pas ; le seuil figure dans la
   description de l'alerte.
 - `{alert_agg_value}` contient la valeur de la requête PromQL (`0.186…`) au tir réel et reste vide au déclenchement
   manuel (`PATCH /api/v2/default/alerts/<id>/trigger`). Rocket.Chat refuse alors le champ d'attachement sans valeur :
