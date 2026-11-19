@@ -352,7 +352,7 @@ Une mise à jour passe par `PUT /api/default/alerts/templates/<nom>` ou `PUT /ap
 sur un nom existant répond `Template with the same name already exists`.
 
 **4. Déclencher l'alerte.** 50 % d'erreurs sur `pricing-service` (voir « Piloter les pannes ») font dépasser le seuil de
-5 % dès que les métriques arrivent dans OpenObserve. Le message arrive dans `#alertes` environ trois minutes après la
+5 % dès que les métriques arrivent dans OpenObserve. Le message arrive dans `#alertes` deux à trois minutes après la
 panne.
 
 ```bash
