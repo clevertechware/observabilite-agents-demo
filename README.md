@@ -231,6 +231,7 @@ cd deploy/helm
 kubectl create namespace rocketchat
 helm repo add mongodb https://mongodb.github.io/helm-charts
 helm repo add rocketchat https://rocketchat.github.io/helm-charts
+helm repo update mongodb rocketchat
 helm install mongodb-kubernetes-operator mongodb/mongodb-kubernetes -n rocketchat --version 1.15.0 --wait
 
 kubectl -n rocketchat create secret generic mongodb-rocketchat-password \
@@ -248,15 +249,18 @@ kubectl -n rocketchat create secret generic rocketchat-admin \
 
 helm install rocketchat rocketchat/rocketchat -n rocketchat --version 7.1.0 -f workspace/rocketchat-values.yaml
 kubectl -n rocketchat rollout status deployment/rocketchat-rocketchat --timeout=8m
-kubectl -n rocketchat rollout restart deployment/rocketchat-rocketchat
+
+kubectl -n rocketchat get secret rocketchat-admin -o jsonpath='{.data.ADMIN_PASS}' | base64 -d
 ```
 
 L'opérateur publie la chaîne de connexion dans le Secret `mongodb-rocketchat-rocketchat`, mais le chart lit la clé
 `mongo-uri`, d'où la copie dans `rocketchat-mongodb`. Le compte `admin` est créé au premier démarrage ; son mot de passe
-se relit dans le Secret `rocketchat-admin`. Cette création remet l'assistant de configuration en cours après que
-`OVERWRITE_SETTING_Show_Setup_Wizard` a été appliqué : le redémarrage le referme. Sans lui, l'assistant exige
-l'enregistrement de l'espace auprès de Rocket.Chat Cloud. Une instance non enregistrée a les limites de l'offre Community
-(aucune app privée activable, 5 apps de la Marketplace).
+se relit dans le Secret `rocketchat-admin`. `OVERWRITE_SETTING_Show_Setup_Wizard=completed` ferme l'assistant de
+configuration, qui exige sinon l'enregistrement de l'espace auprès de Rocket.Chat Cloud. Une instance non enregistrée a
+les limites de l'offre Community (aucune app privée activable, 5 apps de la Marketplace).
+
+Après un changement du mot de passe dans `mongodb-rocketchat-password`, l'opérateur met à jour l'utilisateur et
+`mongodb-rocketchat-rocketchat`, pas la copie `rocketchat-mongodb` : la recréer, puis redémarrer Rocket.Chat.
 
 ## Images
 
