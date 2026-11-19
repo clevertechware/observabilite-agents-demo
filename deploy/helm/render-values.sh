@@ -17,6 +17,7 @@ readonly TEMPLATES=(
   traefik/traefik-values.yaml
   traefik/order-service-ingress.yaml
   ../o2/dashboards/apm.dashboard.json
+  rocketchat/rocketchat-values.yaml
 )
 
 check() {
@@ -36,6 +37,7 @@ source "$config"
 
 check O2_HOST "${O2_HOST:-}" "$HOST_PATTERN"
 check SHOP_HOST "${SHOP_HOST:-}" "$HOST_PATTERN"
+check CHAT_HOST "${CHAT_HOST:-}" "$HOST_PATTERN"
 check ACME_EMAIL "${ACME_EMAIL:-}" "$EMAIL_PATTERN"
 check ALLOWED_IPV4 "${ALLOWED_IPV4:-}" "$IPV4_CIDR_PATTERN"
 check ALLOWED_IPV6 "${ALLOWED_IPV6:-}" "$IPV6_CIDR_PATTERN"
@@ -54,6 +56,7 @@ for template in "${TEMPLATES[@]}"; do
   content="$(<"$helm_dir/$template")"
   replace "o2.example.com" "$O2_HOST"
   replace "shop.example.com" "$SHOP_HOST"
+  replace "chat.example.com" "$CHAT_HOST"
   replace "acme@example.com" "$ACME_EMAIL"
   replace "203.0.113.0/24" "$ALLOWED_IPV4"
   replace "2001:db8:1234:5678::/64" "$ALLOWED_IPV6"

@@ -50,6 +50,9 @@ deploy/
       otel-values-traefik-logs.yaml  release otel (3d) : parsing des access logs JSON de Traefik
       otel-values-patch.yaml         release otel (4a) : Service OTLP, traces, exclusion du namespace demo du filelog
       otel-values-filter-probes.yaml release otel (4d) : retire les spans et métriques des sondes Actuator d'order-service
+    rocketchat/
+      mongodb-community.yaml         replica set MongoDB 8.2 à un membre, géré par l'opérateur MongoDB
+      rocketchat-values.yaml         release rocketchat, monolithe à une réplique, rendu dans workspace/
       otel-values-disk-io.yaml       release otel (5b) : scrape cAdvisor pour les débits disque en lecture et en écriture
       otel-values-workload.yaml      release otel (5c) : attribut k8s.workload.name sur les métriques et les traces
 compose.yaml                     point d'entrée Compose : inclut le socle et les trois services
@@ -216,6 +219,44 @@ Le middleware `rate-limit` s'applique avant l'`Ingress`. `helm upgrade --reuse-v
 `updateStrategy.rollingUpdate: null`, d'où les deux fichiers de values. `infra/up.sh` réinstalle Traefik à chaque
 rallumage : il doit recevoir les mêmes fichiers (`workspace/traefik-values.yaml` et `traefik/traefik-values-tracing.yaml`),
 sinon la release perd le tracing. Le `load-generator` continue de viser le Service interne.
+
+### 7. Rocket.Chat dans le namespace `rocketchat`
+
+Traefik et le middleware `ip-allowlist` du namespace `openobserve` sont en place, comme pour la section 6. `CHAT_HOST`
+doit avoir un enregistrement `A` et `AAAA` vers le load balancer, ou être couvert par un wildcard.
+
+```bash
+cd deploy/helm
+./render-values.sh   # config.env doit contenir CHAT_HOST
+kubectl create namespace rocketchat
+helm repo add mongodb https://mongodb.github.io/helm-charts
+helm repo add rocketchat https://rocketchat.github.io/helm-charts
+helm install mongodb-kubernetes-operator mongodb/mongodb-kubernetes -n rocketchat --version 1.15.0 --wait
+
+kubectl -n rocketchat create secret generic mongodb-rocketchat-password \
+  --from-literal=password="$(openssl rand -hex 24)"
+kubectl apply -f rocketchat/mongodb-community.yaml
+kubectl -n rocketchat wait mongodbcommunity/mongodb --for=jsonpath='{.status.phase}'=Running --timeout=10m
+
+kubectl -n rocketchat create secret generic rocketchat-mongodb --from-literal=mongo-uri="$(
+  kubectl -n rocketchat get secret mongodb-rocketchat-rocketchat \
+    -o jsonpath='{.data.connectionString\.standard}' | base64 -d)"
+kubectl -n rocketchat create secret generic rocketchat-admin \
+  --from-literal=ADMIN_PASS="$(openssl rand -hex 16)" \
+  --from-literal=ADMIN_EMAIL=admin@example.com \
+  --from-literal=OVERWRITE_SETTING_Show_Setup_Wizard=completed
+
+helm install rocketchat rocketchat/rocketchat -n rocketchat --version 7.1.0 -f workspace/rocketchat-values.yaml
+kubectl -n rocketchat rollout status deployment/rocketchat-rocketchat --timeout=8m
+kubectl -n rocketchat rollout restart deployment/rocketchat-rocketchat
+```
+
+L'opérateur publie la chaîne de connexion dans le Secret `mongodb-rocketchat-rocketchat`, mais le chart lit la clé
+`mongo-uri`, d'où la copie dans `rocketchat-mongodb`. Le compte `admin` est créé au premier démarrage ; son mot de passe
+se relit dans le Secret `rocketchat-admin`. Cette création remet l'assistant de configuration en cours après que
+`OVERWRITE_SETTING_Show_Setup_Wizard` a été appliqué : le redémarrage le referme. Sans lui, l'assistant exige
+l'enregistrement de l'espace auprès de Rocket.Chat Cloud. Une instance non enregistrée a les limites de l'offre Community
+(aucune app privée activable, 5 apps de la Marketplace).
 
 ## Images
 

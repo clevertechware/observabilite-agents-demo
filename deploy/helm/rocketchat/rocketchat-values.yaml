@@ -1,0 +1,31 @@
+# rocketchat-values.yaml
+host: chat.example.com
+
+image:
+  tag: "9.0.0"
+
+microservices:
+  enabled: false
+nats:
+  enabled: false
+mongodb:
+  enabled: false
+
+existingMongodbSecret: rocketchat-mongodb
+extraSecret: rocketchat-admin
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 768Mi
+  limits:
+    memory: 1536Mi
+
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+    traefik.ingress.kubernetes.io/router.middlewares: openobserve-ip-allowlist@kubernetescrd
+  tls:
+    - hosts: ["chat.example.com"]
