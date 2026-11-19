@@ -5,6 +5,11 @@ auth:
 config:
   ZO_TELEMETRY: "false"
   ZO_COMPACT_DATA_RETENTION_DAYS: "14"
+  ZO_WEB_URL: "https://o2.example.com"
+
+extraEnv:
+  - name: ZO_SSRF_ALLOWED_HOSTS
+    value: "rocketchat-rocketchat.rocketchat.svc.cluster.local"
 
 image:
   oss:

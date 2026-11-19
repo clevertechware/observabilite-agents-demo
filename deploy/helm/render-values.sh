@@ -13,6 +13,7 @@ readonly UUID_PATTERN='[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{
 readonly LB_IP_IDS_PATTERN="^$UUID_PATTERN,$UUID_PATTERN\$"
 readonly TEMPLATES=(
   traefik/ip-allowlist.yaml
+  o2/openobserve-values.yaml
   o2/openobserve-ingress.yaml
   traefik/traefik-values.yaml
   traefik/order-service-ingress.yaml
