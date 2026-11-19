@@ -1,0 +1,22 @@
+{
+  "name": "http-5xx-rate",
+  "description": "Part des réponses HTTP 5xx supérieure à 5 % sur 5 minutes dans le namespace demo",
+  "stream_type": "metrics",
+  "stream_name": "http_server_request_duration_count",
+  "is_real_time": false,
+  "enabled": true,
+  "query_condition": {
+    "type": "promql",
+    "promql": "sum(rate(http_server_request_duration_count{k8s_namespace_name=\"demo\", http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_request_duration_count{k8s_namespace_name=\"demo\"}[5m]))",
+    "promql_condition": {"column": "value", "operator": ">=", "value": 0.05}
+  },
+  "trigger_condition": {
+    "period": 5,
+    "frequency": 1,
+    "frequency_type": "minutes",
+    "silence": 10,
+    "operator": ">=",
+    "threshold": 1
+  },
+  "destinations": ["rocketchat-alertes"]
+}
