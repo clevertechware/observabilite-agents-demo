@@ -31,11 +31,15 @@ deploy/
   o2/
     dashboards/
       apm.dashboard.json         dashboard APM d'OpenObserve (articles 5b à 5g), schéma v8, rendu dans helm/workspace/
+    alerts/
+      rocketchat.template.json    template « Raw payload » pour le webhook entrant de Rocket.Chat (8)
+      rocketchat.destination.json destination webhook vers le Service interne de Rocket.Chat, jeton fictif (8)
+      http-5xx-rate.alert.json    alerte PromQL sur le taux de 5xx (8)
   helm/
     config.env.example               modèle de config.env (ignoré par git) : hôtes, e-mail ACME, plages d'adresses autorisées
     render-values.sh                 valide config.env et rend les manifestes à valeurs dans workspace/ (ignoré par git)
     o2/
-      openobserve-values.yaml        release openobserve (3a)
+      openobserve-values.yaml        release openobserve (3a, 8) : ZO_WEB_URL, ZO_SSRF_ALLOWED_HOSTS, rendu dans workspace/
       openobserve-ingress.yaml       Ingress d'OpenObserve (3a), rendu dans workspace/
     traefik/
       traefik-values.yaml            release traefik (3a), rendu dans workspace/
@@ -261,6 +265,148 @@ les limites de l'offre Community (aucune app privée activable, 5 apps de la Mar
 
 Après un changement du mot de passe dans `mongodb-rocketchat-password`, l'opérateur met à jour l'utilisateur et
 `mongodb-rocketchat-rocketchat`, pas la copie `rocketchat-mongodb` : la recréer, puis redémarrer Rocket.Chat.
+
+### 8. Alertes OpenObserve vers Rocket.Chat
+
+Une alerte `scheduled` d'OpenObserve évalue le taux de réponses HTTP 5xx de la démo et poste dans le salon `#alertes`
+de Rocket.Chat par un webhook entrant. Les définitions JSON sont dans `deploy/o2/alerts/` :
+
+| Fichier | Objet OpenObserve |
+|---|---|
+| `rocketchat.template.json` | template « Raw payload » (`kind: custom`) : `text` et `attachments` du webhook entrant |
+| `rocketchat.destination.json` | destination webhook générique, `POST` vers l'URL interne du Service Rocket.Chat |
+| `http-5xx-rate.alert.json` | alerte PromQL, période de 5 minutes, évaluation chaque minute, silence de 10 minutes |
+
+Les sections 1 à 7 sont en place et le Collector envoie les métriques `http_server_request_duration`. Les commandes
+se lancent depuis la racine du dépôt, dans un même shell : les blocs partagent leurs variables.
+
+**1. OpenObserve : adresse publique et exception SSRF.** OpenObserve refuse les destinations internes, dont les noms
+en `.local` comme `*.svc.cluster.local`. `ZO_SSRF_ALLOWED_HOSTS` (absent de la documentation, lu dans le code de v1.1.1)
+autorise des noms précis sans désactiver le garde-fou. Le chart ne rend dans sa ConfigMap que les clés qu'il connaît :
+`ZO_WEB_URL` passe par `config`, `ZO_SSRF_ALLOWED_HOSTS` par `extraEnv`. `ZO_WEB_URL` fixe l'hôte de `{alert_url}`,
+`http://localhost:5080` par défaut. `openobserve-values.yaml` fait partie des fichiers rendus par `render-values.sh`,
+d'où le `./render-values.sh` avant le `helm upgrade`. Le pod redémarre, environ 50 secondes.
+
+```bash
+(cd deploy/helm && ./render-values.sh)
+helm repo add openobserve https://charts.openobserve.ai
+helm upgrade o2 openobserve/openobserve-standalone --version 1.0.1 -n openobserve \
+  -f deploy/helm/workspace/openobserve-values.yaml
+kubectl -n openobserve rollout status statefulset/o2-openobserve-standalone
+kubectl -n openobserve wait pod/o2-openobserve-standalone-0 --for=condition=Ready --timeout=3m
+```
+
+Sans `ZO_SSRF_ALLOWED_HOSTS`, la création de la destination échoue :
+`Destination URL blocked by SSRF guard: Access to internal domain rocketchat-rocketchat.rocketchat.svc.cluster.local is
+not allowed for security reasons`. Une destination créée avant la suppression de la variable reste enregistrée, mais
+l'envoi échoue avec le même message.
+
+**2. Rocket.Chat : bot, salon et webhook entrant.** L'utilisateur du webhook doit avoir la permission
+`message-impersonate`, que le rôle `bot` détient. `BOT_EMAIL` doit appartenir à un domaine de
+`Accounts_AllowedDomainsList` quand ce réglage est renseigné : l'adresse doit alors utiliser l'un des domaines
+autorisés. Le webhook est créé au nom du
+bot, dans `#alertes`. Son URL est la seule authentification : elle contient un identifiant et un jeton, qui ne doivent
+pas être versionnés.
+
+```bash
+source deploy/helm/config.env
+BOT_EMAIL="openobserve-bot@<domaine-autorisé>"
+RC_URL="https://$CHAT_HOST"
+RC_ADMIN_PASS="$(kubectl -n rocketchat get secret rocketchat-admin -o jsonpath='{.data.ADMIN_PASS}' | base64 -d)"
+read -r RC_TOKEN RC_USER_ID < <(printf %s "$RC_ADMIN_PASS" \
+  | curl -sS --fail-with-body "$RC_URL/api/v1/login" -d user=admin --data-urlencode "password@-" | jq -r '.data | "\(.authToken) \(.userId)"')
+unset RC_ADMIN_PASS
+rc() {
+  printf %s "${3-}" | curl -sS --fail-with-body -X "$1" "$RC_URL$2" \
+    -H @<(printf 'X-Auth-Token: %s\nX-User-Id: %s\n' "$RC_TOKEN" "$RC_USER_ID") \
+    -H 'Content-Type: application/json' ${3:+-d @-}
+}
+
+rc POST /api/v1/users.create "$(BOT_PASS="$(openssl rand -hex 24)" jq -n --arg email "$BOT_EMAIL" \
+  '{name: "OpenObserve", username: "openobserve-bot", email: $email, password: $ENV.BOT_PASS, roles: ["bot"],
+    verified: true, requirePasswordChange: false, sendWelcomeEmail: false, joinDefaultChannels: false}')" \
+  | jq -c .success
+rc POST /api/v1/channels.create '{"name": "alertes", "members": ["openobserve-bot"]}' | jq -c .success
+HOOK_PATH="$(rc POST /api/v1/integrations.create '{"type": "webhook-incoming", "name": "OpenObserve", "enabled": true,
+  "username": "openobserve-bot", "channel": "#alertes", "scriptEnabled": false, "alias": "OpenObserve",
+  "emoji": ":rotating_light:"}' | jq -r '.integration | "/hooks/\(._id)/\(.token)"')"
+```
+
+**3. OpenObserve : template, destination et alerte.** L'URL de la destination est celle du Service
+(`rocketchat-rocketchat`, port 80), sans passer par Traefik ni par l'allowlist d'adresses. Le fichier versionné porte un
+jeton fictif, remplacé à l'envoi. L'utilisateur est celui du Secret `o2-root-user`.
+
+```bash
+O2_URL="https://$O2_HOST"
+O2_AUTH="$(kubectl -n openobserve get secret o2-root-user -o jsonpath='{.data.ZO_ROOT_USER_EMAIL}' | base64 -d):$(
+  kubectl -n openobserve get secret o2-root-user -o jsonpath='{.data.ZO_ROOT_USER_PASSWORD}' | base64 -d)"
+o2() { curl -sS --fail-with-body -K <(printf 'user = "%s"\n' "$O2_AUTH") -H 'Content-Type: application/json' "$@"; echo; }
+
+o2 -X POST "$O2_URL/api/default/alerts/templates" -d @deploy/o2/alerts/rocketchat.template.json
+jq --arg url "http://rocketchat-rocketchat.rocketchat.svc.cluster.local$HOOK_PATH" '.url = $url' \
+  deploy/o2/alerts/rocketchat.destination.json | o2 -X POST "$O2_URL/api/default/alerts/destinations" -d @-
+o2 -X POST "$O2_URL/api/v2/default/alerts" -d @deploy/o2/alerts/http-5xx-rate.alert.json
+```
+
+Une mise à jour passe par `PUT /api/default/alerts/templates/<nom>` ou `PUT /api/v2/default/alerts/<id>` : un `POST`
+sur un nom existant répond `Template with the same name already exists`.
+
+**4. Déclencher l'alerte.** 50 % d'erreurs sur `pricing-service` (voir « Piloter les pannes ») font dépasser le seuil de
+5 % dès que les métriques arrivent dans OpenObserve. Le message arrive dans `#alertes` environ trois minutes après la
+panne.
+
+```bash
+START="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0.5
+wait_for_alert() {
+  for _ in $(seq 40); do
+    rc GET "/api/v1/channels.history?roomName=alertes&count=1" \
+      | jq -e --arg start "$START" '.messages[0] | select(.ts > $start) | .msg | test("firing")' > /dev/null \
+      && return 0
+    sleep 15
+  done
+  echo "Échec : aucun message « firing » dans #alertes après 10 minutes" >&2
+  return 1
+}
+wait_for_alert; STATUS=$?
+kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0
+[ "$STATUS" -eq 0 ] && rc GET "/api/v1/channels.history?roomName=alertes&count=1" | jq '.messages[0] | {msg, attachments}'
+```
+
+**Constats sur OpenObserve v1.1.1 et Rocket.Chat 9.0.0**
+
+- `period`, `frequency` et `silence` sont en minutes dans l'API v2 (`frequency_type: minutes`). Avec `frequency: 1`,
+  le scheduler évalue l'alerte chaque minute. Après une notification, il n'évalue plus l'alerte pendant `silence`
+  minutes, puis notifie de nouveau si la condition tient toujours.
+- Pour une alerte PromQL, `{alert_threshold}` rend le `threshold` de `trigger_condition` (ici `1`, le nombre de séries
+  attendu), pas le seuil de `promql_condition` (`0.05`). Le template ne l'affiche donc pas ; le seuil figure dans la
+  description de l'alerte.
+- `{alert_agg_value}` contient la valeur de la requête PromQL (`0.186…`) au tir réel et reste vide au déclenchement
+  manuel (`PATCH /api/v2/default/alerts/<id>/trigger`). Rocket.Chat refuse alors le champ d'attachement sans valeur :
+  `Invalid attachment field, title and value is required`, et OpenObserve répond `sent error status: 400 Bad Request`.
+- `POST /api/default/alerts/destinations/<nom>/test_send` rend un template de type `content`, pas le template `custom` :
+  la réponse est `sent status: 200 OK`, mais Rocket.Chat affiche un message vide.
+- Les logs d'OpenObserve contiennent la charge JSON envoyée et la réponse de Rocket.Chat quand l'envoi échoue.
+- Le tableau des destinations de l'interface et `GET /api/default/alerts/destinations` renvoient l'URL en clair, jeton
+  compris.
+- Le trafic OpenObserve vers le Service ne passe pas par Traefik. Un appel au webhook par l'URL publique laisse le jeton
+  dans le champ `RequestPath` de l'access log JSON de Traefik, donc dans les logs collectés par OpenObserve.
+
+**Nettoyage**
+
+```bash
+ALERT_ID="$(o2 -X GET "$O2_URL/api/v2/default/alerts" | jq -r '.list[] | select(.name == "http-5xx-rate") | .alert_id')"
+o2 -X DELETE "$O2_URL/api/v2/default/alerts/$ALERT_ID"
+o2 -X DELETE "$O2_URL/api/default/alerts/destinations/rocketchat-alertes"
+o2 -X DELETE "$O2_URL/api/default/alerts/templates/rocketchat-raw"
+INTEGRATION_ID="$(rc GET /api/v1/integrations.list | jq -r '.integrations[] | select(.name == "OpenObserve") | ._id')"
+rc POST /api/v1/integrations.remove \
+  "{\"type\": \"webhook-incoming\", \"integrationId\": \"$INTEGRATION_ID\"}" | jq -c .success
+rc POST /api/v1/channels.delete '{"roomName": "alertes"}' | jq -c .success
+rc POST /api/v1/users.delete '{"username": "openobserve-bot"}' | jq -c .success
+rc POST /api/v1/logout > /dev/null
+unset RC_TOKEN RC_USER_ID O2_AUTH HOOK_PATH
+```
 
 ## Images
 
