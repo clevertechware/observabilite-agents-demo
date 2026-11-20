@@ -13,10 +13,12 @@ readonly UUID_PATTERN='[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{
 readonly LB_IP_IDS_PATTERN="^$UUID_PATTERN,$UUID_PATTERN\$"
 readonly TEMPLATES=(
   traefik/ip-allowlist.yaml
+  o2/openobserve-values.yaml
   o2/openobserve-ingress.yaml
   traefik/traefik-values.yaml
   traefik/order-service-ingress.yaml
   ../o2/dashboards/apm.dashboard.json
+  rocketchat/rocketchat-values.yaml
 )
 
 check() {
@@ -36,6 +38,7 @@ source "$config"
 
 check O2_HOST "${O2_HOST:-}" "$HOST_PATTERN"
 check SHOP_HOST "${SHOP_HOST:-}" "$HOST_PATTERN"
+check CHAT_HOST "${CHAT_HOST:-}" "$HOST_PATTERN"
 check ACME_EMAIL "${ACME_EMAIL:-}" "$EMAIL_PATTERN"
 check ALLOWED_IPV4 "${ALLOWED_IPV4:-}" "$IPV4_CIDR_PATTERN"
 check ALLOWED_IPV6 "${ALLOWED_IPV6:-}" "$IPV6_CIDR_PATTERN"
@@ -43,23 +46,30 @@ check PRIVATE_NETWORK_CIDR "${PRIVATE_NETWORK_CIDR:-}" "$IPV4_CIDR_PATTERN"
 check PODS_CIDR "${PODS_CIDR:-}" "$IPV4_CIDR_PATTERN"
 check LB_IP_IDS "${LB_IP_IDS:-}" "$LB_IP_IDS_PATTERN"
 
-replace() {
-  local from="$1" to="$2"
-  content="${content//"$from"/$to}"
+# Builds a literal sed substitution: regex metacharacters in the placeholder and special characters in the value
+# are escaped, so neither is interpreted.
+substitution() {
+  local from to
+  from="$(printf '%s' "$1" | sed 's/[][\.*^$|]/\\&/g')"
+  to="$(printf '%s' "$2" | sed 's/[&|\\]/\\&/g')"
+  printf 's|%s|%s|g' "$from" "$to"
 }
+
+substitutions=(
+  -e "$(substitution "o2.example.com" "$O2_HOST")"
+  -e "$(substitution "shop.example.com" "$SHOP_HOST")"
+  -e "$(substitution "chat.example.com" "$CHAT_HOST")"
+  -e "$(substitution "acme@example.com" "$ACME_EMAIL")"
+  -e "$(substitution "203.0.113.0/24" "$ALLOWED_IPV4")"
+  -e "$(substitution "2001:db8:1234:5678::/64" "$ALLOWED_IPV6")"
+  -e "$(substitution "<CIDR_PRIVATE_NETWORK>" "$PRIVATE_NETWORK_CIDR")"
+  -e "$(substitution "<CIDR_PODS>" "$PODS_CIDR")"
+  -e "$(substitution "<lb-ip-ids-from-scaleway>" "$LB_IP_IDS")"
+)
 
 mkdir -p "$workspace"
 
 for template in "${TEMPLATES[@]}"; do
-  content="$(<"$helm_dir/$template")"
-  replace "o2.example.com" "$O2_HOST"
-  replace "shop.example.com" "$SHOP_HOST"
-  replace "acme@example.com" "$ACME_EMAIL"
-  replace "203.0.113.0/24" "$ALLOWED_IPV4"
-  replace "2001:db8:1234:5678::/64" "$ALLOWED_IPV6"
-  replace "<CIDR_PRIVATE_NETWORK>" "$PRIVATE_NETWORK_CIDR"
-  replace "<CIDR_PODS>" "$PODS_CIDR"
-  replace "<lb-ip-ids-from-scaleway>" "$LB_IP_IDS"
-  printf '%s\n' "$content" > "$workspace/$(basename "$template")"
+  sed "${substitutions[@]}" "$helm_dir/$template" > "$workspace/$(basename "$template")"
   echo "généré : $workspace/$(basename "$template")"
 done
