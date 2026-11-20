@@ -8,4 +8,5 @@ packages:
       filename: '{{ .InterfaceName | snakecase }}.go'
     interfaces:
       kubectlRunner:
+      logSearcher:
       orderClient:

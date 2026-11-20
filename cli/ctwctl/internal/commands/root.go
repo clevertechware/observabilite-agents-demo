@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/o2"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/shop"
 	"github.com/urfave/cli/v3"
 )
@@ -17,15 +19,29 @@ const (
 
 type dependencies struct {
 	kubectl        kubectlRunner
+	newLogSearcher func(settings) logSearcher
 	newOrderClient func(settings) orderClient
+	pollInterval   time.Duration
+	now            func() time.Time
 }
 
 func (d dependencies) withDefaults() dependencies {
 	if d.kubectl == nil {
 		d.kubectl = execRunner{}
 	}
+	if d.newLogSearcher == nil {
+		d.newLogSearcher = func(s settings) logSearcher {
+			return o2.NewClient(s.O2.URL, s.O2.Org, s.O2.User, s.O2.Token)
+		}
+	}
 	if d.newOrderClient == nil {
 		d.newOrderClient = func(s settings) orderClient { return shop.NewOrderClient(s.Shop.URL) }
+	}
+	if d.pollInterval == 0 {
+		d.pollInterval = 2 * time.Second
+	}
+	if d.now == nil {
+		d.now = time.Now
 	}
 	return d
 }
@@ -70,6 +86,7 @@ func newRootCommand(deps dependencies) *cli.Command {
 			configCommand(),
 			appsCommand(deps),
 			ordersCommand(deps),
+			o2Command(deps),
 		},
 	}
 }
