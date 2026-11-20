@@ -276,6 +276,10 @@ de Rocket.Chat par un webhook entrant. Les définitions JSON sont dans `deploy/o
 | `rocketchat.template.json` | template « Raw payload » (`kind: custom`) : `text` et `attachments` du webhook entrant |
 | `rocketchat.destination.json` | destination webhook générique, `POST` vers l'URL interne du Service Rocket.Chat |
 | `http-5xx-rate.alert.json` | alerte PromQL, période de 5 minutes, évaluation chaque minute, silence de 10 minutes |
+| `rocketchat-rows.template.json` | template « Raw payload » qui affiche `{rows}`, une ligne par résultat de la requête SQL |
+| `rocketchat-rows.destination.json` | même URL de webhook, avec le template `rocketchat-rows` |
+| `container-restart.alert.json` | alerte SQL sur la métrique `k8s_container_restarts` : conteneur redémarré dans les 5 dernières minutes |
+| `error-logs.alert.json` | alerte SQL sur le stream de logs `default` : logs `ERROR` ou plus, regroupés par service et par exception |
 
 Les sections 1 à 7 sont en place et le Collector envoie les métriques `http_server_request_duration`. Les commandes
 se lancent depuis la racine du dépôt, dans un même shell : les blocs partagent leurs variables.
@@ -373,6 +377,37 @@ kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0
 [ "$STATUS" -eq 0 ] && rc GET "/api/v1/channels.history?roomName=alertes&count=1" | jq '.messages[0] | {msg, attachments}'
 ```
 
+**5. Redémarrages de conteneurs et logs en erreur.** Ces deux alertes sont des requêtes SQL. Le template
+`rocketchat-rows` affiche `{rows}` : OpenObserve applique le `row_template` de l'alerte à chaque ligne du résultat.
+
+- `container-restart` lit `k8s_container_restarts`, envoyée par la release `otel-cluster` (récepteur `k8s_cluster`). Le
+  label `k8s_container_status_last_terminated_reason` donne la raison du dernier arrêt : `OOMKilled`, `Error`… Ce label
+  change au premier redémarrage, ce qui crée une nouvelle série : un `increase()` PromQL par série ne voit pas ce
+  redémarrage. La requête regroupe donc par `k8s_pod_uid` et compare `max(value)` à `min(value)` sur la période.
+- `error-logs` retient les logs de `severity_number` 17 (`ERROR`) ou plus, regroupés par service et par type
+  d'exception, ou par message quand le log n'a pas d'exception. OpenObserve échappe les guillemets et les apostrophes
+  des valeurs avec une barre oblique inverse, que Rocket.Chat affiche : la requête les retire du message.
+
+```bash
+o2 -X POST "$O2_URL/api/default/alerts/templates" -d @deploy/o2/alerts/rocketchat-rows.template.json
+jq --arg url "http://rocketchat-rocketchat.rocketchat.svc.cluster.local$HOOK_PATH" '.url = $url' \
+  deploy/o2/alerts/rocketchat-rows.destination.json | o2 -X POST "$O2_URL/api/default/alerts/destinations" -d @-
+o2 -X POST "$O2_URL/api/v2/default/alerts" -d @deploy/o2/alerts/container-restart.alert.json
+o2 -X POST "$O2_URL/api/v2/default/alerts" -d @deploy/o2/alerts/error-logs.alert.json
+```
+
+Une fuite mémoire de 8 Mio par requête sur `pricing-service` (limite de 64 Mi) mène à un `OOMKilled` en 4 à 5 minutes
+avec le trafic du générateur. Le message `container-restart` est arrivé moins d'une minute après le redémarrage. Les appels
+refusés pendant le redémarrage produisent des logs `ERROR` dans `inventory-service` et `order-service`, que
+`error-logs` signale dans le même intervalle. `FAULT_ERROR_RATE` déclenche aussi `error-logs` (`injected failure`).
+
+```bash
+kubectl -n demo set env deploy/pricing-service FAULT_LEAK_BYTES_PER_REQUEST=8388608
+kubectl -n demo get pod -l app=pricing-service -w   # RESTARTS passe à 1, puis Ctrl+C
+kubectl -n demo set env deploy/pricing-service FAULT_LEAK_BYTES_PER_REQUEST=0
+rc GET "/api/v1/channels.history?roomName=alertes&count=2" | jq '.messages[] | {msg, text: .attachments[0].text}'
+```
+
 **Constats sur OpenObserve v1.1.1 et Rocket.Chat 9.0.0**
 
 - `period`, `frequency` et `silence` sont en minutes dans l'API v2 (`frequency_type: minutes`). Avec `frequency: 1`,
@@ -395,10 +430,14 @@ kubectl -n demo set env deploy/pricing-service FAULT_ERROR_RATE=0
 **Nettoyage**
 
 ```bash
-ALERT_ID="$(o2 -X GET "$O2_URL/api/v2/default/alerts" | jq -r '.list[] | select(.name == "http-5xx-rate") | .alert_id')"
-o2 -X DELETE "$O2_URL/api/v2/default/alerts/$ALERT_ID"
+for ALERT in http-5xx-rate container-restart error-logs; do
+  ALERT_ID="$(o2 -X GET "$O2_URL/api/v2/default/alerts" | jq -r --arg name "$ALERT" '.list[] | select(.name == $name) | .alert_id')"
+  o2 -X DELETE "$O2_URL/api/v2/default/alerts/$ALERT_ID"
+done
 o2 -X DELETE "$O2_URL/api/default/alerts/destinations/rocketchat-alertes"
+o2 -X DELETE "$O2_URL/api/default/alerts/destinations/rocketchat-alertes-rows"
 o2 -X DELETE "$O2_URL/api/default/alerts/templates/rocketchat-raw"
+o2 -X DELETE "$O2_URL/api/default/alerts/templates/rocketchat-rows"
 INTEGRATION_ID="$(rc GET /api/v1/integrations.list | jq -r '.integrations[] | select(.name == "OpenObserve") | ._id')"
 rc POST /api/v1/integrations.remove \
   "{\"type\": \"webhook-incoming\", \"integrationId\": \"$INTEGRATION_ID\"}" | jq -c .success

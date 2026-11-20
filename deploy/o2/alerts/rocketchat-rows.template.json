@@ -1,0 +1,6 @@
+{
+  "name": "rocketchat-rows",
+  "type": "http",
+  "kind": "custom",
+  "body": "{\"text\":\"[{alert_level}] {alert_name} : {alert_status}\",\"attachments\":[{\"title\":\"{alert_name}\",\"title_link\":\"{alert_url}\",\"color\":\"#d32f2f\",\"text\":\"{alert_description}\\n{rows}\",\"fields\":[{\"title\":\"Fenêtre\",\"value\":\"{alert_period} min\",\"short\":true},{\"title\":\"Déclenchée\",\"value\":\"{alert_trigger_time_str}\",\"short\":true}]}]}"
+}

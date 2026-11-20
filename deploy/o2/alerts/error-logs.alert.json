@@ -1,0 +1,24 @@
+{
+  "name": "error-logs",
+  "description": "Logs de niveau ERROR ou plus dans le namespace demo au cours des 5 dernières minutes",
+  "stream_type": "logs",
+  "stream_name": "default",
+  "is_real_time": false,
+  "enabled": true,
+  "query_condition": {
+    "type": "sql",
+    "sql": "SELECT service_name, coalesce(exception_type, body) AS error, coalesce('(' || translate(max(exception_message), '\"''', '') || ')', '') AS message, count(*) AS occurrences FROM \"default\" WHERE k8s_namespace_name = 'demo' AND severity_number >= 17 GROUP BY service_name, coalesce(exception_type, body)"
+  },
+  "trigger_condition": {
+    "period": 5,
+    "frequency": 1,
+    "frequency_type": "minutes",
+    "silence": 10,
+    "operator": ">=",
+    "threshold": 1
+  },
+  "row_template": "• {service_name} : {occurrences} × {error} {message}",
+  "destinations": [
+    "rocketchat-alertes-rows"
+  ]
+}

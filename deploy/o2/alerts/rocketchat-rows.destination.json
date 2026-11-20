@@ -1,0 +1,9 @@
+{
+  "name": "rocketchat-alertes-rows",
+  "type": "http",
+  "url": "http://rocketchat-rocketchat.rocketchat.svc.cluster.local/hooks/<id>/<token>",
+  "method": "post",
+  "skip_tls_verify": false,
+  "headers": {},
+  "template": "rocketchat-rows"
+}
