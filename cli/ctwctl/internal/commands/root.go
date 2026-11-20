@@ -14,7 +14,16 @@ const (
 	outputJSON = "json"
 )
 
-type dependencies struct{}
+type dependencies struct {
+	kubectl kubectlRunner
+}
+
+func (d dependencies) withDefaults() dependencies {
+	if d.kubectl == nil {
+		d.kubectl = execRunner{}
+	}
+	return d
+}
 
 type settingsKey struct{}
 
@@ -27,7 +36,8 @@ func NewRootCommand() *cli.Command {
 	return newRootCommand(dependencies{})
 }
 
-func newRootCommand(_ dependencies) *cli.Command {
+func newRootCommand(deps dependencies) *cli.Command {
+	deps = deps.withDefaults()
 	return &cli.Command{
 		Name:   "ctwctl",
 		Usage:  "applications, logs OpenObserve et commandes de la démo d'observabilité",
@@ -53,6 +63,7 @@ func newRootCommand(_ dependencies) *cli.Command {
 		},
 		Commands: []*cli.Command{
 			configCommand(),
+			appsCommand(deps),
 		},
 	}
 }

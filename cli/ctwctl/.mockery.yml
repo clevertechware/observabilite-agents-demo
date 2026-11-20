@@ -1,0 +1,10 @@
+template: testify
+packages:
+  github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands:
+    config:
+      dir: '{{.InterfaceDir}}/mocks'
+      pkgname: mocks
+      structname: '{{ .InterfaceName | firstUpper }}'
+      filename: '{{ .InterfaceName | snakecase }}.go'
+    interfaces:
+      kubectlRunner:
