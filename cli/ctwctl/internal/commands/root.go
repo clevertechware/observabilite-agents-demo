@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/shop"
 	"github.com/urfave/cli/v3"
 )
 
@@ -15,12 +16,16 @@ const (
 )
 
 type dependencies struct {
-	kubectl kubectlRunner
+	kubectl        kubectlRunner
+	newOrderClient func(settings) orderClient
 }
 
 func (d dependencies) withDefaults() dependencies {
 	if d.kubectl == nil {
 		d.kubectl = execRunner{}
+	}
+	if d.newOrderClient == nil {
+		d.newOrderClient = func(s settings) orderClient { return shop.NewOrderClient(s.Shop.URL) }
 	}
 	return d
 }
@@ -64,6 +69,7 @@ func newRootCommand(deps dependencies) *cli.Command {
 		Commands: []*cli.Command{
 			configCommand(),
 			appsCommand(deps),
+			ordersCommand(deps),
 		},
 	}
 }
