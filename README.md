@@ -59,6 +59,7 @@ deploy/
       rocketchat-values.yaml         release rocketchat, monolithe à une réplique, rendu dans workspace/
       otel-values-disk-io.yaml       release otel (5b) : scrape cAdvisor pour les débits disque en lecture et en écriture
       otel-values-workload.yaml      release otel (5c) : attribut k8s.workload.name sur les métriques et les traces
+cli/ctwctl/                      CLI ctwctl en Go : apps, orders, o2 (articles 6a et 6b)
 compose.yaml                     point d'entrée Compose : inclut le socle et les trois services
 services/
   compose.yaml                   socle mutualisé : Postgres (bases inventory et orders) + Collector OTLP/HTTP
@@ -514,4 +515,16 @@ kubeconform -strict -kubernetes-version 1.36.0 deploy/k8s/*.yaml deploy/k8s/post
 helm template otel-cluster open-telemetry/opentelemetry-collector --version 0.173.1 \
   --namespace otel --values deploy/helm/otel/otel-cluster-values.yaml
 actionlint .github/workflows/images.yml
+```
+
+## CLI ctwctl (articles 6a et 6b)
+
+`cli/ctwctl/` contient une CLI en Go qui regroupe `kubectl`, l'API d'OpenObserve et l'API d'`order-service`. Son README
+décrit la configuration, les commandes et les tests.
+
+```bash
+cd cli/ctwctl
+make build        # produit bin/ctwctl
+make check        # génère les mocks, lance go vet et go test, vérifie qu'aucun mock n'est obsolète
+bin/ctwctl --help
 ```
