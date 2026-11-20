@@ -1,0 +1,24 @@
+{
+  "name": "container-restart",
+  "description": "Conteneur redémarré dans le namespace demo au cours des 5 dernières minutes",
+  "stream_type": "metrics",
+  "stream_name": "k8s_container_restarts",
+  "is_real_time": false,
+  "enabled": true,
+  "query_condition": {
+    "type": "sql",
+    "sql": "SELECT k8s_pod_name, k8s_container_name, max(k8s_container_status_last_terminated_reason) AS reason, CAST(max(value) - min(value) AS BIGINT) AS restarts FROM \"k8s_container_restarts\" WHERE k8s_namespace_name = 'demo' GROUP BY k8s_pod_uid, k8s_pod_name, k8s_container_name HAVING max(value) > min(value)"
+  },
+  "trigger_condition": {
+    "period": 5,
+    "frequency": 1,
+    "frequency_type": "minutes",
+    "silence": 10,
+    "operator": ">=",
+    "threshold": 1
+  },
+  "row_template": "• {k8s_container_name} ({k8s_pod_name}) : {restarts} redémarrage(s), raison {reason}",
+  "destinations": [
+    "rocketchat-alertes-rows"
+  ]
+}
