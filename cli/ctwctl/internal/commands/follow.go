@@ -18,6 +18,9 @@ const (
 // follower relit les logs par polling. Chaque tour interroge une fenêtre qui recouvre le tour précédent, car
 // OpenObserve indexe les logs avec un délai : une ligne plus ancienne que la dernière affichée peut arriver ensuite.
 // La déduplication s'appuie sur le contenu complet de la ligne, conservé tant qu'elle reste dans la fenêtre.
+// La fenêtre ne descend jamais sous floor, la plus ancienne ligne du lot initial, pour ne pas réafficher hors ordre
+// l'arriéré que --limit a écarté. Une page pleine est suivie des pages suivantes : des doublons ne masquent pas une ligne
+// nouvelle.
 type follower struct {
 	searcher logSearcher
 	filter   logFilter
@@ -27,6 +30,8 @@ type follower struct {
 	printer  logPrinter
 	seen     map[string]int64
 	lastSeen int64
+	floor    int64
+	pageSize int
 }
 
 func newFollower(searcher logSearcher, filter logFilter, limit int, interval time.Duration,
@@ -39,6 +44,7 @@ func newFollower(searcher logSearcher, filter logFilter, limit int, interval tim
 		now:      now,
 		printer:  printer,
 		seen:     map[string]int64{},
+		pageSize: followPageSize,
 	}
 }
 
@@ -46,6 +52,7 @@ func (f *follower) run(ctx context.Context, since time.Duration) error {
 	end := f.now()
 	start := end.Add(-since)
 	f.lastSeen = start.UnixMicro()
+	f.floor = f.lastSeen
 	if err := f.initialBatch(ctx, start, end); err != nil {
 		return err
 	}
@@ -75,23 +82,37 @@ func (f *follower) initialBatch(ctx context.Context, start, end time.Time) error
 	}
 	hits := slices.Clone(result.Hits)
 	slices.Reverse(hits)
+	if len(hits) >= f.limit {
+		if oldest, ok := timestampOf(hits[0]); ok {
+			f.floor = oldest
+		}
+	}
 	return f.emit(hits)
 }
 
 func (f *follower) poll(ctx context.Context) error {
 	end := f.now()
-	start := time.UnixMicro(f.lastSeen).Add(-followOverlap)
-	f.forgetBefore(start.UnixMicro())
-	result, err := f.searcher.Search(ctx, o2.SearchRequest{
-		SQL:   f.filter.sql(orderOldestFirst),
-		Start: start,
-		End:   end,
-		Size:  followPageSize,
-	})
-	if err != nil {
-		return err
+	start := max(f.lastSeen-followOverlap.Microseconds(), f.floor)
+	f.forgetBefore(start)
+	for from := 0; ; {
+		result, err := f.searcher.Search(ctx, o2.SearchRequest{
+			SQL:   f.filter.sql(orderOldestFirst),
+			Start: time.UnixMicro(start),
+			End:   end,
+			From:  from,
+			Size:  f.pageSize,
+		})
+		if err != nil {
+			return err
+		}
+		if err := f.emit(result.Hits); err != nil {
+			return err
+		}
+		if len(result.Hits) < f.pageSize {
+			return nil
+		}
+		from += len(result.Hits)
 	}
-	return f.emit(result.Hits)
 }
 
 func (f *follower) emit(hits []o2.Hit) error {

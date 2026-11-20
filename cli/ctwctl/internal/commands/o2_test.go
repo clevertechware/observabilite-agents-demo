@@ -250,7 +250,7 @@ func TestO2Logs_WithFollow_PrintsOldestFirstThenOnlyLinesNotAlreadyShown(t *test
 	require.GreaterOrEqual(t, len(requests), 2)
 	assert.Contains(t, requests[0].SQL, "ORDER BY _timestamp DESC")
 	assert.Contains(t, requests[1].SQL, "ORDER BY _timestamp ASC")
-	assert.Equal(t, base.Add(2*time.Second-followOverlap).UnixMicro(), requests[1].Start.UnixMicro())
+	assert.Equal(t, base.UnixMicro(), requests[1].Start.UnixMicro())
 }
 
 func TestO2Query_SendsTheSQLUnchangedOverTheRequestedWindow(t *testing.T) {
@@ -293,4 +293,87 @@ func TestO2Query_WithoutSQL_ReturnsUsageError(t *testing.T) {
 	_, err := run(t, o2Deps(searcher), "o2", "query")
 
 	require.Error(t, err)
+}
+
+type followFixture struct {
+	follower *follower
+	out      *strings.Builder
+}
+
+func newFollowFixture(searcher logSearcher, limit, pageSize int) followFixture {
+	out := &strings.Builder{}
+	f := newFollower(searcher, logFilter{}, limit, time.Millisecond, func() time.Time { return fixedNow },
+		logPrinter{w: out})
+	f.pageSize = pageSize
+	return followFixture{follower: f, out: out}
+}
+
+func lines(out string) []string {
+	if out == "" {
+		return nil
+	}
+	return splitLines(out)
+}
+
+func TestFollowerPoll_WhenOverlapIsFullOfAlreadySeenLines_ReadsNextPagesUntilTheNewLine(t *testing.T) {
+	base := fixedNow.Add(-30 * time.Second)
+	seen := []o2.Hit{hitAt(base, "a"), hitAt(base.Add(time.Second), "b"), hitAt(base.Add(2*time.Second), "c")}
+	fresh := hitAt(base.Add(3*time.Second), "nouvelle")
+	ascending := (logFilter{}).sql(orderOldestFirst)
+	searcher := mocks.NewLogSearcher(t)
+	searcher.EXPECT().Search(mock.Anything, mock.MatchedBy(func(r o2.SearchRequest) bool { return r.SQL != ascending })).
+		Return(o2.SearchResult{Hits: []o2.Hit{seen[2], seen[1], seen[0]}}, nil).Once()
+	searcher.EXPECT().Search(mock.Anything, mock.MatchedBy(func(r o2.SearchRequest) bool {
+		return r.SQL == ascending && r.From == 0 && r.Size == 3
+	})).Return(o2.SearchResult{Hits: seen}, nil).Once()
+	searcher.EXPECT().Search(mock.Anything, mock.MatchedBy(func(r o2.SearchRequest) bool {
+		return r.SQL == ascending && r.From == 3 && r.Size == 3
+	})).Return(o2.SearchResult{Hits: []o2.Hit{fresh}}, nil).Once()
+	fixture := newFollowFixture(searcher, 3, 3)
+	require.NoError(t, fixture.follower.initialBatch(t.Context(), base, fixedNow))
+
+	require.NoError(t, fixture.follower.poll(t.Context()))
+
+	assert.Equal(t, []string{"a", "b", "c", "nouvelle"}, bodiesOf(fixture.out.String()))
+}
+
+func TestFollowerPoll_WhenLimitDroppedOlderLinesOfTheInitialWindow_NeverShowsThemAfterwards(t *testing.T) {
+	base := fixedNow.Add(-30 * time.Second)
+	all := []o2.Hit{
+		hitAt(base, "ancienne-1"), hitAt(base.Add(time.Second), "ancienne-2"),
+		hitAt(base.Add(2*time.Second), "initiale-1"), hitAt(base.Add(3*time.Second), "initiale-2"),
+	}
+	fresh := hitAt(base.Add(4*time.Second), "nouvelle")
+	var pollStart time.Time
+	searcher := mocks.NewLogSearcher(t)
+	searcher.EXPECT().Search(mock.Anything, mock.Anything).RunAndReturn(
+		func(_ context.Context, req o2.SearchRequest) (o2.SearchResult, error) {
+			if req.SQL != (logFilter{}).sql(orderOldestFirst) {
+				return o2.SearchResult{Hits: []o2.Hit{all[3], all[2]}}, nil
+			}
+			pollStart = req.Start
+			var hits []o2.Hit
+			for _, h := range append(all, fresh) {
+				if ts, _ := timestampOf(h); ts >= req.Start.UnixMicro() {
+					hits = append(hits, h)
+				}
+			}
+			return o2.SearchResult{Hits: hits}, nil
+		})
+	fixture := newFollowFixture(searcher, 2, 1000)
+	require.NoError(t, fixture.follower.initialBatch(t.Context(), base, fixedNow))
+
+	require.NoError(t, fixture.follower.poll(t.Context()))
+
+	assert.Equal(t, []string{"initiale-1", "initiale-2", "nouvelle"}, bodiesOf(fixture.out.String()))
+	assert.Equal(t, base.Add(2*time.Second).UnixMicro(), pollStart.UnixMicro())
+}
+
+func bodiesOf(out string) []string {
+	var bodies []string
+	for _, line := range lines(out) {
+		_, body, _ := strings.Cut(line, "  ")
+		bodies = append(bodies, body)
+	}
+	return bodies
 }
