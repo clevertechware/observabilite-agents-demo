@@ -16,7 +16,7 @@ l'API HTTP d'OpenObserve pour les logs et l'API d'`order-service` par l'hôte pu
 make build        # go build -o bin/ctwctl .
 bin/ctwctl --help
 make test         # go test ./...
-make check        # go generate, go vet, go test, puis échec si un mock généré diffère du dépôt
+make check        # go generate, go vet, go test, puis échec si un mock généré est absent du dépôt ou diffère
 ```
 
 Les mocks sont générés par mockery v3.9.1 (`go run github.com/vektra/mockery/v3@v3.9.1`, configuration dans
@@ -29,27 +29,59 @@ Quatre niveaux se superposent, le dernier l'emportant : valeurs par défaut, fic
 `$XDG_CONFIG_HOME/ctwctl/config.toml` (sinon `~/.config/ctwctl/config.toml`), variables `CTWCTL_*`, options de la ligne
 de commande posées explicitement.
 
-| Clé              | Variable                | Défaut                                   | Option        |
-|------------------|-------------------------|------------------------------------------|---------------|
-| `o2.url`         | `CTWCTL_O2_URL`         | `https://o2.example.com`   |               |
-| `o2.org`         | `CTWCTL_O2_ORG`         | `default`                                |               |
-| `o2.user`        | `CTWCTL_O2_USER`        |                                          |               |
-| `o2.token`       | `CTWCTL_O2_TOKEN`       |                                          |               |
-| `shop.url`       | `CTWCTL_SHOP_URL`       | `https://shop.example.com` |               |
-| `kube.namespace` | `CTWCTL_KUBE_NAMESPACE` | `demo`                                   | `--namespace` |
-| `kube.context`   | `CTWCTL_KUBE_CONTEXT`   | contexte courant de `kubectl`            | `--context`   |
-| `output`         | `CTWCTL_OUTPUT`         | `text`                                   | `-o`          |
+| Clé              | Variable                | Défaut                        | Option        |
+|------------------|-------------------------|-------------------------------|---------------|
+| `o2.url`         | `CTWCTL_O2_URL`         | `https://o2.example.com`      |               |
+| `o2.org`         | `CTWCTL_O2_ORG`         | `default`                     |               |
+| `o2.user`        | `CTWCTL_O2_USER`        |                               |               |
+| `o2.token`       | `CTWCTL_O2_TOKEN`       |                               |               |
+| `shop.url`       | `CTWCTL_SHOP_URL`       | `https://shop.example.com`    |               |
+| `kube.namespace` | `CTWCTL_KUBE_NAMESPACE` | `demo`                        | `--namespace` |
+| `kube.context`   | `CTWCTL_KUBE_CONTEXT`   | contexte courant de `kubectl` | `--context`   |
+| `output`         | `CTWCTL_OUTPUT`         | `text`                        | `-o`          |
+
+Les hôtes par défaut sont des exemples : `o2.url` et `shop.url` se renseignent par le fichier ou par `CTWCTL_*`.
 
 Une clé tient en un mot par segment : `_` sépare les niveaux dans les noms de variables.
 
 ```bash
+ctwctl config set o2.url https://o2.example.com
+ctwctl config set shop.url https://shop.example.com
 ctwctl config set o2.user ctwctl@sa.internal
-ctwctl config set o2.token "<jeton du service account>"
-ctwctl config view
 ```
 
+Le jeton passe de préférence par l'environnement. `config set o2.token "<jeton>"` le laisserait dans l'historique du
+shell et dans les arguments du processus.
+
+```bash
+read -rs CTWCTL_O2_TOKEN && export CTWCTL_O2_TOKEN
+ctwctl o2 streams
+```
+
+`config view` affiche la configuration résolue, jeton masqué.
+
 `config set` écrit le fichier en 0600 (répertoire en 0700) et ne retient que les valeurs du fichier : les variables
-d'environnement et les options n'y sont jamais copiées. `config view` affiche la configuration résolue, jeton masqué.
+d'environnement et les options n'y sont jamais copiées.
+
+## Compte OpenObserve et Secret `o2-ctwctl`
+
+Le dépôt ne crée pas le compte. Dans OpenObserve, IAM > Service Accounts crée un compte (par exemple
+`ctwctl@sa.internal`) et affiche son jeton une seule fois. `PUT /api/default/service_accounts/{email}?rotateToken=true`
+en génère un nouveau. Dans la démo, les deux valeurs sont rangées dans un Secret Kubernetes :
+
+```bash
+read -rs O2_TOKEN
+kubectl create secret generic o2-ctwctl -n openobserve \
+  --from-literal=email=ctwctl@sa.internal --from-literal=token="$O2_TOKEN"
+unset O2_TOKEN
+```
+
+Pour lancer la CLI sans écrire le jeton dans un fichier :
+
+```bash
+export CTWCTL_O2_USER=$(kubectl -n openobserve get secret o2-ctwctl -o jsonpath='{.data.email}' | base64 -d)
+export CTWCTL_O2_TOKEN=$(kubectl -n openobserve get secret o2-ctwctl -o jsonpath='{.data.token}' | base64 -d)
+```
 
 ## Commandes
 

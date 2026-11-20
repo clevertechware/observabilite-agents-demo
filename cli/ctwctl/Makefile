@@ -13,4 +13,5 @@ test:
 	go test ./...
 
 check: generate vet test
-	git diff --exit-code -- internal
+	@test -z "$$(git status --porcelain -- internal/commands/mocks)" || \
+		{ echo "mocks générés différents du dépôt :"; git status --porcelain -- internal/commands/mocks; exit 1; }
