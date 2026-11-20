@@ -71,8 +71,8 @@ en génère un nouveau. Dans la démo, les deux valeurs sont rangées dans un Se
 
 ```bash
 read -rs O2_TOKEN
-kubectl create secret generic o2-ctwctl -n openobserve \
-  --from-literal=email=ctwctl@sa.internal --from-literal=token="$O2_TOKEN"
+printf '%s' "$O2_TOKEN" | kubectl create secret generic o2-ctwctl -n openobserve \
+  --from-literal=email=ctwctl@sa.internal --from-file=token=/dev/stdin
 unset O2_TOKEN
 ```
 
