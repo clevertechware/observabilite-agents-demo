@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strconv"
 	"strings"
 	"testing"
@@ -192,6 +193,7 @@ func TestO2Logs_WithInvalidArguments_FailsBeforeAnySearch(t *testing.T) {
 		{"an unparsable window", []string{"--since", "hier"}, "--since"},
 		{"a negative window", []string{"--since", "-5m"}, "--since"},
 		{"a zero limit", []string{"--limit", "0"}, "--limit"},
+		{"a negative limit", []string{"--limit", "-1"}, "--limit"},
 		{"an unknown level", []string{"--level", "loud"}, "loud"},
 	}
 	for _, tt := range tests {
@@ -203,6 +205,20 @@ func TestO2Logs_WithInvalidArguments_FailsBeforeAnySearch(t *testing.T) {
 
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), tt.want)
+		})
+	}
+}
+
+func TestO2Query_WithNonPositiveLimit_FailsBeforeSearch(t *testing.T) {
+	for _, value := range []string{"0", "-1"} {
+		t.Run(value, func(t *testing.T) {
+			withO2Credentials(t)
+			searcher := mocks.NewLogSearcher(t)
+
+			_, err := run(t, o2Deps(searcher), "o2", "query", "SELECT 1", "--limit", value)
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "--limit")
 		})
 	}
 }
@@ -302,10 +318,25 @@ type followFixture struct {
 
 func newFollowFixture(searcher logSearcher, limit, pageSize int) followFixture {
 	out := &strings.Builder{}
+	printer := logPrinter{w: out}
 	f := newFollower(searcher, logFilter{}, limit, time.Millisecond, func() time.Time { return fixedNow },
-		logPrinter{w: out})
+		printer.print)
 	f.pageSize = pageSize
 	return followFixture{follower: f, out: out}
+}
+
+func TestFollowerEmit_PropagatesOutputError(t *testing.T) {
+	hit := hitAt(fixedNow, "message")
+	writeErr := errors.New("output unavailable")
+	follower := newFollower(nil, logFilter{}, 1, time.Millisecond, func() time.Time { return fixedNow },
+		func(got o2.Hit) error {
+			assert.Equal(t, hit, got)
+			return writeErr
+		})
+
+	err := follower.emit([]o2.Hit{hit})
+
+	require.ErrorIs(t, err, writeErr)
 }
 
 func lines(out string) []string {

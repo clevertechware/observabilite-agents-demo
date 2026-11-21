@@ -18,31 +18,31 @@ const (
 // follower relit les logs par polling. Chaque tour interroge une fenêtre qui recouvre le tour précédent, car
 // OpenObserve indexe les logs avec un délai : une ligne plus ancienne que la dernière affichée peut arriver ensuite.
 // La déduplication s'appuie sur le contenu complet de la ligne, conservé tant qu'elle reste dans la fenêtre.
-// La fenêtre ne descend jamais sous floor, la plus ancienne ligne du lot initial, pour ne pas réafficher hors ordre
+// La fenêtre ne descend jamais sous windowFloor, la plus ancienne ligne du lot initial, pour ne pas réafficher hors ordre
 // l'arriéré que --limit a écarté. Une page pleine est suivie des pages suivantes : des doublons ne masquent pas une ligne
 // nouvelle.
 type follower struct {
-	searcher logSearcher
-	filter   logFilter
-	limit    int
-	interval time.Duration
-	now      func() time.Time
-	printer  logPrinter
-	seen     map[string]int64
-	lastSeen int64
-	floor    int64
-	pageSize int
+	searcher        logSearcher
+	filter          logFilter
+	limit           int
+	interval        time.Duration
+	now             func() time.Time
+	writeHit        func(o2.Hit) error
+	seen            map[string]int64
+	latestTimestamp int64
+	windowFloor     int64
+	pageSize        int
 }
 
 func newFollower(searcher logSearcher, filter logFilter, limit int, interval time.Duration,
-	now func() time.Time, printer logPrinter) *follower {
+	now func() time.Time, writeHit func(o2.Hit) error) *follower {
 	return &follower{
 		searcher: searcher,
 		filter:   filter,
 		limit:    limit,
 		interval: interval,
 		now:      now,
-		printer:  printer,
+		writeHit: writeHit,
 		seen:     map[string]int64{},
 		pageSize: followPageSize,
 	}
@@ -51,8 +51,8 @@ func newFollower(searcher logSearcher, filter logFilter, limit int, interval tim
 func (f *follower) run(ctx context.Context, since time.Duration) error {
 	end := f.now()
 	start := end.Add(-since)
-	f.lastSeen = start.UnixMicro()
-	f.floor = f.lastSeen
+	f.latestTimestamp = start.UnixMicro()
+	f.windowFloor = f.latestTimestamp
 	if err := f.initialBatch(ctx, start, end); err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (f *follower) initialBatch(ctx context.Context, start, end time.Time) error
 	slices.Reverse(hits)
 	if len(hits) >= f.limit {
 		if oldest, ok := timestampOf(hits[0]); ok {
-			f.floor = oldest
+			f.windowFloor = oldest
 		}
 	}
 	return f.emit(hits)
@@ -92,7 +92,7 @@ func (f *follower) initialBatch(ctx context.Context, start, end time.Time) error
 
 func (f *follower) poll(ctx context.Context) error {
 	end := f.now()
-	start := max(f.lastSeen-followOverlap.Microseconds(), f.floor)
+	start := max(f.latestTimestamp-followOverlap.Microseconds(), f.windowFloor)
 	f.forgetBefore(start)
 	for from := 0; ; {
 		result, err := f.searcher.Search(ctx, o2.SearchRequest{
@@ -126,8 +126,8 @@ func (f *follower) emit(hits []o2.Hit) error {
 		}
 		ts, _ := timestampOf(hit)
 		f.seen[key] = ts
-		f.lastSeen = max(f.lastSeen, ts)
-		if err := f.printer.print(hit); err != nil {
+		f.latestTimestamp = max(f.latestTimestamp, ts)
+		if err := f.writeHit(hit); err != nil {
 			return err
 		}
 	}

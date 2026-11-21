@@ -60,41 +60,47 @@ type createRequest struct {
 	Quantity int    `json:"quantity"`
 }
 
+type response struct {
+	statusCode int
+	location   string
+	body       []byte
+}
+
 func (c *OrderClient) Create(ctx context.Context, sku string, quantity int) (Order, error) {
 	payload, err := json.Marshal(createRequest{SKU: sku, Quantity: quantity})
 	if err != nil {
 		return Order{}, fmt.Errorf("encodage de la commande : %w", err)
 	}
-	resp, body, err := c.do(ctx, http.MethodPost, "/orders", payload)
+	resp, err := c.do(ctx, http.MethodPost, "/orders", payload)
 	if err != nil {
 		return Order{}, err
 	}
-	if resp.StatusCode != http.StatusCreated {
-		return Order{}, statusError(resp.StatusCode, body)
+	if resp.statusCode != http.StatusCreated {
+		return Order{}, statusError(resp.statusCode, resp.body)
 	}
-	order, err := decodeOrder(body)
+	order, err := decodeOrder(resp.body)
 	if err != nil {
 		return Order{}, err
 	}
-	order.Location = resp.Header.Get("Location")
+	order.Location = resp.location
 	return order, nil
 }
 
 func (c *OrderClient) Get(ctx context.Context, id int64) (Order, error) {
-	resp, body, err := c.do(ctx, http.MethodGet, "/orders/"+strconv.FormatInt(id, 10), nil)
+	resp, err := c.do(ctx, http.MethodGet, "/orders/"+strconv.FormatInt(id, 10), nil)
 	if err != nil {
 		return Order{}, err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return Order{}, statusError(resp.StatusCode, body)
+	if resp.statusCode != http.StatusOK {
+		return Order{}, statusError(resp.statusCode, resp.body)
 	}
-	return decodeOrder(body)
+	return decodeOrder(resp.body)
 }
 
-func (c *OrderClient) do(ctx context.Context, method, path string, payload []byte) (*http.Response, []byte, error) {
+func (c *OrderClient) do(ctx context.Context, method, path string, payload []byte) (response, error) {
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(payload))
 	if err != nil {
-		return nil, nil, fmt.Errorf("construction de la requête : %w", err)
+		return response{}, fmt.Errorf("construction de la requête : %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
 	if payload != nil {
@@ -102,14 +108,14 @@ func (c *OrderClient) do(ctx context.Context, method, path string, payload []byt
 	}
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, nil, fmt.Errorf("appel à order-service : %w", err)
+		return response{}, fmt.Errorf("appel à order-service : %w", err)
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, nil, fmt.Errorf("lecture de la réponse : %w", err)
+		return response{}, fmt.Errorf("lecture de la réponse : %w", err)
 	}
-	return resp, body, nil
+	return response{statusCode: resp.StatusCode, location: resp.Header.Get("Location"), body: body}, nil
 }
 
 func decodeOrder(body []byte) (Order, error) {

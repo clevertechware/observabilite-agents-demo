@@ -16,15 +16,18 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(dir)
 
 	for _, entry := range os.Environ() {
-		if name, _, _ := strings.Cut(entry, "="); strings.HasPrefix(name, envPrefix) {
+		if name, _, _ := strings.Cut(entry, "="); strings.HasPrefix(name, "CTWCTL_") {
 			os.Unsetenv(name)
 		}
 	}
 	os.Setenv("XDG_CONFIG_HOME", dir)
-	os.Exit(m.Run())
+	code := m.Run()
+	if err := os.RemoveAll(dir); err != nil {
+		code = 1
+	}
+	os.Exit(code)
 }
 
 func run(t *testing.T, deps dependencies, args ...string) (string, error) {

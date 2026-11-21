@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/kube"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/o2"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/shop"
 	"github.com/urfave/cli/v3"
@@ -18,7 +20,7 @@ const (
 )
 
 type dependencies struct {
-	kubectl        kubectlRunner
+	kubectl        kube.Runner
 	newLogSearcher func(settings) logSearcher
 	newOrderClient func(settings) orderClient
 	pollInterval   time.Duration
@@ -27,7 +29,7 @@ type dependencies struct {
 
 func (d dependencies) withDefaults() dependencies {
 	if d.kubectl == nil {
-		d.kubectl = execRunner{}
+		d.kubectl = kube.ExecRunner{}
 	}
 	if d.newLogSearcher == nil {
 		d.newLogSearcher = func(s settings) logSearcher {
@@ -49,8 +51,16 @@ func (d dependencies) withDefaults() dependencies {
 type settingsKey struct{}
 
 func settingsFrom(ctx context.Context) settings {
-	s, _ := ctx.Value(settingsKey{}).(settings)
-	return s
+	resolved, _ := ctx.Value(settingsKey{}).(*config.Resolved)
+	if resolved == nil {
+		return settings{}
+	}
+	return resolved.Settings
+}
+
+func resolvedConfigFrom(ctx context.Context) *config.Resolved {
+	resolved, _ := ctx.Value(settingsKey{}).(*config.Resolved)
+	return resolved
 }
 
 func NewRootCommand() *cli.Command {
@@ -69,18 +79,14 @@ func newRootCommand(deps dependencies) *cli.Command {
 			&cli.StringFlag{Name: "namespace", Usage: "namespace Kubernetes (défaut : demo)"},
 		},
 		Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
-			k, err := loadConfig(cmd)
+			resolved, err := config.Load(flagsSet(cmd))
 			if err != nil {
 				return ctx, err
 			}
-			s, err := decodeSettings(k)
-			if err != nil {
-				return ctx, err
+			if resolved.Settings.Output != outputText && resolved.Settings.Output != outputJSON {
+				return ctx, fmt.Errorf("format de sortie %q inconnu : text ou json attendu", resolved.Settings.Output)
 			}
-			if s.Output != outputText && s.Output != outputJSON {
-				return ctx, fmt.Errorf("format de sortie %q inconnu : text ou json attendu", s.Output)
-			}
-			return context.WithValue(ctx, settingsKey{}, s), nil
+			return context.WithValue(ctx, settingsKey{}, resolved), nil
 		},
 		Commands: []*cli.Command{
 			configCommand(),

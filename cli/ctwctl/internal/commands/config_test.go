@@ -103,32 +103,6 @@ func TestRoot_WhenOutputFormatIsUnknown_ReturnsError(t *testing.T) {
 	assert.Contains(t, err.Error(), "yaml")
 }
 
-func TestConfigPath_UsesXDGConfigHomeWhenSet(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", "/tmp/xdg")
-
-	path, err := configPath()
-
-	require.NoError(t, err)
-	assert.Equal(t, "/tmp/xdg/ctwctl/config.toml", path)
-}
-
-func TestConfigPath_FallsBackToDotConfigInHomeEvenOnMacOS(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", "")
-	t.Setenv("HOME", "/home/dev")
-
-	path, err := configPath()
-
-	require.NoError(t, err)
-	assert.Equal(t, "/home/dev/.config/ctwctl/config.toml", path)
-}
-
-func TestEnvKey_StripsPrefixLowercasesAndSplitsOnUnderscore(t *testing.T) {
-	key, value := envKey("CTWCTL_O2_TOKEN", "secret")
-
-	assert.Equal(t, "o2.token", key)
-	assert.Equal(t, "secret", value)
-}
-
 func TestConfigSet_WritesTheFileWithOwnerOnlyPermissions(t *testing.T) {
 	dir := isolatedConfigDir(t)
 

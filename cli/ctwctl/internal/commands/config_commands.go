@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/urfave/cli/v3"
 )
 
@@ -33,10 +34,10 @@ func setConfig(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("une clé et une valeur sont attendues : ctwctl config set <clé> <valeur>")
 	}
 	key, value := cmd.Args().Get(0), cmd.Args().Get(1)
-	if !isConfigKey(key) {
-		return fmt.Errorf("clé inconnue %q : %s", key, strings.Join(configKeys(), ", "))
+	if !config.IsKey(key) {
+		return fmt.Errorf("clé inconnue %q : %s", key, strings.Join(config.Keys(), ", "))
 	}
-	path, err := saveConfigValue(key, value)
+	path, err := config.SaveValue(key, value)
 	if err != nil {
 		return err
 	}
@@ -45,20 +46,15 @@ func setConfig(_ context.Context, cmd *cli.Command) error {
 }
 
 func viewConfig(ctx context.Context, cmd *cli.Command) error {
-	k, err := loadConfig(cmd)
-	if err != nil {
-		return err
-	}
-	view, err := maskedConfig(k)
+	view, err := resolvedConfigFrom(ctx).MaskedView()
 	if err != nil {
 		return err
 	}
 	if settingsFrom(ctx).Output == outputJSON {
-		return writeJSON(writer(cmd), view.Raw())
+		return writeJSON(writer(cmd), view.Raw)
 	}
-	flat := view.All()
-	for _, key := range configKeys() {
-		if _, err := fmt.Fprintf(writer(cmd), "%s = %v\n", key, flat[key]); err != nil {
+	for _, key := range config.Keys() {
+		if _, err := fmt.Fprintf(writer(cmd), "%s = %v\n", key, view.Values[key]); err != nil {
 			return err
 		}
 	}
