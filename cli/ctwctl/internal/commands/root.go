@@ -20,7 +20,7 @@ const (
 )
 
 type dependencies struct {
-	kubectl        kube.Runner
+	newAppClient   func(settings) appClient
 	newLogSearcher func(settings) logSearcher
 	newOrderClient func(settings) orderClient
 	pollInterval   time.Duration
@@ -28,8 +28,8 @@ type dependencies struct {
 }
 
 func (d dependencies) withDefaults() dependencies {
-	if d.kubectl == nil {
-		d.kubectl = kube.ExecRunner{}
+	if d.newAppClient == nil {
+		d.newAppClient = func(s settings) appClient { return kube.NewClient(s.Kube.Namespace, s.Kube.Context) }
 	}
 	if d.newLogSearcher == nil {
 		d.newLogSearcher = func(s settings) logSearcher {

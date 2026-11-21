@@ -1,143 +1,107 @@
 package commands
 
 import (
-	"bytes"
-	"context"
-	"os/exec"
+	"errors"
 	"testing"
 
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/app"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/urfave/cli/v3"
 )
 
-var deploymentsJSON = []byte(`{
-  "kind": "List",
-  "items": [
-    {"metadata": {"name": "order-service"}, "spec": {"replicas": 1},
-     "status": {"readyReplicas": 1, "conditions": [{"type": "Progressing", "status": "True"}, {"type": "Available", "status": "True"}]}},
-    {"metadata": {"name": "inventory-service"}, "spec": {"replicas": 1},
-     "status": {"readyReplicas": 1, "conditions": [{"type": "Available", "status": "True"}]}}
-  ]
-}`)
-
-const expectedAppsJSON = `[
-  {"name": "order-service", "ready": 1, "replicas": 1, "available": true},
-  {"name": "inventory-service", "ready": 1, "replicas": 1, "available": true}
-]`
-
-func TestAppsList_WithJSONOutput_PrintsOneEntryPerDeployment(t *testing.T) {
-	runner := mocks.NewKubectlRunner(t)
-	runner.EXPECT().
-		Run(mock.Anything, []string{"get", "deployments", "-n", "demo", "-o", "json"}).
-		Return(deploymentsJSON, nil)
-	var out bytes.Buffer
-	cmd := newRootCommand(dependencies{kubectl: runner})
-	cmd.Writer = &out
-	cmd.ExitErrHandler = func(context.Context, *cli.Command, error) {}
-
-	err := cmd.Run(t.Context(), []string{"ctwctl", "apps", "list", "-o", "json"})
-
-	require.NoError(t, err)
-	assert.JSONEq(t, expectedAppsJSON, out.String())
+var appStatuses = []app.Status{
+	{Name: "order-service", Ready: 1, Replicas: 1, Available: true},
+	{Name: "pricing-service", Ready: 1, Replicas: 2, Available: false},
 }
 
-func TestAppsList_WithTextOutput_PrintsReadyOverDesiredAndAvailability(t *testing.T) {
-	runner := mocks.NewKubectlRunner(t)
-	runner.EXPECT().Run(mock.Anything, mock.Anything).Return(deploymentsJSON, nil)
-
-	out, err := run(t, dependencies{kubectl: runner}, "apps", "list")
-
-	require.NoError(t, err)
-	assert.Equal(t, "NOM                PRÊTS  DISPONIBLE\n"+
-		"order-service      1/1    oui\n"+
-		"inventory-service  1/1    oui\n", out)
+func appDeps(client appClient) dependencies {
+	return dependencies{newAppClient: func(settings) appClient { return client }}
 }
 
-func TestAppsList_WhenRolloutIsIncomplete_ReportsPartialReadinessAndUnavailable(t *testing.T) {
-	runner := mocks.NewKubectlRunner(t)
-	runner.EXPECT().Run(mock.Anything, mock.Anything).Return([]byte(`{"items":[
-		{"metadata":{"name":"pricing-service"},"spec":{"replicas":2},
-		 "status":{"readyReplicas":1,"conditions":[{"type":"Available","status":"False"}]}},
-		{"metadata":{"name":"load-generator"},"spec":{},"status":{}}]}`), nil)
+func TestAppsList_WithJSONOutput_PrintsOneEntryPerApp(t *testing.T) {
+	client := mocks.NewAppClient(t)
+	client.EXPECT().ListApps(mock.Anything).Return(appStatuses, nil)
 
-	out, err := run(t, dependencies{kubectl: runner}, "apps", "list", "-o", "json")
+	out, err := run(t, appDeps(client), "apps", "list", "-o", "json")
 
 	require.NoError(t, err)
 	assert.JSONEq(t, `[
-		{"name":"pricing-service","ready":1,"replicas":2,"available":false},
-		{"name":"load-generator","ready":0,"replicas":1,"available":false}]`, out)
+		{"name":"order-service","ready":1,"replicas":1,"available":true},
+		{"name":"pricing-service","ready":1,"replicas":2,"available":false}]`, out)
 }
 
-func TestAppsList_WhenNamespaceAndContextAreGiven_ForwardsThemToKubectl(t *testing.T) {
-	runner := mocks.NewKubectlRunner(t)
-	runner.EXPECT().
-		Run(mock.Anything, []string{"get", "deployments", "-n", "staging", "-o", "json", "--context", "prod-cluster"}).
-		Return([]byte(`{"items":[]}`), nil)
+func TestAppsList_WithTextOutput_PrintsReadyOverDesiredAndAvailability(t *testing.T) {
+	client := mocks.NewAppClient(t)
+	client.EXPECT().ListApps(mock.Anything).Return(appStatuses, nil)
 
-	out, err := run(t, dependencies{kubectl: runner},
-		"--namespace", "staging", "--context", "prod-cluster", "apps", "list", "-o", "json")
+	out, err := run(t, appDeps(client), "apps", "list")
 
 	require.NoError(t, err)
-	assert.JSONEq(t, `[]`, out)
+	assert.Equal(t, "NOM              PRÊTS  DISPONIBLE\n"+
+		"order-service    1/1    oui\n"+
+		"pricing-service  1/2    non\n", out)
 }
 
-func TestAppsList_WhenKubectlFails_ReportsItsStderr(t *testing.T) {
-	runner := mocks.NewKubectlRunner(t)
-	runner.EXPECT().Run(mock.Anything, mock.Anything).
-		Return(nil, &exec.ExitError{Stderr: []byte("error: You must be logged in to the server\n")})
+func TestAppsList_BuildsTheClientFromNamespaceAndContextFlags(t *testing.T) {
+	client := mocks.NewAppClient(t)
+	client.EXPECT().ListApps(mock.Anything).Return(nil, nil)
+	var got settings
+	deps := dependencies{newAppClient: func(s settings) appClient {
+		got = s
+		return client
+	}}
 
-	_, err := run(t, dependencies{kubectl: runner}, "apps", "list")
+	_, err := run(t, deps, "--namespace", "staging", "--context", "prod-cluster", "apps", "list")
+
+	require.NoError(t, err)
+	assert.Equal(t, "staging", got.Kube.Namespace)
+	assert.Equal(t, "prod-cluster", got.Kube.Context)
+}
+
+func TestAppsList_WhenClientFails_ReturnsItsError(t *testing.T) {
+	client := mocks.NewAppClient(t)
+	client.EXPECT().ListApps(mock.Anything).Return(nil, errors.New("kubectl : You must be logged in to the server"))
+
+	_, err := run(t, appDeps(client), "apps", "list")
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "You must be logged in to the server")
 }
 
-func TestAppsList_WhenKubectlIsNotInstalled_SaysSo(t *testing.T) {
-	runner := mocks.NewKubectlRunner(t)
-	runner.EXPECT().Run(mock.Anything, mock.Anything).Return(nil, exec.ErrNotFound)
+func TestAppsRestart_RestartsTheNamedAppAndPrintsTheOutput(t *testing.T) {
+	client := mocks.NewAppClient(t)
+	client.EXPECT().RestartApp(mock.Anything, "load-generator").
+		Return("deployment.apps/load-generator restarted\n", nil)
 
-	_, err := run(t, dependencies{kubectl: runner}, "apps", "list")
-
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "introuvable dans le PATH")
-}
-
-func TestAppsList_WhenKubectlPrintsInvalidJSON_ReturnsDecodeError(t *testing.T) {
-	runner := mocks.NewKubectlRunner(t)
-	runner.EXPECT().Run(mock.Anything, mock.Anything).Return([]byte("pas du json"), nil)
-
-	_, err := run(t, dependencies{kubectl: runner}, "apps", "list")
-
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "décodage")
-}
-
-func TestAppsRestart_RunsRolloutRestartOnTheNamedDeployment(t *testing.T) {
-	runner := mocks.NewKubectlRunner(t)
-	runner.EXPECT().
-		Run(mock.Anything, []string{"rollout", "restart", "deployment/load-generator", "-n", "demo"}).
-		Return([]byte("deployment.apps/load-generator restarted\n"), nil)
-
-	out, err := run(t, dependencies{kubectl: runner}, "apps", "restart", "load-generator")
+	out, err := run(t, appDeps(client), "apps", "restart", "load-generator")
 
 	require.NoError(t, err)
 	assert.Equal(t, "deployment.apps/load-generator restarted\n", out)
 }
 
-func TestAppsRestart_WithJSONOutput_ReportsTheRestartedDeployment(t *testing.T) {
-	runner := mocks.NewKubectlRunner(t)
-	runner.EXPECT().Run(mock.Anything, mock.Anything).Return([]byte("restarted"), nil)
+func TestAppsRestart_WithJSONOutput_ReportsTheRestartedApp(t *testing.T) {
+	client := mocks.NewAppClient(t)
+	client.EXPECT().RestartApp(mock.Anything, "load-generator").Return("restarted", nil)
 
-	out, err := run(t, dependencies{kubectl: runner}, "apps", "restart", "load-generator", "-o", "json")
+	out, err := run(t, appDeps(client), "apps", "restart", "load-generator", "-o", "json")
 
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"name":"load-generator","restarted":true}`, out)
 }
 
-func TestAppsRestart_RejectsInvalidNamesWithoutCallingKubectl(t *testing.T) {
+func TestAppsRestart_WhenClientFails_ReturnsItsError(t *testing.T) {
+	client := mocks.NewAppClient(t)
+	client.EXPECT().RestartApp(mock.Anything, "load-generator").Return("", errors.New("kubectl est introuvable dans le PATH"))
+
+	_, err := run(t, appDeps(client), "apps", "restart", "load-generator")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "introuvable dans le PATH")
+}
+
+func TestAppsRestart_RejectsInvalidNamesWithoutCallingTheClient(t *testing.T) {
 	tests := []struct {
 		name string
 		args []string
@@ -150,9 +114,9 @@ func TestAppsRestart_RejectsInvalidNamesWithoutCallingKubectl(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := mocks.NewKubectlRunner(t)
+			client := mocks.NewAppClient(t)
 
-			_, err := run(t, dependencies{kubectl: runner}, append([]string{"apps", "restart", "--"}, tt.args...)...)
+			_, err := run(t, appDeps(client), append([]string{"apps", "restart", "--"}, tt.args...)...)
 
 			assert.Error(t, err)
 		})

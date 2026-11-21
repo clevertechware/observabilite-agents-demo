@@ -7,50 +7,49 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/app"
 )
 
-type Runner interface {
-	Run(ctx context.Context, args []string) ([]byte, error)
+type Client struct {
+	namespace string
+	context   string
+	run       func(ctx context.Context, args ...string) ([]byte, error)
 }
 
-type ExecRunner struct{}
+func NewClient(namespace, kubeContext string) *Client {
+	return &Client{namespace: namespace, context: kubeContext, run: runKubectl}
+}
 
-func (ExecRunner) Run(ctx context.Context, args []string) ([]byte, error) {
+func runKubectl(ctx context.Context, args ...string) ([]byte, error) {
 	return exec.CommandContext(ctx, "kubectl", args...).Output()
 }
 
-type AppStatus struct {
-	Name      string `json:"name"`
-	Ready     int    `json:"ready"`
-	Replicas  int    `json:"replicas"`
-	Available bool   `json:"available"`
-}
-
-func ListDeployments(ctx context.Context, runner Runner, namespace, kubeContext string) ([]AppStatus, error) {
-	args := []string{"get", "deployments", "-n", namespace, "-o", "json"}
-	args = withContext(args, kubeContext)
-	data, err := runner.Run(ctx, args)
+func (c *Client) ListApps(ctx context.Context) ([]app.Status, error) {
+	data, err := c.kubectl(ctx, "get", "deployments", "-n", c.namespace, "-o", "json")
 	if err != nil {
-		return nil, kubectlFailure(err)
+		return nil, err
 	}
 	return parseDeployments(data)
 }
 
-func RestartDeployment(ctx context.Context, runner Runner, namespace, kubeContext, name string) (string, error) {
-	args := []string{"rollout", "restart", "deployment/" + name, "-n", namespace}
-	args = withContext(args, kubeContext)
-	output, err := runner.Run(ctx, args)
+func (c *Client) RestartApp(ctx context.Context, name string) (string, error) {
+	output, err := c.kubectl(ctx, "rollout", "restart", "deployment/"+name, "-n", c.namespace)
 	if err != nil {
-		return "", kubectlFailure(err)
+		return "", err
 	}
 	return string(output), nil
 }
 
-func withContext(args []string, kubeContext string) []string {
-	if kubeContext != "" {
-		args = append(args, "--context", kubeContext)
+func (c *Client) kubectl(ctx context.Context, args ...string) ([]byte, error) {
+	if c.context != "" {
+		args = append(args, "--context", c.context)
 	}
-	return args
+	output, err := c.run(ctx, args...)
+	if err != nil {
+		return nil, kubectlFailure(err)
+	}
+	return output, nil
 }
 
 type deploymentList struct {
@@ -71,12 +70,12 @@ type deploymentList struct {
 	} `json:"items"`
 }
 
-func parseDeployments(data []byte) ([]AppStatus, error) {
+func parseDeployments(data []byte) ([]app.Status, error) {
 	var list deploymentList
 	if err := json.Unmarshal(data, &list); err != nil {
 		return nil, fmt.Errorf("décodage de la sortie de kubectl : %w", err)
 	}
-	apps := make([]AppStatus, 0, len(list.Items))
+	apps := make([]app.Status, 0, len(list.Items))
 	for _, item := range list.Items {
 		replicas := 1
 		if item.Spec.Replicas != nil {
@@ -88,7 +87,7 @@ func parseDeployments(data []byte) ([]AppStatus, error) {
 				available = true
 			}
 		}
-		apps = append(apps, AppStatus{
+		apps = append(apps, app.Status{
 			Name:      item.Metadata.Name,
 			Ready:     item.Status.ReadyReplicas,
 			Replicas:  replicas,

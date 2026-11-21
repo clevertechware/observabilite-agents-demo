@@ -7,6 +7,6 @@ packages:
       structname: '{{ .InterfaceName | firstUpper }}'
       filename: '{{ .InterfaceName | snakecase }}.go'
     interfaces:
-      kubectlRunner:
+      appClient:
       logSearcher:
       orderClient:
