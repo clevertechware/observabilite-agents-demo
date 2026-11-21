@@ -1,12 +1,11 @@
 package commands
 
 import (
-	"encoding/json"
 	"io"
+
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 )
 
 func writeJSON(w io.Writer, v any) error {
-	enc := json.NewEncoder(w)
-	enc.SetEscapeHTML(false)
-	return enc.Encode(v)
+	return cmdutil.WriteJSON(w, v)
 }

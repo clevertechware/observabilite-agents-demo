@@ -8,5 +8,12 @@ packages:
       filename: '{{ .InterfaceName | snakecase }}.go'
     interfaces:
       appClient:
-      logSearcher:
       orderClient:
+  github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/o2:
+    config:
+      dir: '{{.InterfaceDir}}/mocks'
+      pkgname: mocks
+      structname: '{{ .InterfaceName | firstUpper }}'
+      filename: '{{ .InterfaceName | snakecase }}.go'
+    interfaces:
+      LogSearcher:

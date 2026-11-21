@@ -2,65 +2,44 @@ package commands
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
-	"time"
 
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
+	o2cmd "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/o2"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/kube"
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/o2"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/shop"
 	"github.com/urfave/cli/v3"
 )
 
 const (
-	outputText = "text"
-	outputJSON = "json"
+	outputText = cmdutil.OutputText
+	outputJSON = cmdutil.OutputJSON
 )
 
 type dependencies struct {
 	newAppClient   func(settings) appClient
-	newLogSearcher func(settings) logSearcher
+	o2             o2cmd.Dependencies
 	newOrderClient func(settings) orderClient
-	pollInterval   time.Duration
-	now            func() time.Time
 }
 
 func (d dependencies) withDefaults() dependencies {
 	if d.newAppClient == nil {
 		d.newAppClient = func(s settings) appClient { return kube.NewClient(s.Kube.Namespace, s.Kube.Context) }
 	}
-	if d.newLogSearcher == nil {
-		d.newLogSearcher = func(s settings) logSearcher {
-			return o2.NewClient(s.O2.URL, s.O2.Org, s.O2.User, s.O2.Token)
-		}
-	}
 	if d.newOrderClient == nil {
 		d.newOrderClient = func(s settings) orderClient { return shop.NewOrderClient(s.Shop.URL) }
-	}
-	if d.pollInterval == 0 {
-		d.pollInterval = 2 * time.Second
-	}
-	if d.now == nil {
-		d.now = time.Now
 	}
 	return d
 }
 
-type settingsKey struct{}
-
 func settingsFrom(ctx context.Context) settings {
-	resolved, _ := ctx.Value(settingsKey{}).(*config.Resolved)
-	if resolved == nil {
-		return settings{}
-	}
-	return resolved.Settings
+	return cmdutil.Settings(ctx)
 }
 
 func resolvedConfigFrom(ctx context.Context) *config.Resolved {
-	resolved, _ := ctx.Value(settingsKey{}).(*config.Resolved)
-	return resolved
+	return cmdutil.Resolved(ctx)
 }
 
 func NewRootCommand() *cli.Command {
@@ -73,30 +52,17 @@ func newRootCommand(deps dependencies) *cli.Command {
 		Name:   "ctwctl",
 		Usage:  "applications, logs OpenObserve et commandes de la démo d'observabilité",
 		Writer: os.Stdout,
-		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "output", Aliases: []string{"o"}, Usage: "format de sortie : text ou json"},
-			&cli.StringFlag{Name: "context", Usage: "contexte kubectl (défaut : le contexte courant)"},
-			&cli.StringFlag{Name: "namespace", Usage: "namespace Kubernetes (défaut : demo)"},
-		},
-		Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
-			resolved, err := config.Load(flagsSet(cmd))
-			if err != nil {
-				return ctx, err
-			}
-			if resolved.Settings.Output != outputText && resolved.Settings.Output != outputJSON {
-				return ctx, fmt.Errorf("format de sortie %q inconnu : text ou json attendu", resolved.Settings.Output)
-			}
-			return context.WithValue(ctx, settingsKey{}, resolved), nil
-		},
+		Flags:  cmdutil.GlobalFlags(),
+		Before: cmdutil.Before,
 		Commands: []*cli.Command{
 			configCommand(),
 			appsCommand(deps),
 			ordersCommand(deps),
-			o2Command(deps),
+			o2cmd.NewCommand(deps.o2),
 		},
 	}
 }
 
 func writer(cmd *cli.Command) io.Writer {
-	return cmd.Root().Writer
+	return cmdutil.Writer(cmd)
 }
