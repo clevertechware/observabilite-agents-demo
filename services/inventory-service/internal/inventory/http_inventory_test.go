@@ -134,6 +134,7 @@ func TestServerDurationMetricCarriesRouteMethodAndStatus(t *testing.T) {
 
 	var collected metricdata.ResourceMetrics
 	require.NoError(t, f.metrics.Collect(context.Background(), &collected))
+
 	var duration *metricdata.Metrics
 	for _, scope := range collected.ScopeMetrics {
 		for i := range scope.Metrics {
@@ -142,14 +143,18 @@ func TestServerDurationMetricCarriesRouteMethodAndStatus(t *testing.T) {
 			}
 		}
 	}
+
 	require.NotNil(t, duration)
 	assert.Equal(t, "s", duration.Unit)
+
 	histogram, ok := duration.Data.(metricdata.Histogram[float64])
 	require.True(t, ok)
 	require.Len(t, histogram.DataPoints, 1)
+
 	attributes := histogram.DataPoints[0].Attributes
 	assertAttribute(t, attributes, "http.route", "/stock/:sku")
 	assertAttribute(t, attributes, "http.request.method", "GET")
+
 	status, found := attributes.Value("http.response.status_code")
 	require.True(t, found)
 	assert.Equal(t, int64(http.StatusOK), status.AsInt64())
@@ -303,6 +308,7 @@ func TestReservationRejectsInvalidBodies(t *testing.T) {
 		"zero quantity":     {`{"sku":"SKU-42","quantity":0}`, http.StatusUnprocessableEntity},
 		"negative quantity": {`{"sku":"SKU-42","quantity":-3}`, http.StatusUnprocessableEntity},
 	}
+
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

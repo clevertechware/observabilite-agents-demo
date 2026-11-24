@@ -34,11 +34,13 @@ func (c *PricingHTTPClient) Price(ctx context.Context, sku string, quantity int)
 	if err != nil {
 		return inventory.Price{}, err
 	}
+
 	response, err := c.http.Do(request)
 	if err != nil {
 		return inventory.Price{}, err
 	}
 	defer func() { _ = response.Body.Close() }()
+
 	return decodePrice(response)
 }
 

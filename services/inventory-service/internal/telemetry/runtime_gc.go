@@ -48,10 +48,12 @@ func registerGCMetrics(meter metric.Meter) error {
 	if err != nil {
 		return err
 	}
+
 	cpuTime, err := goconv.NewCPUTimeObservable(meter)
 	if err != nil {
 		return err
 	}
+
 	cpuAttributes := make([]metric.ObserveOption, len(cpuClasses))
 	for i, class := range cpuClasses {
 		cpuAttributes[i] = metric.WithAttributeSet(attribute.NewSet(
@@ -96,6 +98,7 @@ func (p *runtimeHistogramProducer) Produce(ctx context.Context) ([]metricdata.Sc
 
 	sample := []metrics.Sample{{Name: gcPausesMetric}}
 	metrics.Read(sample)
+
 	pauses := goconv.MemoryGCPauseDuration{}
 	return append(scopes, metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{Name: scopeName},
@@ -135,6 +138,7 @@ func toHistogramDataPoint(h *metrics.Float64Histogram, start, now time.Time) met
 			sum += bounds[i-1] * float64(c)
 		}
 	}
+
 	return metricdata.HistogramDataPoint[float64]{
 		StartTime:    start,
 		Time:         now,

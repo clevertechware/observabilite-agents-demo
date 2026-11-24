@@ -66,6 +66,7 @@ func TestCPUTimeIsSplitByStateAndDetailedStateLikeTheSemanticConventions(t *test
 
 	sum := cpuTime.Data.(metricdata.Sum[float64])
 	assert.Equal(t, "s", cpuTime.Unit)
+
 	detailedByState := map[string][]string{}
 	var gcSeconds float64
 	for _, dp := range sum.DataPoints {
@@ -76,6 +77,7 @@ func TestCPUTimeIsSplitByStateAndDetailedStateLikeTheSemanticConventions(t *test
 			gcSeconds += dp.Value
 		}
 	}
+
 	assert.Equal(t, map[string][]string{
 		"user":     {"user"},
 		"gc":       {"gc/mark/assist", "gc/mark/dedicated", "gc/mark/idle", "gc/pause"},

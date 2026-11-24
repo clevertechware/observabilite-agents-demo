@@ -46,9 +46,11 @@ func (r *PGStock) Reserve(ctx context.Context, sku string, quantity int) error {
 		if err != nil {
 			return err
 		}
+
 		if available < quantity {
 			return inventory.ErrInsufficientStock
 		}
+
 		_, err = tx.Exec(ctx, decrementSQL, sku, quantity)
 		return err
 	})

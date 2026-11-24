@@ -59,9 +59,11 @@ func (r *Reservations) ReserveStock(ctx context.Context, sku string, quantity in
 	if err != nil {
 		return Reservation{}, err
 	}
+
 	if err = r.repository.Reserve(ctx, sku, quantity); err != nil {
 		return Reservation{}, err
 	}
+
 	return Reservation{
 		SKU:       sku,
 		Quantity:  quantity,

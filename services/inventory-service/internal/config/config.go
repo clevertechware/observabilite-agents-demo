@@ -27,12 +27,15 @@ func Load(getenv func(string) string) (Config, error) {
 		PricingURL:  getenv("PRICING_URL"),
 		Port:        getenv("PORT"),
 	}
+
 	if cfg.PricingURL == "" {
 		return Config{}, errors.New("PRICING_URL is required")
 	}
+
 	if cfg.Port == "" {
 		cfg.Port = "8080"
 	}
+
 	if raw := getenv("FAULT_SLOW_QUERY_SECONDS"); raw != "" {
 		seconds, err := strconv.ParseFloat(raw, 64)
 		if err != nil || math.IsNaN(seconds) || math.IsInf(seconds, 0) || seconds < 0 {
@@ -40,5 +43,6 @@ func Load(getenv func(string) string) (Config, error) {
 		}
 		cfg.FaultSlowQuerySeconds = seconds
 	}
+
 	return cfg, nil
 }

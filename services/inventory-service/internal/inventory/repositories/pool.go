@@ -18,9 +18,11 @@ func NewPool(ctx context.Context, databaseURL string, tracerOptions ...otelpgx.O
 	if err != nil {
 		return nil, err
 	}
+
 	if err = otelpgx.RecordStats(pool); err != nil {
 		pool.Close()
 		return nil, err
 	}
+
 	return pool, nil
 }
