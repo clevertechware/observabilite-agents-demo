@@ -78,7 +78,7 @@ func (f *follower) initialBatch(ctx context.Context, start, end time.Time) error
 		Size:  f.limit,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("suivi des logs : %w", err)
 	}
 	hits := slices.Clone(result.Hits)
 	slices.Reverse(hits)
@@ -103,7 +103,7 @@ func (f *follower) poll(ctx context.Context) error {
 			Size:  f.pageSize,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("suivi des logs : %w", err)
 		}
 		if err := f.emit(result.Hits); err != nil {
 			return err

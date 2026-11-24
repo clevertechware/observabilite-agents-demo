@@ -22,22 +22,23 @@ func listStreams(ctx context.Context, cmd *cli.Command, deps Dependencies) error
 	if t := cmd.String("type"); t != "" {
 		types = []string{t}
 	}
+	w := cmdutil.Writer(cmd)
 	streams := []o2.Stream{}
 	for _, t := range types {
 		found, err := searcher.Streams(ctx, t)
 		if err != nil {
-			return err
+			return fmt.Errorf("listing des streams %s : %w", t, err)
 		}
 		streams = append(streams, found...)
 	}
 	if s.Output == cmdutil.OutputJSON {
-		return cmdutil.WriteJSON(cmdutil.Writer(cmd), streams)
+		return cmdutil.WriteJSON(w, streams)
 	}
 	for _, stream := range streams {
-		if _, err := fmt.Fprintf(cmdutil.Writer(cmd), "%s/%s\n", stream.Type, stream.Name); err != nil {
+		if _, err := fmt.Fprintf(w, "%s/%s\n", stream.Type, stream.Name); err != nil {
 			return err
 		}
-		if err := writeWrapped(cmdutil.Writer(cmd), stream.Fields); err != nil {
+		if err := writeWrapped(w, stream.Fields); err != nil {
 			return err
 		}
 	}

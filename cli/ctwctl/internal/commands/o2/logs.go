@@ -3,6 +3,7 @@ package o2
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/o2"
@@ -27,7 +28,7 @@ func showLogs(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 	if err != nil {
 		return err
 	}
-	printer := logPrinter{w: cmdutil.Writer(cmd), json: s.Output == cmdutil.OutputJSON}
+	printer := logPrinter{w: cmdutil.Writer(cmd), isJSON: s.Output == cmdutil.OutputJSON}
 	if cmd.Bool("follow") {
 		follower := newFollower(searcher, filter, limit, deps.PollInterval, deps.Now, printer.print)
 		err := follower.run(ctx, since)
@@ -45,7 +46,7 @@ func showLogs(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 		Size:  limit,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("recherche des logs : %w", err)
 	}
 	return printer.printAll(result.Hits)
 }

@@ -3,6 +3,7 @@ package o2
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/o2"
@@ -30,10 +31,10 @@ func runQuery(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 		Size:  limit,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("exécution de la requête : %w", err)
 	}
 	if s.Output == cmdutil.OutputJSON {
-		return logPrinter{w: cmdutil.Writer(cmd), json: true}.printAll(result.Hits)
+		return logPrinter{w: cmdutil.Writer(cmd), isJSON: true}.printAll(result.Hits)
 	}
 	return writeTable(cmdutil.Writer(cmd), result.Hits)
 }

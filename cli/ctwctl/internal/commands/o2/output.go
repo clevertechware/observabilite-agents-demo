@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -16,13 +17,17 @@ import (
 func writeTable(w io.Writer, hits []o2.Hit) error {
 	columns := columnNames(hits)
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, strings.Join(columns, "\t"))
+	if _, err := fmt.Fprintln(tw, strings.Join(columns, "\t")); err != nil {
+		return err
+	}
 	for _, hit := range hits {
 		cells := make([]string, len(columns))
 		for i, column := range columns {
 			cells[i] = fmt.Sprint(hit[column])
 		}
-		fmt.Fprintln(tw, strings.Join(cells, "\t"))
+		if _, err := fmt.Fprintln(tw, strings.Join(cells, "\t")); err != nil {
+			return err
+		}
 	}
 	return tw.Flush()
 }
@@ -34,17 +39,12 @@ func columnNames(hits []o2.Hit) []string {
 			set[column] = struct{}{}
 		}
 	}
-	columns := make([]string, 0, len(set))
-	for column := range set {
-		columns = append(columns, column)
-	}
-	sort.Strings(columns)
-	return columns
+	return slices.Sorted(maps.Keys(set))
 }
 
 type logPrinter struct {
-	w    io.Writer
-	json bool
+	w      io.Writer
+	isJSON bool
 }
 
 func (p logPrinter) printAll(hits []o2.Hit) error {
@@ -57,7 +57,7 @@ func (p logPrinter) printAll(hits []o2.Hit) error {
 }
 
 func (p logPrinter) print(hit o2.Hit) error {
-	if p.json {
+	if p.isJSON {
 		return cmdutil.WriteJSON(p.w, hit)
 	}
 	_, err := fmt.Fprintf(p.w, "%s %s  %s\n", formatTimestamp(hit), origin(hit), fmt.Sprint(hit["body"]))

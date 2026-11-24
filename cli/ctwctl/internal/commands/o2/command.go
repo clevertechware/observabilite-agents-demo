@@ -1,3 +1,4 @@
+// Package o2 provides OpenObserve commands for ctwctl.
 package o2
 
 import (
@@ -9,19 +10,26 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-const (
-	defaultLimit = 100
-)
+const defaultLimit = 100
 
+const defaultPollInterval = 2 * time.Second
+
+// LogSearcher provides the OpenObserve search and stream operations used by the commands.
 type LogSearcher interface {
+	// Search executes a log search request.
 	Search(ctx context.Context, req o2.SearchRequest) (o2.SearchResult, error)
+	// Streams lists streams of the requested type.
 	Streams(ctx context.Context, streamType string) ([]o2.Stream, error)
 }
 
+// Dependencies contains the services and clock used by the OpenObserve commands.
 type Dependencies struct {
+	// NewLogSearcher creates a search client from the resolved configuration.
 	NewLogSearcher func(config.Settings) LogSearcher
-	PollInterval   time.Duration
-	Now            func() time.Time
+	// PollInterval is the delay between successive log-follow searches.
+	PollInterval time.Duration
+	// Now returns the current time used to build search windows.
+	Now func() time.Time
 }
 
 func (d Dependencies) withDefaults() Dependencies {
@@ -31,7 +39,7 @@ func (d Dependencies) withDefaults() Dependencies {
 		}
 	}
 	if d.PollInterval == 0 {
-		d.PollInterval = 2 * time.Second
+		d.PollInterval = defaultPollInterval
 	}
 	if d.Now == nil {
 		d.Now = time.Now
@@ -39,6 +47,7 @@ func (d Dependencies) withDefaults() Dependencies {
 	return d
 }
 
+// NewCommand creates the OpenObserve command tree.
 func NewCommand(deps Dependencies) *cli.Command {
 	deps = deps.withDefaults()
 	sinceFlag := &cli.StringFlag{Name: "since", Usage: "fenêtre de temps, par exemple 15m ou 1h", Value: "1h"}

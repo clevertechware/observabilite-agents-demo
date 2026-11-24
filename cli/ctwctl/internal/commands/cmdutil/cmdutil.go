@@ -1,3 +1,4 @@
+// Package cmdutil contains helpers shared by ctwctl command packages.
 package cmdutil
 
 import (
@@ -11,7 +12,9 @@ import (
 )
 
 const (
+	// OutputText selects human-readable command output.
 	OutputText = "text"
+	// OutputJSON selects JSON command output.
 	OutputJSON = "json"
 )
 
@@ -23,6 +26,7 @@ var flagKeys = map[string]string{
 
 type resolvedKey struct{}
 
+// GlobalFlags returns the flags shared by all ctwctl commands.
 func GlobalFlags() []cli.Flag {
 	return []cli.Flag{
 		&cli.StringFlag{Name: "output", Aliases: []string{"o"}, Usage: "format de sortie : text ou json"},
@@ -31,6 +35,7 @@ func GlobalFlags() []cli.Flag {
 	}
 }
 
+// Before loads and validates the CLI configuration before a command runs.
 func Before(ctx context.Context, cmd *cli.Command) (context.Context, error) {
 	resolved, err := config.Load(flagsSet(cmd))
 	if err != nil {
@@ -42,11 +47,13 @@ func Before(ctx context.Context, cmd *cli.Command) (context.Context, error) {
 	return context.WithValue(ctx, resolvedKey{}, resolved), nil
 }
 
+// Resolved returns the configuration resolved by Before, if present in ctx.
 func Resolved(ctx context.Context) *config.Resolved {
 	resolved, _ := ctx.Value(resolvedKey{}).(*config.Resolved)
 	return resolved
 }
 
+// Settings returns the settings resolved by Before, or their zero value if absent.
 func Settings(ctx context.Context) config.Settings {
 	resolved := Resolved(ctx)
 	if resolved == nil {
@@ -55,10 +62,12 @@ func Settings(ctx context.Context) config.Settings {
 	return resolved.Settings
 }
 
+// Writer returns the root command's output writer.
 func Writer(cmd *cli.Command) io.Writer {
 	return cmd.Root().Writer
 }
 
+// WriteJSON encodes v as JSON without escaping HTML characters.
 func WriteJSON(w io.Writer, v any) error {
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
