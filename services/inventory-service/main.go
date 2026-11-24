@@ -56,6 +56,7 @@ func run() error {
 	pgStock := postgres.NewPGStock(pool, cfg.FaultSlowQuerySeconds)
 	pricingHTTPClient := gateway.NewPricingHTTPClient(cfg.PricingURL)
 	reservations := inventory.NewReservations(pgStock, pricingHTTPClient)
+
 	server := &http.Server{
 		Addr:              ":" + cfg.Port,
 		Handler:           inventory.NewHttpRouter(reservations),
@@ -73,9 +74,11 @@ func run() error {
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
+
 	if err = server.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
+
 	return nil
 }
 

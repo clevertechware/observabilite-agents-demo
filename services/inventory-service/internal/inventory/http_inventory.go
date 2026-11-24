@@ -36,11 +36,13 @@ func (h *httpHandlers) getStock(c *gin.Context) {
 		c.JSON(http.StatusNotFound, errorResponse{Error: "unknown sku"})
 		return
 	}
+
 	if err != nil {
 		slog.ErrorContext(ctx, "stock lookup failed", "sku", sku, "error", err)
 		c.JSON(http.StatusInternalServerError, errorResponse{Error: "internal server error"})
 		return
 	}
+
 	c.JSON(http.StatusOK, stockLevel{SKU: sku, Quantity: quantity})
 }
 

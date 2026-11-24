@@ -64,6 +64,7 @@ func TestReserveStock(t *testing.T) {
 		{name: "stock becomes insufficient after pricing", available: 10, reserveErr: fmt.Errorf("reserve: %w", inventory.ErrInsufficientStock), wantPricing: true, wantReserve: true, wantErr: inventory.ErrInsufficientStock},
 		{name: "reservation fails", available: 10, reserveErr: dependencyErr, wantPricing: true, wantReserve: true, wantErr: dependencyErr},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -71,6 +72,7 @@ func TestReserveStock(t *testing.T) {
 			ctx := context.Background()
 			repository := mocks.NewMockStockRepository(t)
 			repository.EXPECT().Quantity(ctx, "SKU-42").Return(tt.available, tt.quantityErr).Once()
+
 			pricingCalls := 0
 			provider := priceProviderFunc(func(gotCtx context.Context, sku string, quantity int) (inventory.Price, error) {
 				pricingCalls++
@@ -79,11 +81,13 @@ func TestReserveStock(t *testing.T) {
 				assert.Equal(t, 2, quantity)
 				return inventory.Price{UnitPrice: 12.5, Total: 25}, tt.priceErr
 			})
+
 			if tt.wantReserve {
 				repository.EXPECT().Reserve(ctx, "SKU-42", 2).Run(func(context.Context, string, int) {
 					assert.Equal(t, 1, pricingCalls)
 				}).Return(tt.reserveErr).Once()
 			}
+
 			reservations := inventory.NewReservations(repository, provider)
 
 			reservation, err := reservations.ReserveStock(ctx, "SKU-42", 2)
@@ -95,11 +99,13 @@ func TestReserveStock(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, inventory.Reservation{SKU: "SKU-42", Quantity: 2, UnitPrice: 12.5, Total: 25}, reservation)
 			}
+
 			if tt.wantPricing {
 				assert.Equal(t, 1, pricingCalls)
 			} else {
 				assert.Zero(t, pricingCalls)
 			}
+
 			if !tt.wantReserve {
 				repository.AssertNotCalled(t, "Reserve")
 			}

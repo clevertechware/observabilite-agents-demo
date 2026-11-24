@@ -174,6 +174,7 @@ func TestConcurrentReservationsNeverOversellStock(t *testing.T) {
 			results <- repository.Reserve(requestContext(), "SKU-42", 1)
 		}()
 	}
+
 	group.Wait()
 	close(results)
 
@@ -186,6 +187,7 @@ func TestConcurrentReservationsNeverOversellStock(t *testing.T) {
 		assert.ErrorIs(t, err, inventory.ErrInsufficientStock)
 	}
 	assert.Equal(t, 5, succeeded)
+
 	quantity, err := repository.Quantity(requestContext(), "SKU-42")
 	require.NoError(t, err)
 	assert.Equal(t, 0, quantity)

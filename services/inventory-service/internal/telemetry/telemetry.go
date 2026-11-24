@@ -31,6 +31,7 @@ func Setup(ctx context.Context) (func(context.Context) error, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithResource(res),
 		sdktrace.WithBatcher(spanExporter),
@@ -40,15 +41,18 @@ func Setup(ctx context.Context) (func(context.Context) error, error) {
 	autoexport.WithFallbackMetricProducer(func(context.Context) (sdkmetric.Producer, error) {
 		return newRuntimeHistogramProducer(), nil
 	})
+
 	metricReader, err := autoexport.NewMetricReader(ctx)
 	if err != nil {
 		return nil, errors.Join(err, tracerProvider.Shutdown(ctx))
 	}
+
 	meterProvider := sdkmetric.NewMeterProvider(
 		sdkmetric.WithResource(res),
 		sdkmetric.WithReader(metricReader),
 	)
 	otel.SetMeterProvider(meterProvider)
+
 	if err = registerGCMetrics(meterProvider.Meter(scopeName)); err != nil {
 		return nil, errors.Join(err, tracerProvider.Shutdown(ctx), meterProvider.Shutdown(ctx))
 	}
@@ -57,11 +61,13 @@ func Setup(ctx context.Context) (func(context.Context) error, error) {
 	if err != nil {
 		return nil, errors.Join(err, tracerProvider.Shutdown(ctx), meterProvider.Shutdown(ctx))
 	}
+
 	loggerProvider := sdklog.NewLoggerProvider(
 		sdklog.WithResource(res),
 		sdklog.WithProcessor(sdklog.NewBatchProcessor(logExporter)),
 	)
 	otel.SetLoggerProvider(loggerProvider)
+
 	slog.SetDefault(slog.New(slog.NewMultiHandler(
 		slog.NewJSONHandler(os.Stdout, nil),
 		otelslog.NewHandler("inventory-service"),

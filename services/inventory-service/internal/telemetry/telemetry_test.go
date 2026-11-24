@@ -41,6 +41,7 @@ func TestSetupHonoursOtelTracesSamplerEnvironmentVariable(t *testing.T) {
 		{name: "always_off drops root spans", sampler: "always_off", wantSampled: false},
 		{name: "always_on keeps root spans", sampler: "always_on", wantSampled: true},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("OTEL_TRACES_EXPORTER", "none")
