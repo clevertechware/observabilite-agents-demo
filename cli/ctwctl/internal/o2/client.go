@@ -137,7 +137,7 @@ func (c *Client) Search(ctx context.Context, req SearchRequest) (SearchResult, e
 		return SearchResult{}, err
 	}
 	var result SearchResult
-	if err := decodeJSON(body, &result); err != nil {
+	if err = decodeJSON(body, &result); err != nil {
 		return SearchResult{}, fmt.Errorf("décodage de la réponse de _search : %w", err)
 	}
 	return result, nil
@@ -160,7 +160,7 @@ func (c *Client) Streams(ctx context.Context, streamType string) ([]Stream, erro
 		return nil, err
 	}
 	var response streamsResponse
-	if err := decodeJSON(body, &response); err != nil {
+	if err = decodeJSON(body, &response); err != nil {
 		return nil, fmt.Errorf("décodage de la réponse de streams : %w", err)
 	}
 	streams := make([]Stream, 0, len(response.List))

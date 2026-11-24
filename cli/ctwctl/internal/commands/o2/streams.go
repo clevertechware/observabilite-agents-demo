@@ -25,7 +25,8 @@ func listStreams(ctx context.Context, cmd *cli.Command, deps Dependencies) error
 	w := cmdutil.Writer(cmd)
 	streams := []o2.Stream{}
 	for _, t := range types {
-		found, err := searcher.Streams(ctx, t)
+		var found []o2.Stream
+		found, err = searcher.Streams(ctx, t)
 		if err != nil {
 			return fmt.Errorf("listing des streams %s : %w", t, err)
 		}
@@ -35,10 +36,10 @@ func listStreams(ctx context.Context, cmd *cli.Command, deps Dependencies) error
 		return cmdutil.WriteJSON(w, streams)
 	}
 	for _, stream := range streams {
-		if _, err := fmt.Fprintf(w, "%s/%s\n", stream.Type, stream.Name); err != nil {
+		if _, err = fmt.Fprintf(w, "%s/%s\n", stream.Type, stream.Name); err != nil {
 			return err
 		}
-		if err := writeWrapped(w, stream.Fields); err != nil {
+		if err = writeWrapped(w, stream.Fields); err != nil {
 			return err
 		}
 	}

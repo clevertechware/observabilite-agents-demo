@@ -54,7 +54,7 @@ func viewConfig(ctx context.Context, cmd *cli.Command) error {
 		return writeJSON(writer(cmd), view.Raw)
 	}
 	for _, key := range config.Keys() {
-		if _, err := fmt.Fprintf(writer(cmd), "%s = %v\n", key, view.Values[key]); err != nil {
+		if _, err = fmt.Fprintf(writer(cmd), "%s = %v\n", key, view.Values[key]); err != nil {
 			return err
 		}
 	}

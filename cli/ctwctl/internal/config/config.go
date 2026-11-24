@@ -70,7 +70,7 @@ func Load(flagValues map[string]any) (*Resolved, error) {
 	if err := k.Load(confmap.Provider(defaults, "."), nil); err != nil {
 		return nil, err
 	}
-	path, err := path(os.UserHomeDir)
+	path, err := configPath(os.UserHomeDir)
 	if err != nil {
 		return nil, err
 	}
@@ -79,14 +79,14 @@ func Load(flagValues map[string]any) (*Resolved, error) {
 		return nil, fmt.Errorf("lecture de %s : %w", path, err)
 	}
 	envProvider := env.Provider(".", env.Opt{Prefix: envPrefix, TransformFunc: envKey})
-	if err := k.Load(envProvider, nil); err != nil {
+	if err = k.Load(envProvider, nil); err != nil {
 		return nil, err
 	}
-	if err := k.Load(confmap.Provider(flagValues, "."), nil); err != nil {
+	if err = k.Load(confmap.Provider(flagValues, "."), nil); err != nil {
 		return nil, err
 	}
 	var settings Settings
-	if err := k.Unmarshal("", &settings); err != nil {
+	if err = k.Unmarshal("", &settings); err != nil {
 		return nil, fmt.Errorf("lecture de la configuration : %w", err)
 	}
 	return &Resolved{Settings: settings, values: k}, nil
@@ -117,7 +117,7 @@ func Keys() []string {
 }
 
 func SaveValue(key, value string) (string, error) {
-	path, err := path(os.UserHomeDir)
+	path, err := configPath(os.UserHomeDir)
 	if err != nil {
 		return "", err
 	}
@@ -126,7 +126,7 @@ func SaveValue(key, value string) (string, error) {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return "", fmt.Errorf("lecture de %s : %w", path, err)
 	}
-	if err := k.Set(key, value); err != nil {
+	if err = k.Set(key, value); err != nil {
 		return "", err
 	}
 	data, err := k.Marshal(toml.Parser())
@@ -136,7 +136,7 @@ func SaveValue(key, value string) (string, error) {
 	return path, writePrivateFile(path, data)
 }
 
-func path(userHomeDir func() (string, error)) (string, error) {
+func configPath(userHomeDir func() (string, error)) (string, error) {
 	base := os.Getenv("XDG_CONFIG_HOME")
 	if base == "" {
 		home, err := userHomeDir()
@@ -163,15 +163,15 @@ func writePrivateFile(path string, data []byte) error {
 		return fmt.Errorf("création du fichier temporaire : %w", err)
 	}
 	defer os.Remove(tmp.Name())
-	if err := tmp.Chmod(0o600); err != nil {
+	if err = tmp.Chmod(0o600); err != nil {
 		tmp.Close()
 		return fmt.Errorf("droits du fichier temporaire : %w", err)
 	}
-	if _, err := tmp.Write(data); err != nil {
+	if _, err = tmp.Write(data); err != nil {
 		tmp.Close()
 		return fmt.Errorf("écriture de %s : %w", path, err)
 	}
-	if err := tmp.Close(); err != nil {
+	if err = tmp.Close(); err != nil {
 		return fmt.Errorf("écriture de %s : %w", path, err)
 	}
 	return os.Rename(tmp.Name(), path)

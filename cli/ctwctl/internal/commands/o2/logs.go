@@ -30,8 +30,8 @@ func showLogs(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 	}
 	printer := logPrinter{w: cmdutil.Writer(cmd), isJSON: s.Output == cmdutil.OutputJSON}
 	if cmd.Bool("follow") {
-		follower := newFollower(searcher, filter, limit, deps.PollInterval, deps.Now, printer.print)
-		err := follower.run(ctx, since)
+		flw := newFollower(searcher, filter, limit, deps.PollInterval, deps.Now, printer.print)
+		err = flw.run(ctx, since)
 		if errors.Is(err, context.Canceled) {
 			return nil
 		}

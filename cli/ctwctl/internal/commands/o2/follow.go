@@ -105,7 +105,7 @@ func (f *follower) poll(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("suivi des logs : %w", err)
 		}
-		if err := f.emit(result.Hits); err != nil {
+		if err = f.emit(result.Hits); err != nil {
 			return err
 		}
 		if len(result.Hits) < f.pageSize {
@@ -127,7 +127,7 @@ func (f *follower) emit(hits []o2.Hit) error {
 		ts, _ := timestampOf(hit)
 		f.seen[key] = ts
 		f.latestTimestamp = max(f.latestTimestamp, ts)
-		if err := f.writeHit(hit); err != nil {
+		if err = f.writeHit(hit); err != nil {
 			return err
 		}
 	}

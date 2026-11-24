@@ -329,13 +329,13 @@ func newFollowFixture(searcher LogSearcher, limit, pageSize int) followFixture {
 func TestFollowerEmit_PropagatesOutputError(t *testing.T) {
 	hit := hitAt(fixedNow, "message")
 	writeErr := errors.New("output unavailable")
-	follower := newFollower(nil, logFilter{}, 1, time.Millisecond, func() time.Time { return fixedNow },
+	flw := newFollower(nil, logFilter{}, 1, time.Millisecond, func() time.Time { return fixedNow },
 		func(got o2.Hit) error {
 			assert.Equal(t, hit, got)
 			return writeErr
 		})
 
-	err := follower.emit([]o2.Hit{hit})
+	err := flw.emit([]o2.Hit{hit})
 
 	require.ErrorIs(t, err, writeErr)
 }

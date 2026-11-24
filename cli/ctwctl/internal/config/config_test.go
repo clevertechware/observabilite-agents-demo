@@ -50,7 +50,7 @@ func TestResolved_MaskedViewHidesTokenButKeepsEffectiveSettings(t *testing.T) {
 func TestPath_UsesXDGConfigHomeWhenSet(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "/tmp/xdg")
 
-	got, err := path(func() (string, error) {
+	got, err := configPath(func() (string, error) {
 		t.Fatal("user home should not be requested when XDG_CONFIG_HOME is set")
 		return "", nil
 	})
@@ -62,7 +62,7 @@ func TestPath_UsesXDGConfigHomeWhenSet(t *testing.T) {
 func TestPath_FallsBackToDotConfigUnderUserHome(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 
-	got, err := path(func() (string, error) { return "/home/dev", nil })
+	got, err := configPath(func() (string, error) { return "/home/dev", nil })
 
 	require.NoError(t, err)
 	assert.Equal(t, filepath.Join("/home/dev", ".config", "ctwctl", "config.toml"), got)
