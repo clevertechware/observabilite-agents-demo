@@ -198,28 +198,28 @@ func TestO2Logs_WithInvalidArguments_FailsBeforeAnySearch(t *testing.T) {
 		{"an unknown level", []string{"--level", "loud"}, "loud"},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			withO2Credentials(t)
-			searcher := mocks.NewLogSearcher(t)
+		t.Run(tt.name, func(st *testing.T) {
+			withO2Credentials(st)
+			searcher := mocks.NewLogSearcher(st)
 
-			_, err := run(t, o2Deps(searcher), append([]string{"o2", "logs"}, tt.args...)...)
+			_, err := run(st, o2Deps(searcher), append([]string{"o2", "logs"}, tt.args...)...)
 
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), tt.want)
+			require.Error(st, err)
+			assert.Contains(st, err.Error(), tt.want)
 		})
 	}
 }
 
 func TestO2Query_WithNonPositiveLimit_FailsBeforeSearch(t *testing.T) {
 	for _, value := range []string{"0", "-1"} {
-		t.Run(value, func(t *testing.T) {
-			withO2Credentials(t)
-			searcher := mocks.NewLogSearcher(t)
+		t.Run(value, func(st *testing.T) {
+			withO2Credentials(st)
+			searcher := mocks.NewLogSearcher(st)
 
-			_, err := run(t, o2Deps(searcher), "o2", "query", "SELECT 1", "--limit", value)
+			_, err := run(st, o2Deps(searcher), "o2", "query", "SELECT 1", "--limit", value)
 
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "--limit")
+			require.Error(st, err)
+			assert.Contains(st, err.Error(), "--limit")
 		})
 	}
 }

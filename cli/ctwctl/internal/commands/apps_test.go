@@ -113,12 +113,12 @@ func TestAppsRestart_RejectsInvalidNamesWithoutCallingTheClient(t *testing.T) {
 		{"two names are a usage error", []string{"a", "b"}},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			client := mocks.NewAppClient(t)
+		t.Run(tt.name, func(st *testing.T) {
+			client := mocks.NewAppClient(st)
 
-			_, err := run(t, appDeps(client), append([]string{"apps", "restart", "--"}, tt.args...)...)
+			_, err := run(st, appDeps(client), append([]string{"apps", "restart", "--"}, tt.args...)...)
 
-			assert.Error(t, err)
+			assert.Error(st, err)
 		})
 	}
 }

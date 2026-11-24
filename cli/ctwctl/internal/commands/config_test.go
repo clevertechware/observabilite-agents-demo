@@ -59,18 +59,18 @@ func TestLoadConfig_SourcesOverrideEachOtherInTheDocumentedOrder(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			dir := isolatedConfigDir(t)
+		t.Run(tt.name, func(st *testing.T) {
+			dir := isolatedConfigDir(st)
 			if tt.file != "" {
-				writeConfigFile(t, dir, tt.file)
+				writeConfigFile(st, dir, tt.file)
 			}
 			for key, value := range tt.env {
-				t.Setenv(key, value)
+				st.Setenv(key, value)
 			}
 
-			view := resolvedConfig(t, tt.args...)
+			view := resolvedConfig(st, tt.args...)
 
-			assert.Equal(t, tt.wantNamespace, namespaceOf(view))
+			assert.Equal(st, tt.wantNamespace, namespaceOf(view))
 		})
 	}
 }

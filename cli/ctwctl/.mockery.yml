@@ -1,4 +1,4 @@
-template: testify
+template: file://../../mock_testify.templ
 packages:
   github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands:
     config:

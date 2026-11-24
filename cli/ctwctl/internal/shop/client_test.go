@@ -72,17 +72,17 @@ func TestOrderClientErrors_MapStatusToTypedErrorWithProblemDetail(t *testing.T) 
 		{"rate limiting is a 429", http.StatusTooManyRequests, ErrRateLimited},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.name, func(st *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.status)
 				_, _ = w.Write([]byte(`{"detail":"détail du serveur"}`))
 			}))
 			defer server.Close()
 
-			_, err := NewOrderClient(server.URL).Create(t.Context(), "SKU-001", 1)
+			_, err := NewOrderClient(server.URL).Create(st.Context(), "SKU-001", 1)
 
-			require.ErrorIs(t, err, tt.want)
-			assert.Contains(t, err.Error(), "détail du serveur")
+			require.ErrorIs(st, err, tt.want)
+			assert.Contains(st, err.Error(), "détail du serveur")
 		})
 	}
 }

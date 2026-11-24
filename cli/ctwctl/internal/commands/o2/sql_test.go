@@ -36,8 +36,8 @@ func TestLogFilterSQL_BuildsOneConditionPerFilterInAnOrderedQuery(t *testing.T) 
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, tt.filter.sql(tt.order))
+		t.Run(tt.name, func(st *testing.T) {
+			assert.Equal(st, tt.want, tt.filter.sql(tt.order))
 		})
 	}
 }
@@ -50,11 +50,11 @@ func TestNewLogFilter_MapsLevelNamesToSeverityNumbers(t *testing.T) {
 		{"", 0}, {"debug", 5}, {"info", 9}, {"warn", 13}, {"error", 17}, {"ERROR", 17}, {"fatal", 21},
 	}
 	for _, tt := range tests {
-		t.Run("level "+tt.level, func(t *testing.T) {
+		t.Run("level "+tt.level, func(st *testing.T) {
 			filter, err := newLogFilter("", "", "", tt.level)
 
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, filter.minSeverity)
+			require.NoError(st, err)
+			assert.Equal(st, tt.want, filter.minSeverity)
 		})
 	}
 }

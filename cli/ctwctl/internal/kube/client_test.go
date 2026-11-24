@@ -100,17 +100,17 @@ func TestClient_WhenKubectlFails_TranslatesTheError(t *testing.T) {
 		{"other errors are wrapped", context.Canceled, "kubectl : context canceled"},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.name, func(st *testing.T) {
 			client := NewClient("demo", "")
-			fakeKubectl(t, client, nil, nil, tt.err)
+			fakeKubectl(st, client, nil, nil, tt.err)
 
-			_, listErr := client.ListApps(t.Context())
-			_, restartErr := client.RestartApp(t.Context(), "load-generator")
+			_, listErr := client.ListApps(st.Context())
+			_, restartErr := client.RestartApp(st.Context(), "load-generator")
 
-			require.Error(t, listErr)
-			assert.Equal(t, tt.wantMsg, listErr.Error())
-			require.Error(t, restartErr)
-			assert.Equal(t, tt.wantMsg, restartErr.Error())
+			require.Error(st, listErr)
+			assert.Equal(st, tt.wantMsg, listErr.Error())
+			require.Error(st, restartErr)
+			assert.Equal(st, tt.wantMsg, restartErr.Error())
 		})
 	}
 }
