@@ -34,8 +34,14 @@ type follower struct {
 	pageSize        int
 }
 
-func newFollower(searcher LogSearcher, filter logFilter, limit int, interval time.Duration,
-	now func() time.Time, writeHit func(o2.Hit) error) *follower {
+func newFollower(
+	searcher LogSearcher,
+	filter logFilter,
+	limit int,
+	interval time.Duration,
+	now func() time.Time,
+	writeHit func(o2.Hit) error,
+) *follower {
 	return &follower{
 		searcher: searcher,
 		filter:   filter,
@@ -53,11 +59,14 @@ func (f *follower) run(ctx context.Context, since time.Duration) error {
 	start := end.Add(-since)
 	f.latestTimestamp = start.UnixMicro()
 	f.windowFloor = f.latestTimestamp
+
 	if err := f.initialBatch(ctx, start, end); err != nil {
 		return err
 	}
+
 	ticker := time.NewTicker(f.interval)
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -80,13 +89,16 @@ func (f *follower) initialBatch(ctx context.Context, start, end time.Time) error
 	if err != nil {
 		return fmt.Errorf("suivi des logs : %w", err)
 	}
+
 	hits := slices.Clone(result.Hits)
 	slices.Reverse(hits)
+
 	if len(hits) >= f.limit {
 		if oldest, ok := timestampOf(hits[0]); ok {
 			f.windowFloor = oldest
 		}
 	}
+
 	return f.emit(hits)
 }
 
@@ -94,6 +106,7 @@ func (f *follower) poll(ctx context.Context) error {
 	end := f.now()
 	start := max(f.latestTimestamp-followOverlap.Microseconds(), f.windowFloor)
 	f.forgetBefore(start)
+
 	for from := 0; ; {
 		result, err := f.searcher.Search(ctx, o2.SearchRequest{
 			SQL:   f.filter.sql(orderOldestFirst),
@@ -105,9 +118,11 @@ func (f *follower) poll(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("suivi des logs : %w", err)
 		}
+
 		if err = f.emit(result.Hits); err != nil {
 			return err
 		}
+
 		if len(result.Hits) < f.pageSize {
 			return nil
 		}
@@ -124,9 +139,11 @@ func (f *follower) emit(hits []o2.Hit) error {
 		if _, dup := f.seen[key]; dup {
 			continue
 		}
+
 		ts, _ := timestampOf(hit)
 		f.seen[key] = ts
 		f.latestTimestamp = max(f.latestTimestamp, ts)
+
 		if err = f.writeHit(hit); err != nil {
 			return err
 		}
