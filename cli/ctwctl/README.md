@@ -20,8 +20,8 @@ make check        # go generate, go vet, go test, puis échec si un mock génér
 ```
 
 Les mocks sont générés par mockery v3.9.1 (`go run github.com/vektra/mockery/v3@v3.9.1`, configuration dans
-`.mockery.yml`). Aucune installation préalable n'est nécessaire. Ils sont committés dans
-`internal/commands/mocks/` et `internal/commands/o2/mocks/`.
+`.mockery.yml`). Aucune installation préalable n'est nécessaire. Ils sont committés dans `internal/app/mocks/`,
+`internal/order/mocks/` et `internal/commands/o2/mocks/`.
 
 ## Configuration
 
@@ -122,8 +122,13 @@ main.go                       point d'entrée, interruption par Ctrl+C
 internal/commands/            commandes urfave/cli (apps, orders, config) et utilitaires partagés
 internal/commands/cmdutil/    flags globaux, configuration du contexte et helpers de sortie
 internal/commands/o2/         commandes OpenObserve et tests du package
-internal/commands/mocks/      mocks mockery v3 (kubectlRunner, orderClient)
 internal/commands/o2/mocks/   mock mockery v3 de LogSearcher
+internal/app/                 domaine des applications : liste, redémarrage, validation du nom de Deployment
+internal/app/mocks/           mock mockery v3 de app.Client
+internal/order/               domaine des commandes : création, lecture, validation de la quantité
+internal/order/mocks/         mock mockery v3 de order.Client
+internal/config/              configuration en couches : défauts, config.toml, variables CTWCTL_*, options
+internal/kube/                implémentation d'app.Client qui lance kubectl
 internal/o2/                  client HTTP d'OpenObserve : _search, streams, retries sur 429 et 5xx
-internal/shop/                client HTTP d'order-service
+internal/shop/                client HTTP d'order-service, implémentation d'order.Client
 ```
