@@ -91,6 +91,17 @@ func TestO2Streams_WithTypeFlag_QueriesOnlyThatType(t *testing.T) {
 	assert.JSONEq(t, `[{"name":"up","type":"metrics","fields":["value"]}]`, out)
 }
 
+func TestO2Streams_WithNoStreamInJSON_PrintsAnEmptyArrayRatherThanNull(t *testing.T) {
+	withO2Credentials(t)
+	searcher := mocks.NewLogSearcher(t)
+	searcher.EXPECT().Streams(mock.Anything, "metrics").Return(nil, nil)
+
+	out, err := run(t, o2Deps(searcher), "o2", "streams", "--type", "metrics", "-o", "json")
+
+	require.NoError(t, err)
+	assert.Equal(t, "[]\n", out)
+}
+
 func TestO2Streams_WithManyFields_WrapsTheListUnderTheLineWidth(t *testing.T) {
 	withO2Credentials(t)
 	fields := make([]string, 0, 30)
