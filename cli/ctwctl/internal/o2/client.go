@@ -187,7 +187,7 @@ func (c *Client) Streams(ctx context.Context, streamType string) ([]Stream, erro
 
 func (c *Client) do(ctx context.Context, method, path string, payload []byte) ([]byte, error) {
 	var lastErr error
-	for attempt := 0; attempt < maxAttempts; attempt++ {
+	for attempt := range maxAttempts {
 		if attempt > 0 {
 			if err := sleep(ctx, c.backoff<<(attempt-1)); err != nil {
 				return nil, err
