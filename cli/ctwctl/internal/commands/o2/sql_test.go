@@ -35,6 +35,7 @@ func TestLogFilterSQL_BuildsOneConditionPerFilterInAnOrderedQuery(t *testing.T) 
 			`SELECT * FROM "default" WHERE service_name = 'a'' OR ''1''=''1' ORDER BY _timestamp DESC`,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(st *testing.T) {
 			assert.Equal(st, tt.want, tt.filter.sql(tt.order))
@@ -49,6 +50,7 @@ func TestNewLogFilter_MapsLevelNamesToSeverityNumbers(t *testing.T) {
 	}{
 		{"", 0}, {"debug", 5}, {"info", 9}, {"warn", 13}, {"error", 17}, {"ERROR", 17}, {"fatal", 21},
 	}
+
 	for _, tt := range tests {
 		t.Run("level "+tt.level, func(st *testing.T) {
 			filter, err := newLogFilter("", "", "", tt.level)

@@ -28,10 +28,12 @@ func newLogFilter(service, namespace, grep, level string) (logFilter, error) {
 	if level == "" {
 		return filter, nil
 	}
+
 	severity, ok := severityNumbers[strings.ToLower(level)]
 	if !ok {
 		return logFilter{}, fmt.Errorf("niveau %q inconnu : trace, debug, info, warn, error ou fatal", level)
 	}
+
 	filter.minSeverity = severity
 	return filter, nil
 }
@@ -55,10 +57,12 @@ func (f logFilter) sql(order string) string {
 	if f.grep != "" {
 		conditions = append(conditions, "body LIKE "+sqlString("%"+f.grep+"%"))
 	}
+
 	query := fmt.Sprintf("SELECT * FROM %q", logStream)
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
+
 	return query + " ORDER BY _timestamp " + order
 }
 

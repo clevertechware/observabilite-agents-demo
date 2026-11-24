@@ -112,6 +112,7 @@ func TestAppsRestart_RejectsInvalidNamesWithoutCallingTheClient(t *testing.T) {
 		{"a missing name is a usage error", nil},
 		{"two names are a usage error", []string{"a", "b"}},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(st *testing.T) {
 			client := appmocks.NewClient(st)

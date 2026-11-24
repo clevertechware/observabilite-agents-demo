@@ -58,6 +58,7 @@ func TestLoadConfig_SourcesOverrideEachOtherInTheDocumentedOrder(t *testing.T) {
 			[]string{"--context", "other"}, "from-env",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(st *testing.T) {
 			dir := isolatedConfigDir(st)

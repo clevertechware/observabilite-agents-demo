@@ -38,20 +38,25 @@ func (d Dependencies) withDefaults() Dependencies {
 			return o2.NewClient(s.O2.URL, s.O2.Org, s.O2.User, s.O2.Token)
 		}
 	}
+
 	if d.PollInterval == 0 {
 		d.PollInterval = defaultPollInterval
 	}
+
 	if d.Now == nil {
 		d.Now = time.Now
 	}
+
 	return d
 }
 
 // NewCommand creates the OpenObserve command tree.
 func NewCommand(deps Dependencies) *cli.Command {
 	deps = deps.withDefaults()
+
 	sinceFlag := &cli.StringFlag{Name: "since", Usage: "fenêtre de temps, par exemple 15m ou 1h", Value: "1h"}
 	limitFlag := &cli.IntFlag{Name: "limit", Usage: "nombre maximal de résultats", Value: defaultLimit}
+
 	return &cli.Command{
 		Name:  "o2",
 		Usage: "streams, logs et requêtes SQL d'OpenObserve",

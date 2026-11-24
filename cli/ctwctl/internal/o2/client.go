@@ -48,9 +48,11 @@ func NewClient(baseURL, org, user, token string, opts ...Option) *Client {
 		http:    &http.Client{Timeout: 30 * time.Second},
 		backoff: defaultBackoff,
 	}
+
 	for _, opt := range opts {
 		opt(c)
 	}
+
 	return c
 }
 
@@ -108,18 +110,22 @@ func (c *Client) Search(ctx context.Context, req SearchRequest) (SearchResult, e
 	if end.IsZero() {
 		end = time.Now()
 	}
+
 	start := req.Start
 	if start.IsZero() {
 		start = end.Add(-defaultWindow)
 	}
+
 	size := req.Size
 	if size <= 0 {
 		size = defaultPageSize
 	}
+
 	streamType := req.StreamType
 	if streamType == "" {
 		streamType = "logs"
 	}
+
 	payload, err := json.Marshal(searchBody{Query: searchQuery{
 		SQL:       req.SQL,
 		StartTime: start.UnixMicro(),
@@ -136,10 +142,12 @@ func (c *Client) Search(ctx context.Context, req SearchRequest) (SearchResult, e
 	if err != nil {
 		return SearchResult{}, err
 	}
+
 	var result SearchResult
 	if err = decodeJSON(body, &result); err != nil {
 		return SearchResult{}, fmt.Errorf("décodage de la réponse de _search : %w", err)
 	}
+
 	return result, nil
 }
 
@@ -159,10 +167,12 @@ func (c *Client) Streams(ctx context.Context, streamType string) ([]Stream, erro
 	if err != nil {
 		return nil, err
 	}
+
 	var response streamsResponse
 	if err = decodeJSON(body, &response); err != nil {
 		return nil, fmt.Errorf("décodage de la réponse de streams : %w", err)
 	}
+
 	streams := make([]Stream, 0, len(response.List))
 	for _, item := range response.List {
 		fields := make([]string, 0, len(item.Schema))
@@ -171,6 +181,7 @@ func (c *Client) Streams(ctx context.Context, streamType string) ([]Stream, erro
 		}
 		streams = append(streams, Stream{Name: item.Name, Type: item.StreamType, Fields: fields})
 	}
+
 	return streams, nil
 }
 
@@ -182,15 +193,18 @@ func (c *Client) do(ctx context.Context, method, path string, payload []byte) ([
 				return nil, err
 			}
 		}
+
 		body, retryable, err := c.once(ctx, method, path, payload)
 		if err == nil {
 			return body, nil
 		}
+
 		lastErr = err
 		if !retryable {
 			return nil, err
 		}
 	}
+
 	return nil, lastErr
 }
 
@@ -199,6 +213,7 @@ func (c *Client) once(ctx context.Context, method, path string, payload []byte) 
 	if err != nil {
 		return nil, false, fmt.Errorf("construction de la requête : %w", err)
 	}
+
 	req.SetBasicAuth(c.user, c.token)
 	req.Header.Set("Accept", "application/json")
 	if payload != nil {
@@ -215,9 +230,11 @@ func (c *Client) once(ctx context.Context, method, path string, payload []byte) 
 	if err != nil {
 		return nil, ctx.Err() == nil, fmt.Errorf("lecture de la réponse : %w", err)
 	}
+
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return body, false, nil
 	}
+
 	retryable := resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500
 	return nil, retryable, &StatusError{Status: resp.StatusCode, Body: truncate(string(body))}
 }
@@ -232,8 +249,10 @@ func sleep(ctx context.Context, d time.Duration) error {
 	if d <= 0 {
 		return ctx.Err()
 	}
+
 	timer := time.NewTimer(d)
 	defer timer.Stop()
+
 	select {
 	case <-ctx.Done():
 		return ctx.Err()

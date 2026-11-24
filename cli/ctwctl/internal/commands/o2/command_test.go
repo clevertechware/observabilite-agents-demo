@@ -208,6 +208,7 @@ func TestO2Logs_WithInvalidArguments_FailsBeforeAnySearch(t *testing.T) {
 		{"a negative limit", []string{"--limit", "-1"}, "--limit"},
 		{"an unknown level", []string{"--level", "loud"}, "loud"},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(st *testing.T) {
 			withO2Credentials(st)
@@ -387,6 +388,7 @@ func TestFollowerPoll_WhenLimitDroppedOlderLinesOfTheInitialWindow_NeverShowsThe
 		hitAt(base.Add(2*time.Second), "initiale-1"), hitAt(base.Add(3*time.Second), "initiale-2"),
 	}
 	fresh := hitAt(base.Add(4*time.Second), "nouvelle")
+
 	var pollStart time.Time
 	searcher := mocks.NewLogSearcher(t)
 	searcher.EXPECT().Search(mock.Anything, mock.Anything).RunAndReturn(
@@ -402,6 +404,7 @@ func TestFollowerPoll_WhenLimitDroppedOlderLinesOfTheInitialWindow_NeverShowsThe
 				}
 			}
 			return o2.SearchResult{Hits: hits}, nil
+
 		})
 	fixture := newFollowFixture(searcher, 2, 1000)
 	require.NoError(t, fixture.follower.initialBatch(t.Context(), base, fixedNow))

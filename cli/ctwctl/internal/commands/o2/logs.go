@@ -16,18 +16,22 @@ func showLogs(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 	if err != nil {
 		return err
 	}
+
 	since, limit, err := parseSearchOptions(cmd)
 	if err != nil {
 		return err
 	}
+
 	namespace := ""
 	if cmd.IsSet("namespace") {
 		namespace = s.Kube.Namespace
 	}
+
 	filter, err := newLogFilter(cmd.String("service"), namespace, cmd.String("grep"), cmd.String("level"))
 	if err != nil {
 		return err
 	}
+
 	printer := logPrinter{w: cmdutil.Writer(cmd), isJSON: s.Output == cmdutil.OutputJSON}
 	if cmd.Bool("follow") {
 		flw := newFollower(searcher, filter, limit, deps.PollInterval, deps.Now, printer.print)
@@ -48,5 +52,6 @@ func showLogs(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 	if err != nil {
 		return fmt.Errorf("recherche des logs : %w", err)
 	}
+
 	return printer.printAll(result.Hits)
 }

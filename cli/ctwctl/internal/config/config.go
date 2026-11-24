@@ -70,25 +70,31 @@ func Load(flagValues map[string]any) (*Resolved, error) {
 	if err := k.Load(confmap.Provider(defaults, "."), nil); err != nil {
 		return nil, err
 	}
+
 	path, err := configPath(os.UserHomeDir)
 	if err != nil {
 		return nil, err
 	}
+
 	err = k.Load(file.Provider(path), toml.Parser())
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, fmt.Errorf("lecture de %s : %w", path, err)
 	}
+
 	envProvider := env.Provider(".", env.Opt{Prefix: envPrefix, TransformFunc: envKey})
 	if err = k.Load(envProvider, nil); err != nil {
 		return nil, err
 	}
+
 	if err = k.Load(confmap.Provider(flagValues, "."), nil); err != nil {
 		return nil, err
 	}
+
 	var settings Settings
 	if err = k.Unmarshal("", &settings); err != nil {
 		return nil, fmt.Errorf("lecture de la configuration : %w", err)
 	}
+
 	return &Resolved{Settings: settings, values: k}, nil
 }
 
@@ -99,6 +105,7 @@ func (r *Resolved) MaskedView() (View, error) {
 			return View{}, err
 		}
 	}
+
 	return View{Raw: view.Raw(), Values: view.All()}, nil
 }
 
@@ -121,18 +128,22 @@ func SaveValue(key, value string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	k := koanf.New(".")
 	err = k.Load(file.Provider(path), toml.Parser())
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return "", fmt.Errorf("lecture de %s : %w", path, err)
 	}
+
 	if err = k.Set(key, value); err != nil {
 		return "", err
 	}
+
 	data, err := k.Marshal(toml.Parser())
 	if err != nil {
 		return "", fmt.Errorf("encodage TOML : %w", err)
 	}
+
 	return path, writePrivateFile(path, data)
 }
 
@@ -145,6 +156,7 @@ func configPath(userHomeDir func() (string, error)) (string, error) {
 		}
 		base = filepath.Join(home, ".config")
 	}
+
 	return filepath.Join(base, "ctwctl", "config.toml"), nil
 }
 
@@ -158,21 +170,26 @@ func writePrivateFile(path string, data []byte) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("création de %s : %w", dir, err)
 	}
+
 	tmp, err := os.CreateTemp(dir, ".config-*.toml")
 	if err != nil {
 		return fmt.Errorf("création du fichier temporaire : %w", err)
 	}
 	defer os.Remove(tmp.Name())
+
 	if err = tmp.Chmod(0o600); err != nil {
 		tmp.Close()
 		return fmt.Errorf("droits du fichier temporaire : %w", err)
 	}
+
 	if _, err = tmp.Write(data); err != nil {
 		tmp.Close()
 		return fmt.Errorf("écriture de %s : %w", path, err)
 	}
+
 	if err = tmp.Close(); err != nil {
 		return fmt.Errorf("écriture de %s : %w", path, err)
 	}
+
 	return os.Rename(tmp.Name(), path)
 }

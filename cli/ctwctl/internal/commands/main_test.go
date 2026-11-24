@@ -22,11 +22,13 @@ func TestMain(m *testing.M) {
 			os.Unsetenv(name)
 		}
 	}
+
 	os.Setenv("XDG_CONFIG_HOME", dir)
 	code := m.Run()
 	if err = os.RemoveAll(dir); err != nil {
 		code = 1
 	}
+
 	os.Exit(code)
 }
 

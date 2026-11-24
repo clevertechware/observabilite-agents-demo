@@ -50,6 +50,7 @@ func NewRootCommand() *cli.Command {
 
 func newRootCommand(deps dependencies) *cli.Command {
 	deps = deps.withDefaults()
+
 	return &cli.Command{
 		Name:   "ctwctl",
 		Usage:  "applications, logs OpenObserve et commandes de la démo d'observabilité",

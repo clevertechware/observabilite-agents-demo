@@ -20,15 +20,18 @@ func writeTable(w io.Writer, hits []o2.Hit) error {
 	if _, err := fmt.Fprintln(tw, strings.Join(columns, "\t")); err != nil {
 		return err
 	}
+
 	for _, hit := range hits {
 		cells := make([]string, len(columns))
 		for i, column := range columns {
 			cells[i] = fmt.Sprint(hit[column])
 		}
+
 		if _, err := fmt.Fprintln(tw, strings.Join(cells, "\t")); err != nil {
 			return err
 		}
 	}
+
 	return tw.Flush()
 }
 
@@ -39,6 +42,7 @@ func columnNames(hits []o2.Hit) []string {
 			set[column] = struct{}{}
 		}
 	}
+
 	return slices.Sorted(maps.Keys(set))
 }
 
@@ -75,6 +79,7 @@ func formatTimestamp(hit o2.Hit) string {
 func origin(hit o2.Hit) string {
 	namespace, _ := hit["k8s_namespace_name"].(string)
 	pod, _ := hit["k8s_pod_name"].(string)
+
 	if namespace == "" && pod == "" {
 		service, _ := hit["service_name"].(string)
 		if service == "" {
@@ -82,6 +87,7 @@ func origin(hit o2.Hit) string {
 		}
 		return service
 	}
+
 	return namespace + "/" + pod
 }
 

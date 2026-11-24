@@ -72,6 +72,7 @@ func TestOrderClientErrors_MapStatusToTypedErrorWithProblemDetail(t *testing.T) 
 		{"inventory outage is a 502", http.StatusBadGateway, ErrUpstreamFailure},
 		{"rate limiting is a 429", http.StatusTooManyRequests, ErrRateLimited},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(st *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

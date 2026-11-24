@@ -48,6 +48,7 @@ func createOrder(ctx context.Context, cmd *cli.Command, deps dependencies) error
 	if err != nil {
 		return err
 	}
+
 	return printOrder(cmd, s, created, "créée")
 }
 
@@ -55,15 +56,18 @@ func getOrder(ctx context.Context, cmd *cli.Command, deps dependencies) error {
 	if cmd.Args().Len() != 1 {
 		return errors.New("un identifiant est attendu : ctwctl orders get <id>")
 	}
+
 	id, err := strconv.ParseInt(cmd.Args().First(), 10, 64)
 	if err != nil {
 		return fmt.Errorf("identifiant de commande invalide %q", cmd.Args().First())
 	}
+
 	s := settingsFrom(ctx)
 	got, err := order.NewOrders(deps.newOrderClient(s)).Get(ctx, id)
 	if err != nil {
 		return err
 	}
+
 	return printOrder(cmd, s, got, "lue")
 }
 
@@ -71,10 +75,12 @@ func printOrder(cmd *cli.Command, s settings, item order.Order, verb string) err
 	if s.Output == outputJSON {
 		return writeJSON(writer(cmd), item)
 	}
+
 	_, err := fmt.Fprintf(writer(cmd), "commande %d %s : %s x%d, prix unitaire %s, total %s\n",
 		item.ID, verb, item.SKU, item.Quantity, item.UnitPrice, item.Total)
 	if err == nil && item.Location != "" {
 		_, err = fmt.Fprintf(writer(cmd), "Location: %s\n", item.Location)
 	}
+
 	return err
 }

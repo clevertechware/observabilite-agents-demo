@@ -40,11 +40,14 @@ func listApps(ctx context.Context, cmd *cli.Command, apps *app.Apps) error {
 	if err != nil {
 		return err
 	}
+
 	if settingsFrom(ctx).Output == outputJSON {
 		return writeJSON(writer(cmd), statuses)
 	}
+
 	tw := tabwriter.NewWriter(writer(cmd), 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "NOM\tPRÊTS\tDISPONIBLE")
+
 	for _, status := range statuses {
 		available := "non"
 		if status.Available {
@@ -52,6 +55,7 @@ func listApps(ctx context.Context, cmd *cli.Command, apps *app.Apps) error {
 		}
 		fmt.Fprintf(tw, "%s\t%d/%d\t%s\n", status.Name, status.Ready, status.Replicas, available)
 	}
+
 	return tw.Flush()
 }
 
@@ -59,6 +63,7 @@ func restartApp(ctx context.Context, cmd *cli.Command, apps *app.Apps) error {
 	if cmd.Args().Len() != 1 {
 		return errors.New("un nom de Deployment est attendu : ctwctl apps restart <nom>")
 	}
+
 	name := cmd.Args().First()
 	out, err := apps.Restart(ctx, name)
 	if errors.Is(err, app.ErrInvalidName) {
@@ -67,9 +72,11 @@ func restartApp(ctx context.Context, cmd *cli.Command, apps *app.Apps) error {
 	if err != nil {
 		return err
 	}
+
 	if settingsFrom(ctx).Output == outputJSON {
 		return writeJSON(writer(cmd), map[string]any{"name": name, "restarted": true})
 	}
+
 	_, err = fmt.Fprintln(writer(cmd), strings.TrimSpace(out))
 	return err
 }

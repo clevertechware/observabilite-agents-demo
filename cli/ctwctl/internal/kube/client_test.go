@@ -99,6 +99,7 @@ func TestClient_WhenKubectlFails_TranslatesTheError(t *testing.T) {
 		{"a missing binary is explained", exec.ErrNotFound, "kubectl est introuvable dans le PATH"},
 		{"other errors are wrapped", context.Canceled, "kubectl : context canceled"},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(st *testing.T) {
 			client := NewClient("demo", "")

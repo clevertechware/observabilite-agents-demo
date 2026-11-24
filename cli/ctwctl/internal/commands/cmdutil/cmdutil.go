@@ -41,9 +41,11 @@ func Before(ctx context.Context, cmd *cli.Command) (context.Context, error) {
 	if err != nil {
 		return ctx, err
 	}
+
 	if resolved.Settings.Output != OutputText && resolved.Settings.Output != OutputJSON {
 		return ctx, fmt.Errorf("format de sortie %q inconnu : text ou json attendu", resolved.Settings.Output)
 	}
+
 	return context.WithValue(ctx, resolvedKey{}, resolved), nil
 }
 
@@ -59,6 +61,7 @@ func Settings(ctx context.Context) config.Settings {
 	if resolved == nil {
 		return config.Settings{}
 	}
+
 	return resolved.Settings
 }
 
@@ -81,5 +84,6 @@ func flagsSet(cmd *cli.Command) map[string]any {
 			values[key] = cmd.String(flag)
 		}
 	}
+
 	return values
 }

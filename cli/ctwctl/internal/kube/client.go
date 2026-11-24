@@ -45,10 +45,12 @@ func (c *Client) kubectl(ctx context.Context, args ...string) ([]byte, error) {
 	if c.context != "" {
 		args = append(args, "--context", c.context)
 	}
+
 	output, err := c.run(ctx, args...)
 	if err != nil {
 		return nil, kubectlFailure(err)
 	}
+
 	return output, nil
 }
 
@@ -75,18 +77,21 @@ func parseDeployments(data []byte) ([]app.Status, error) {
 	if err := json.Unmarshal(data, &list); err != nil {
 		return nil, fmt.Errorf("décodage de la sortie de kubectl : %w", err)
 	}
+
 	apps := make([]app.Status, 0, len(list.Items))
 	for _, item := range list.Items {
 		replicas := 1
 		if item.Spec.Replicas != nil {
 			replicas = *item.Spec.Replicas
 		}
+
 		available := false
 		for _, condition := range item.Status.Conditions {
 			if condition.Type == "Available" && condition.Status == "True" {
 				available = true
 			}
 		}
+
 		apps = append(apps, app.Status{
 			Name:      item.Metadata.Name,
 			Ready:     item.Status.ReadyReplicas,
@@ -94,6 +99,7 @@ func parseDeployments(data []byte) ([]app.Status, error) {
 			Available: available,
 		})
 	}
+
 	return apps, nil
 }
 

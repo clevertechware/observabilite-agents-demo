@@ -20,6 +20,7 @@ func searcherFor(s config.Settings, deps Dependencies) (LogSearcher, error) {
 	if len(missing) > 0 {
 		return nil, fmt.Errorf("identifiants OpenObserve absents : %s", strings.Join(missing, ", "))
 	}
+
 	return deps.NewLogSearcher(s), nil
 }
 
@@ -29,9 +30,11 @@ func parseSearchOptions(cmd *cli.Command) (time.Duration, int, error) {
 	if err != nil || since <= 0 {
 		return 0, 0, fmt.Errorf("--since %q invalide : une durée positive est attendue, par exemple 15m ou 1h", sinceValue)
 	}
+
 	limit := cmd.Int("limit")
 	if limit <= 0 {
 		return 0, 0, fmt.Errorf("--limit doit être strictement positif, reçu %d", limit)
 	}
+
 	return since, limit, nil
 }
