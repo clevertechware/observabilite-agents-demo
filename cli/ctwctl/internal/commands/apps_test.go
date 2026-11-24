@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/app"
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/mocks"
+	appmocks "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/app/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -16,12 +16,12 @@ var appStatuses = []app.Status{
 	{Name: "pricing-service", Ready: 1, Replicas: 2, Available: false},
 }
 
-func appDeps(client appClient) dependencies {
-	return dependencies{newAppClient: func(settings) appClient { return client }}
+func appDeps(client app.Client) dependencies {
+	return dependencies{newAppClient: func(settings) app.Client { return client }}
 }
 
 func TestAppsList_WithJSONOutput_PrintsOneEntryPerApp(t *testing.T) {
-	client := mocks.NewAppClient(t)
+	client := appmocks.NewClient(t)
 	client.EXPECT().ListApps(mock.Anything).Return(appStatuses, nil)
 
 	out, err := run(t, appDeps(client), "apps", "list", "-o", "json")
@@ -33,7 +33,7 @@ func TestAppsList_WithJSONOutput_PrintsOneEntryPerApp(t *testing.T) {
 }
 
 func TestAppsList_WithTextOutput_PrintsReadyOverDesiredAndAvailability(t *testing.T) {
-	client := mocks.NewAppClient(t)
+	client := appmocks.NewClient(t)
 	client.EXPECT().ListApps(mock.Anything).Return(appStatuses, nil)
 
 	out, err := run(t, appDeps(client), "apps", "list")
@@ -45,10 +45,10 @@ func TestAppsList_WithTextOutput_PrintsReadyOverDesiredAndAvailability(t *testin
 }
 
 func TestAppsList_BuildsTheClientFromNamespaceAndContextFlags(t *testing.T) {
-	client := mocks.NewAppClient(t)
+	client := appmocks.NewClient(t)
 	client.EXPECT().ListApps(mock.Anything).Return(nil, nil)
 	var got settings
-	deps := dependencies{newAppClient: func(s settings) appClient {
+	deps := dependencies{newAppClient: func(s settings) app.Client {
 		got = s
 		return client
 	}}
@@ -61,7 +61,7 @@ func TestAppsList_BuildsTheClientFromNamespaceAndContextFlags(t *testing.T) {
 }
 
 func TestAppsList_WhenClientFails_ReturnsItsError(t *testing.T) {
-	client := mocks.NewAppClient(t)
+	client := appmocks.NewClient(t)
 	client.EXPECT().ListApps(mock.Anything).Return(nil, errors.New("kubectl : You must be logged in to the server"))
 
 	_, err := run(t, appDeps(client), "apps", "list")
@@ -71,7 +71,7 @@ func TestAppsList_WhenClientFails_ReturnsItsError(t *testing.T) {
 }
 
 func TestAppsRestart_RestartsTheNamedAppAndPrintsTheOutput(t *testing.T) {
-	client := mocks.NewAppClient(t)
+	client := appmocks.NewClient(t)
 	client.EXPECT().RestartApp(mock.Anything, "load-generator").
 		Return("deployment.apps/load-generator restarted\n", nil)
 
@@ -82,7 +82,7 @@ func TestAppsRestart_RestartsTheNamedAppAndPrintsTheOutput(t *testing.T) {
 }
 
 func TestAppsRestart_WithJSONOutput_ReportsTheRestartedApp(t *testing.T) {
-	client := mocks.NewAppClient(t)
+	client := appmocks.NewClient(t)
 	client.EXPECT().RestartApp(mock.Anything, "load-generator").Return("restarted", nil)
 
 	out, err := run(t, appDeps(client), "apps", "restart", "load-generator", "-o", "json")
@@ -92,7 +92,7 @@ func TestAppsRestart_WithJSONOutput_ReportsTheRestartedApp(t *testing.T) {
 }
 
 func TestAppsRestart_WhenClientFails_ReturnsItsError(t *testing.T) {
-	client := mocks.NewAppClient(t)
+	client := appmocks.NewClient(t)
 	client.EXPECT().RestartApp(mock.Anything, "load-generator").Return("", errors.New("kubectl est introuvable dans le PATH"))
 
 	_, err := run(t, appDeps(client), "apps", "restart", "load-generator")
@@ -114,7 +114,7 @@ func TestAppsRestart_RejectsInvalidNamesWithoutCallingTheClient(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(st *testing.T) {
-			client := mocks.NewAppClient(st)
+			client := appmocks.NewClient(st)
 
 			_, err := run(st, appDeps(client), append([]string{"apps", "restart", "--"}, tt.args...)...)
 

@@ -6,14 +6,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/shop"
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order"
 	"github.com/urfave/cli/v3"
 )
-
-type orderClient interface {
-	Create(ctx context.Context, sku string, quantity int) (shop.Order, error)
-	Get(ctx context.Context, id int64) (shop.Order, error)
-}
 
 func ordersCommand(deps dependencies) *cli.Command {
 	return &cli.Command{
@@ -45,15 +40,15 @@ func ordersCommand(deps dependencies) *cli.Command {
 
 func createOrder(ctx context.Context, cmd *cli.Command, deps dependencies) error {
 	quantity := cmd.Int("quantity")
-	if quantity <= 0 {
+	s := settingsFrom(ctx)
+	created, err := order.NewOrders(deps.newOrderClient(s)).Create(ctx, cmd.String("sku"), quantity)
+	if errors.Is(err, order.ErrInvalidQuantity) {
 		return fmt.Errorf("--quantity doit être strictement positif, reçu %d", quantity)
 	}
-	s := settingsFrom(ctx)
-	order, err := deps.newOrderClient(s).Create(ctx, cmd.String("sku"), quantity)
 	if err != nil {
 		return err
 	}
-	return printOrder(cmd, s, order, "créée")
+	return printOrder(cmd, s, created, "créée")
 }
 
 func getOrder(ctx context.Context, cmd *cli.Command, deps dependencies) error {
@@ -65,21 +60,21 @@ func getOrder(ctx context.Context, cmd *cli.Command, deps dependencies) error {
 		return fmt.Errorf("identifiant de commande invalide %q", cmd.Args().First())
 	}
 	s := settingsFrom(ctx)
-	order, err := deps.newOrderClient(s).Get(ctx, id)
+	got, err := order.NewOrders(deps.newOrderClient(s)).Get(ctx, id)
 	if err != nil {
 		return err
 	}
-	return printOrder(cmd, s, order, "lue")
+	return printOrder(cmd, s, got, "lue")
 }
 
-func printOrder(cmd *cli.Command, s settings, order shop.Order, verb string) error {
+func printOrder(cmd *cli.Command, s settings, item order.Order, verb string) error {
 	if s.Output == outputJSON {
-		return writeJSON(writer(cmd), order)
+		return writeJSON(writer(cmd), item)
 	}
 	_, err := fmt.Fprintf(writer(cmd), "commande %d %s : %s x%d, prix unitaire %s, total %s\n",
-		order.ID, verb, order.SKU, order.Quantity, order.UnitPrice, order.Total)
-	if err == nil && order.Location != "" {
-		_, err = fmt.Fprintf(writer(cmd), "Location: %s\n", order.Location)
+		item.ID, verb, item.SKU, item.Quantity, item.UnitPrice, item.Total)
+	if err == nil && item.Location != "" {
+		_, err = fmt.Fprintf(writer(cmd), "Location: %s\n", item.Location)
 	}
 	return err
 }

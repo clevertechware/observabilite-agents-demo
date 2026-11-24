@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order"
 )
 
 var (
@@ -20,16 +22,6 @@ var (
 	ErrUpstreamFailure   = errors.New("inventory-service indisponible")
 	ErrRateLimited       = errors.New("limite de débit atteinte")
 )
-
-// Order est la commande renvoyée par order-service ; Location n'est renseigné qu'à la création.
-type Order struct {
-	ID        int64       `json:"id"`
-	SKU       string      `json:"sku"`
-	Quantity  int         `json:"quantity"`
-	UnitPrice json.Number `json:"unitPrice"`
-	Total     json.Number `json:"total"`
-	Location  string      `json:"location,omitempty"`
-}
 
 type StatusError struct {
 	Status int
@@ -66,33 +58,33 @@ type response struct {
 	body       []byte
 }
 
-func (c *OrderClient) Create(ctx context.Context, sku string, quantity int) (Order, error) {
+func (c *OrderClient) Create(ctx context.Context, sku string, quantity int) (order.Order, error) {
 	payload, err := json.Marshal(createRequest{SKU: sku, Quantity: quantity})
 	if err != nil {
-		return Order{}, fmt.Errorf("encodage de la commande : %w", err)
+		return order.Order{}, fmt.Errorf("encodage de la commande : %w", err)
 	}
 	resp, err := c.do(ctx, http.MethodPost, "/orders", payload)
 	if err != nil {
-		return Order{}, err
+		return order.Order{}, err
 	}
 	if resp.statusCode != http.StatusCreated {
-		return Order{}, statusError(resp.statusCode, resp.body)
+		return order.Order{}, statusError(resp.statusCode, resp.body)
 	}
-	order, err := decodeOrder(resp.body)
+	created, err := decodeOrder(resp.body)
 	if err != nil {
-		return Order{}, err
+		return order.Order{}, err
 	}
-	order.Location = resp.location
-	return order, nil
+	created.Location = resp.location
+	return created, nil
 }
 
-func (c *OrderClient) Get(ctx context.Context, id int64) (Order, error) {
+func (c *OrderClient) Get(ctx context.Context, id int64) (order.Order, error) {
 	resp, err := c.do(ctx, http.MethodGet, "/orders/"+strconv.FormatInt(id, 10), nil)
 	if err != nil {
-		return Order{}, err
+		return order.Order{}, err
 	}
 	if resp.statusCode != http.StatusOK {
-		return Order{}, statusError(resp.statusCode, resp.body)
+		return order.Order{}, statusError(resp.statusCode, resp.body)
 	}
 	return decodeOrder(resp.body)
 }
@@ -118,12 +110,12 @@ func (c *OrderClient) do(ctx context.Context, method, path string, payload []byt
 	return response{statusCode: resp.StatusCode, location: resp.Header.Get("Location"), body: body}, nil
 }
 
-func decodeOrder(body []byte) (Order, error) {
-	var order Order
-	if err := json.Unmarshal(body, &order); err != nil {
-		return Order{}, fmt.Errorf("décodage de la commande : %w", err)
+func decodeOrder(body []byte) (order.Order, error) {
+	var decoded order.Order
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		return order.Order{}, fmt.Errorf("décodage de la commande : %w", err)
 	}
-	return order, nil
+	return decoded, nil
 }
 
 type problemDetail struct {

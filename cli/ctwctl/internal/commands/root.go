@@ -5,10 +5,12 @@ import (
 	"io"
 	"os"
 
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/app"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	o2cmd "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/o2"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/kube"
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/shop"
 	"github.com/urfave/cli/v3"
 )
@@ -19,17 +21,17 @@ const (
 )
 
 type dependencies struct {
-	newAppClient   func(settings) appClient
+	newAppClient   func(settings) app.Client
 	o2             o2cmd.Dependencies
-	newOrderClient func(settings) orderClient
+	newOrderClient func(settings) order.Client
 }
 
 func (d dependencies) withDefaults() dependencies {
 	if d.newAppClient == nil {
-		d.newAppClient = func(s settings) appClient { return kube.NewClient(s.Kube.Namespace, s.Kube.Context) }
+		d.newAppClient = func(s settings) app.Client { return kube.NewClient(s.Kube.Namespace, s.Kube.Context) }
 	}
 	if d.newOrderClient == nil {
-		d.newOrderClient = func(s settings) orderClient { return shop.NewOrderClient(s.Shop.URL) }
+		d.newOrderClient = func(s settings) order.Client { return shop.NewOrderClient(s.Shop.URL) }
 	}
 	return d
 }

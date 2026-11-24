@@ -3,23 +3,24 @@ package commands
 import (
 	"testing"
 
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/mocks"
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order"
+	ordermocks "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order/mocks"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/shop"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-func ordersDeps(client orderClient) dependencies {
-	return dependencies{newOrderClient: func(settings) orderClient { return client }}
+func ordersDeps(client order.Client) dependencies {
+	return dependencies{newOrderClient: func(settings) order.Client { return client }}
 }
 
-var createdOrder = shop.Order{
+var createdOrder = order.Order{
 	ID: 42, SKU: "SKU-001", Quantity: 2, UnitPrice: "9.90", Total: "19.80", Location: "/orders/42",
 }
 
 func TestOrdersCreate_SendsSkuAndQuantityAndPrintsTheCreatedOrder(t *testing.T) {
-	client := mocks.NewOrderClient(t)
+	client := ordermocks.NewClient(t)
 	client.EXPECT().Create(mock.Anything, "SKU-001", 2).Return(createdOrder, nil)
 
 	out, err := run(t, ordersDeps(client), "orders", "create", "--sku", "SKU-001", "--quantity", "2")
@@ -29,7 +30,7 @@ func TestOrdersCreate_SendsSkuAndQuantityAndPrintsTheCreatedOrder(t *testing.T) 
 }
 
 func TestOrdersCreate_WithJSONOutput_PrintsTheOrderWithItsLocation(t *testing.T) {
-	client := mocks.NewOrderClient(t)
+	client := ordermocks.NewClient(t)
 	client.EXPECT().Create(mock.Anything, "SKU-001", 2).Return(createdOrder, nil)
 
 	out, err := run(t, ordersDeps(client), "orders", "create", "--sku", "SKU-001", "--quantity", "2", "-o", "json")
@@ -40,8 +41,8 @@ func TestOrdersCreate_WithJSONOutput_PrintsTheOrderWithItsLocation(t *testing.T)
 }
 
 func TestOrdersCreate_WhenStockIsInsufficient_ReturnsTheTypedError(t *testing.T) {
-	client := mocks.NewOrderClient(t)
-	client.EXPECT().Create(mock.Anything, "SKU-LOW", 5).Return(shop.Order{}, shop.ErrInsufficientStock)
+	client := ordermocks.NewClient(t)
+	client.EXPECT().Create(mock.Anything, "SKU-LOW", 5).Return(order.Order{}, shop.ErrInsufficientStock)
 
 	_, err := run(t, ordersDeps(client), "orders", "create", "--sku", "SKU-LOW", "--quantity", "5")
 
@@ -49,7 +50,7 @@ func TestOrdersCreate_WhenStockIsInsufficient_ReturnsTheTypedError(t *testing.T)
 }
 
 func TestOrdersCreate_WithoutSku_FailsBeforeAnyCall(t *testing.T) {
-	client := mocks.NewOrderClient(t)
+	client := ordermocks.NewClient(t)
 
 	_, err := run(t, ordersDeps(client), "orders", "create")
 
@@ -57,7 +58,7 @@ func TestOrdersCreate_WithoutSku_FailsBeforeAnyCall(t *testing.T) {
 }
 
 func TestOrdersCreate_WithNonPositiveQuantity_FailsBeforeAnyCall(t *testing.T) {
-	client := mocks.NewOrderClient(t)
+	client := ordermocks.NewClient(t)
 
 	_, err := run(t, ordersDeps(client), "orders", "create", "--sku", "SKU-001", "--quantity", "0")
 
@@ -66,8 +67,8 @@ func TestOrdersCreate_WithNonPositiveQuantity_FailsBeforeAnyCall(t *testing.T) {
 }
 
 func TestOrdersGet_PrintsTheOrderReadByItsIdentifier(t *testing.T) {
-	client := mocks.NewOrderClient(t)
-	client.EXPECT().Get(mock.Anything, int64(42)).Return(shop.Order{
+	client := ordermocks.NewClient(t)
+	client.EXPECT().Get(mock.Anything, int64(42)).Return(order.Order{
 		ID: 42, SKU: "SKU-001", Quantity: 2, UnitPrice: "9.90", Total: "19.80",
 	}, nil)
 
@@ -78,8 +79,8 @@ func TestOrdersGet_PrintsTheOrderReadByItsIdentifier(t *testing.T) {
 }
 
 func TestOrdersGet_WithJSONOutput_OmitsTheLocation(t *testing.T) {
-	client := mocks.NewOrderClient(t)
-	client.EXPECT().Get(mock.Anything, int64(42)).Return(shop.Order{
+	client := ordermocks.NewClient(t)
+	client.EXPECT().Get(mock.Anything, int64(42)).Return(order.Order{
 		ID: 42, SKU: "SKU-001", Quantity: 2, UnitPrice: "9.90", Total: "19.80",
 	}, nil)
 
@@ -90,7 +91,7 @@ func TestOrdersGet_WithJSONOutput_OmitsTheLocation(t *testing.T) {
 }
 
 func TestOrdersGet_WithNonNumericIdentifier_FailsBeforeAnyCall(t *testing.T) {
-	client := mocks.NewOrderClient(t)
+	client := ordermocks.NewClient(t)
 
 	_, err := run(t, ordersDeps(client), "orders", "get", "abc")
 
@@ -98,8 +99,8 @@ func TestOrdersGet_WithNonNumericIdentifier_FailsBeforeAnyCall(t *testing.T) {
 }
 
 func TestOrdersGet_WhenOrderIsMissing_ReturnsNotFound(t *testing.T) {
-	client := mocks.NewOrderClient(t)
-	client.EXPECT().Get(mock.Anything, int64(7)).Return(shop.Order{}, shop.ErrNotFound)
+	client := ordermocks.NewClient(t)
+	client.EXPECT().Get(mock.Anything, int64(7)).Return(order.Order{}, shop.ErrNotFound)
 
 	_, err := run(t, ordersDeps(client), "orders", "get", "7")
 
@@ -110,9 +111,9 @@ func TestOrders_UseTheShopURLFromTheConfiguration(t *testing.T) {
 	isolatedConfigDir(t)
 	t.Setenv("CTWCTL_SHOP_URL", "https://shop.example.test")
 	var gotURL string
-	client := mocks.NewOrderClient(t)
-	client.EXPECT().Get(mock.Anything, int64(1)).Return(shop.Order{ID: 1}, nil)
-	deps := dependencies{newOrderClient: func(s settings) orderClient {
+	client := ordermocks.NewClient(t)
+	client.EXPECT().Get(mock.Anything, int64(1)).Return(order.Order{ID: 1}, nil)
+	deps := dependencies{newOrderClient: func(s settings) order.Client {
 		gotURL = s.Shop.URL
 		return client
 	}}

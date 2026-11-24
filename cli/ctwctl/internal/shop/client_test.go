@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -37,13 +38,13 @@ func TestOrderClientCreate_WhenServerAnswers201_ReturnsOrderWithLocation(t *test
 	}))
 	defer server.Close()
 
-	order, err := NewOrderClient(server.URL).Create(t.Context(), "SKU-001", 2)
+	created, err := NewOrderClient(server.URL).Create(t.Context(), "SKU-001", 2)
 
 	require.NoError(t, err)
-	assert.Equal(t, Order{
+	assert.Equal(t, order.Order{
 		ID: 42, SKU: "SKU-001", Quantity: 2,
 		UnitPrice: "9.90", Total: "19.80", Location: "/orders/42",
-	}, order)
+	}, created)
 }
 
 func TestOrderClientCreate_WhenServerAnswers200_ReportsUnexpectedStatus(t *testing.T) {
@@ -108,11 +109,11 @@ func TestOrderClientGet_ReadsTheOrderAtItsPath(t *testing.T) {
 	}))
 	defer server.Close()
 
-	order, err := NewOrderClient(server.URL).Get(t.Context(), 42)
+	got, err := NewOrderClient(server.URL).Get(t.Context(), 42)
 
 	require.NoError(t, err)
-	assert.EqualValues(t, 42, order.ID)
-	assert.Empty(t, order.Location)
+	assert.EqualValues(t, 42, got.ID)
+	assert.Empty(t, got.Location)
 }
 
 func TestOrderClientGet_WhenOrderIsMissing_ReturnsNotFound(t *testing.T) {
