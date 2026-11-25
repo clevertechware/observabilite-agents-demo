@@ -185,6 +185,8 @@ func (c *Client) Streams(ctx context.Context, streamType string) ([]Stream, erro
 	return streams, nil
 }
 
+// do sends the request up to maxAttempts times, retrying only on 429, 5xx and network errors. The wait before each
+// retry doubles with exponential backoff: c.backoff<<(attempt-1) gives 500ms, then 1s with the default backoff.
 func (c *Client) do(ctx context.Context, method, path string, payload []byte) ([]byte, error) {
 	var lastErr error
 	for attempt := range maxAttempts {
