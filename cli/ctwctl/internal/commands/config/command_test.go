@@ -1,4 +1,4 @@
-package commands
+package config
 
 import (
 	"encoding/json"
@@ -21,7 +21,7 @@ func writeConfigFile(t *testing.T, environment config.Environment, content strin
 
 func resolvedConfig(t *testing.T, environment config.Environment, args ...string) map[string]any {
 	t.Helper()
-	out, err := run(t, dependencies{environment: environment}, append(args, "config", "view", "-o", "json")...)
+	out, err := run(t, environment, append(args, "config", "view", "-o", "json")...)
 	require.NoError(t, err)
 	var view map[string]any
 	require.NoError(t, json.Unmarshal([]byte(out), &view))
@@ -95,19 +95,10 @@ func TestLoadConfig_WhenFileIsNotValidTOML_NamesTheFile(t *testing.T) {
 	environment := cmdtest.IsolatedEnvironment(t, nil)
 	writeConfigFile(t, environment, "ceci n'est pas du toml [")
 
-	_, err := run(t, dependencies{environment: environment}, "config", "view")
+	_, err := run(t, environment, "config", "view")
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), configFilePath(environment))
-}
-
-func TestRoot_WhenOutputFormatIsUnknown_ReturnsError(t *testing.T) {
-	t.Parallel()
-
-	_, err := run(t, dependencies{}, "-o", "yaml", "config", "view")
-
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "yaml")
 }
 
 func TestConfigSet_WritesTheFileWithOwnerOnlyPermissions(t *testing.T) {
@@ -115,7 +106,7 @@ func TestConfigSet_WritesTheFileWithOwnerOnlyPermissions(t *testing.T) {
 
 	environment := cmdtest.IsolatedEnvironment(t, nil)
 
-	out, err := run(t, dependencies{environment: environment}, "config", "set", "o2.token", "jeton-secret")
+	out, err := run(t, environment, "config", "set", "o2.token", "jeton-secret")
 
 	require.NoError(t, err)
 	path := configFilePath(environment)
@@ -134,7 +125,7 @@ func TestConfigSet_TightensPermissionsOfAnExistingOpenFile(t *testing.T) {
 	path := configFilePath(environment)
 	require.NoError(t, os.Chmod(path, 0o644))
 
-	_, err := run(t, dependencies{environment: environment}, "config", "set", "kube.namespace", "staging")
+	_, err := run(t, environment, "config", "set", "kube.namespace", "staging")
 
 	require.NoError(t, err)
 	info, statErr := os.Stat(path)
@@ -148,7 +139,7 @@ func TestConfigSet_KeepsValuesAlreadyInTheFile(t *testing.T) {
 	environment := cmdtest.IsolatedEnvironment(t, nil)
 	writeConfigFile(t, environment, "[o2]\nurl = \"https://o2.example.test\"\n")
 
-	_, err := run(t, dependencies{environment: environment}, "config", "set", "kube.namespace", "staging")
+	_, err := run(t, environment, "config", "set", "kube.namespace", "staging")
 
 	require.NoError(t, err)
 	view := resolvedConfig(t, environment)
@@ -161,7 +152,7 @@ func TestConfigSet_DoesNotPersistEnvironmentValuesInTheFile(t *testing.T) {
 
 	environment := cmdtest.IsolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "jeton-de-l-environnement"})
 
-	_, err := run(t, dependencies{environment: environment}, "config", "set", "kube.namespace", "staging")
+	_, err := run(t, environment, "config", "set", "kube.namespace", "staging")
 
 	require.NoError(t, err)
 	content, readErr := os.ReadFile(configFilePath(environment))
@@ -174,7 +165,7 @@ func TestConfigSet_RejectsUnknownKeysAndListsTheKnownOnes(t *testing.T) {
 
 	environment := cmdtest.IsolatedEnvironment(t, nil)
 
-	_, err := run(t, dependencies{environment: environment}, "config", "set", "o2.stream.type", "logs")
+	_, err := run(t, environment, "config", "set", "o2.stream.type", "logs")
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "o2.token")
@@ -184,7 +175,7 @@ func TestConfigSet_RejectsUnknownKeysAndListsTheKnownOnes(t *testing.T) {
 func TestConfigSet_WithoutValue_ReturnsUsageError(t *testing.T) {
 	t.Parallel()
 
-	_, err := run(t, dependencies{}, "config", "set", "o2.token")
+	_, err := run(t, cmdtest.IsolatedEnvironment(t, nil), "config", "set", "o2.token")
 
 	require.Error(t, err)
 }
@@ -192,11 +183,11 @@ func TestConfigSet_WithoutValue_ReturnsUsageError(t *testing.T) {
 func TestConfigView_MasksTheTokenInTextAndJSON(t *testing.T) {
 	t.Parallel()
 
-	deps := dependencies{environment: cmdtest.IsolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "jeton-secret"})}
+	environment := cmdtest.IsolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "jeton-secret"})
 
-	text, err := run(t, deps, "config", "view")
+	text, err := run(t, environment, "config", "view")
 	require.NoError(t, err)
-	jsonOut, err := run(t, deps, "config", "view", "-o", "json")
+	jsonOut, err := run(t, environment, "config", "view", "-o", "json")
 	require.NoError(t, err)
 
 	assert.NotContains(t, text, "jeton-secret")
@@ -207,7 +198,7 @@ func TestConfigView_MasksTheTokenInTextAndJSON(t *testing.T) {
 func TestConfigView_WithTextOutput_PrintsOneSortedKeyPerLine(t *testing.T) {
 	t.Parallel()
 
-	out, err := run(t, dependencies{}, "config", "view")
+	out, err := run(t, cmdtest.IsolatedEnvironment(t, nil), "config", "view")
 
 	require.NoError(t, err)
 	assert.Equal(t, "kube.context = \n"+

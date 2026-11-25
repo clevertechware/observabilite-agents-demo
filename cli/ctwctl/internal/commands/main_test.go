@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"path/filepath"
 	"testing"
 
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdtest"
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/urfave/cli/v3"
 )
 
@@ -27,8 +25,4 @@ func run(t *testing.T, deps dependencies, args ...string) (string, error) {
 	cmd.ExitErrHandler = func(context.Context, *cli.Command, error) {}
 	err := cmd.Run(t.Context(), append([]string{"ctwctl"}, args...))
 	return out.String(), err
-}
-
-func configFilePath(environment config.Environment) string {
-	return filepath.Join(environment.Variables["XDG_CONFIG_HOME"], "ctwctl", "config.toml")
 }

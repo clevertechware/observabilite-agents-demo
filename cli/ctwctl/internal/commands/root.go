@@ -1,21 +1,15 @@
 package commands
 
 import (
-	"context"
-	"io"
 	"os"
 
 	appscmd "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/apps"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
+	configcmd "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/config"
 	o2cmd "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/o2"
 	orderscmd "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/orders"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/urfave/cli/v3"
-)
-
-const (
-	outputText = cmdutil.OutputText
-	outputJSON = cmdutil.OutputJSON
 )
 
 type dependencies struct {
@@ -23,14 +17,6 @@ type dependencies struct {
 	o2          o2cmd.Dependencies
 	orders      orderscmd.Dependencies
 	environment config.Environment
-}
-
-func settingsFrom(ctx context.Context) settings {
-	return cmdutil.Settings(ctx)
-}
-
-func resolvedConfigFrom(ctx context.Context) *config.Resolved {
-	return cmdutil.Resolved(ctx)
 }
 
 func NewRootCommand() *cli.Command {
@@ -45,14 +31,10 @@ func newRootCommand(deps dependencies) *cli.Command {
 		Flags:  cmdutil.GlobalFlags(),
 		Before: cmdutil.LoadConfig(deps.environment),
 		Commands: []*cli.Command{
-			configCommand(deps.environment),
+			configcmd.NewCommand(deps.environment),
 			appscmd.NewCommand(deps.apps),
 			orderscmd.NewCommand(deps.orders),
 			o2cmd.NewCommand(deps.o2),
 		},
 	}
-}
-
-func writer(cmd *cli.Command) io.Writer {
-	return cmdutil.Writer(cmd)
 }
