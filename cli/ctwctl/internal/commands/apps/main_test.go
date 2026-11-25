@@ -9,5 +9,5 @@ import (
 func run(t *testing.T, deps Dependencies, args ...string) (string, error) {
 	t.Helper()
 
-	return cmdtest.Run(t.Context(), cmdtest.IsolatedEnvironment(t, nil), NewCommand(deps), args...)
+	return cmdtest.RunWithEnvironment(t.Context(), cmdtest.IsolatedEnvironment(t, nil), NewCommand(deps), args...)
 }

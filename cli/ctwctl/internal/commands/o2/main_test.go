@@ -17,5 +17,5 @@ func run(t *testing.T, environment config.Environment, deps Dependencies, args .
 func runWithContext(
 	ctx context.Context, environment config.Environment, deps Dependencies, args ...string,
 ) (string, error) {
-	return cmdtest.Run(ctx, environment, NewCommand(deps), args...)
+	return cmdtest.RunWithEnvironment(ctx, environment, NewCommand(deps), args...)
 }

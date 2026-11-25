@@ -11,7 +11,7 @@ import (
 func run(t *testing.T, environment config.Environment, args ...string) (string, error) {
 	t.Helper()
 
-	return cmdtest.Run(t.Context(), environment, NewCommand(environment), args...)
+	return cmdtest.RunWithEnvironment(t.Context(), environment, NewCommand(environment), args...)
 }
 
 func configFilePath(environment config.Environment) string {

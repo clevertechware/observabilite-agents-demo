@@ -24,6 +24,10 @@ func NewRootCommand() *cli.Command {
 }
 
 func newRootCommand(deps dependencies) *cli.Command {
+	if deps.orders.LoadSettings == nil {
+		deps.orders.LoadSettings = cmdutil.NewSettingsLoader(deps.environment)
+	}
+
 	return &cli.Command{
 		Name:   "ctwctl",
 		Usage:  "applications, OpenObserve logs and orders of the observability demo",

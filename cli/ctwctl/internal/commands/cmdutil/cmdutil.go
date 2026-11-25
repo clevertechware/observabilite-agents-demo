@@ -38,17 +38,41 @@ func GlobalFlags() []cli.Flag {
 // LoadConfig returns the hook that loads and validates the CLI configuration from environment before a command runs.
 func LoadConfig(environment config.Environment) cli.BeforeFunc {
 	return func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
-		resolved, err := config.Load(environment, flagsSet(cmd))
+		resolved, err := resolve(environment, cmd)
 		if err != nil {
 			return ctx, err
 		}
 
-		if resolved.Settings.Output != OutputText && resolved.Settings.Output != OutputJSON {
-			return ctx, fmt.Errorf("unknown output format %q: text or json expected", resolved.Settings.Output)
-		}
-
 		return context.WithValue(ctx, resolvedKey{}, resolved), nil
 	}
+}
+
+// SettingsLoader resolves the settings of the invoked command.
+type SettingsLoader func(cmd *cli.Command) (config.Settings, error)
+
+// NewSettingsLoader returns a SettingsLoader that resolves the settings from environment and the flags of the command.
+func NewSettingsLoader(environment config.Environment) SettingsLoader {
+	return func(cmd *cli.Command) (config.Settings, error) {
+		resolved, err := resolve(environment, cmd)
+		if err != nil {
+			return config.Settings{}, err
+		}
+
+		return resolved.Settings, nil
+	}
+}
+
+func resolve(environment config.Environment, cmd *cli.Command) (*config.Resolved, error) {
+	resolved, err := config.Load(environment, flagsSet(cmd))
+	if err != nil {
+		return nil, err
+	}
+
+	if resolved.Settings.Output != OutputText && resolved.Settings.Output != OutputJSON {
+		return nil, fmt.Errorf("unknown output format %q: text or json expected", resolved.Settings.Output)
+	}
+
+	return resolved, nil
 }
 
 // Resolved returns the configuration resolved by Before, if present in ctx.

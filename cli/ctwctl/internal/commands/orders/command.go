@@ -4,14 +4,17 @@ package orders
 import (
 	"context"
 
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/shop"
 	"github.com/urfave/cli/v3"
 )
 
-// Dependencies contains the services used by the order commands.
+// Dependencies contains the configuration and the services used by the order commands.
 type Dependencies struct {
+	// LoadSettings resolves the settings of the invoked command. It is required.
+	LoadSettings cmdutil.SettingsLoader
 	// NewOrderClient creates an order-service client from the resolved configuration.
 	NewOrderClient func(config.Settings) order.Client
 }

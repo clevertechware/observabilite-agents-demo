@@ -27,18 +27,35 @@ func IsolatedEnvironment(t *testing.T, variables map[string]string) config.Envir
 	}}
 }
 
-// Run executes command under a ctwctl root that loads its configuration from environment, and returns the output.
-func Run(ctx context.Context, environment config.Environment, command *cli.Command, args ...string) (string, error) {
-	var out bytes.Buffer
-	root := &cli.Command{
+// Run executes command under a ctwctl root that only declares the global flags, and returns the output.
+func Run(ctx context.Context, command *cli.Command, args ...string) (string, error) {
+	return run(ctx, newRoot(command), args...)
+}
+
+// RunWithEnvironment executes command under a ctwctl root that loads its configuration from environment, and returns
+// the output.
+func RunWithEnvironment(
+	ctx context.Context, environment config.Environment, command *cli.Command, args ...string,
+) (string, error) {
+	root := newRoot(command)
+	root.Before = cmdutil.LoadConfig(environment)
+
+	return run(ctx, root, args...)
+}
+
+func newRoot(command *cli.Command) *cli.Command {
+	return &cli.Command{
 		Name:           "ctwctl",
 		Flags:          cmdutil.GlobalFlags(),
-		Before:         cmdutil.LoadConfig(environment),
 		Commands:       []*cli.Command{command},
-		Writer:         &out,
 		ErrWriter:      io.Discard,
 		ExitErrHandler: func(context.Context, *cli.Command, error) {},
 	}
+}
+
+func run(ctx context.Context, root *cli.Command, args ...string) (string, error) {
+	var out bytes.Buffer
+	root.Writer = &out
 
 	err := root.Run(ctx, append([]string{"ctwctl"}, args...))
 
