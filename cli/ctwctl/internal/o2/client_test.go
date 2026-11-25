@@ -15,6 +15,7 @@ import (
 
 func TestSearchSendsBasicAuthAndMicrosecondWindowToOrgEndpoint(t *testing.T) {
 	t.Parallel()
+
 	start := time.Date(2026, 11, 20, 10, 0, 0, 0, time.UTC)
 	end := start.Add(time.Hour)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -45,6 +46,7 @@ func TestSearchSendsBasicAuthAndMicrosecondWindowToOrgEndpoint(t *testing.T) {
 
 func TestSearchDecodesHitsAndTotalAtTheRootOfTheResponse(t *testing.T) {
 	t.Parallel()
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`{"took":3,"hits":[{"_timestamp":1795167672000000,"body":"ok"}],"total":1,"from":0,"size":100}`))
 	}))
@@ -61,6 +63,7 @@ func TestSearchDecodesHitsAndTotalAtTheRootOfTheResponse(t *testing.T) {
 
 func TestSearchDefaultsToTheLastHourWhenNoWindowIsGiven(t *testing.T) {
 	t.Parallel()
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var body searchBody
 		assert.NoError(t, json.NewDecoder(r.Body).Decode(&body))
@@ -76,6 +79,7 @@ func TestSearchDefaultsToTheLastHourWhenNoWindowIsGiven(t *testing.T) {
 
 func TestSearchRetriesOn429And503ThenSucceeds(t *testing.T) {
 	t.Parallel()
+
 	var calls atomic.Int32
 	statuses := []int{http.StatusTooManyRequests, http.StatusServiceUnavailable, http.StatusOK}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -96,6 +100,7 @@ func TestSearchRetriesOn429And503ThenSucceeds(t *testing.T) {
 
 func TestSearchGivesUpAfterThreeServerErrorsAndReportsTheStatus(t *testing.T) {
 	t.Parallel()
+
 	var calls atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		calls.Add(1)
@@ -113,6 +118,7 @@ func TestSearchGivesUpAfterThreeServerErrorsAndReportsTheStatus(t *testing.T) {
 
 func TestSearchDoesNotRetryOnBadRequest(t *testing.T) {
 	t.Parallel()
+
 	var calls atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		calls.Add(1)
@@ -132,6 +138,7 @@ func TestSearchDoesNotRetryOnBadRequest(t *testing.T) {
 
 func TestSearchStopsRetryingWhenTheContextIsCancelled(t *testing.T) {
 	t.Parallel()
+
 	var calls atomic.Int32
 	ctx, cancel := context.WithCancel(t.Context())
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -149,6 +156,7 @@ func TestSearchStopsRetryingWhenTheContextIsCancelled(t *testing.T) {
 
 func TestStreamsListsFieldNamesFromTheSchemaOfTheRequestedType(t *testing.T) {
 	t.Parallel()
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodGet, r.Method)
 		assert.Equal(t, "/api/default/streams", r.URL.Path)

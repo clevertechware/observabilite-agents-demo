@@ -23,6 +23,7 @@ func isolatedEnvironment(t *testing.T, variables map[string]string) Environment 
 
 func TestLoad_AppliesSourcesInPriorityOrder(t *testing.T) {
 	t.Parallel()
+
 	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_KUBE_NAMESPACE": "from-env"})
 	dir := environment.Variables["XDG_CONFIG_HOME"]
 	path := filepath.Join(dir, "ctwctl", "config.toml")
@@ -37,6 +38,7 @@ func TestLoad_AppliesSourcesInPriorityOrder(t *testing.T) {
 
 func TestLoad_UsesEnvironmentWhenNoFlagOverridesIt(t *testing.T) {
 	t.Parallel()
+
 	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_KUBE_NAMESPACE": "from-env"})
 
 	resolved, err := Load(environment, nil)
@@ -47,6 +49,7 @@ func TestLoad_UsesEnvironmentWhenNoFlagOverridesIt(t *testing.T) {
 
 func TestResolved_MaskedViewHidesTokenButKeepsEffectiveSettings(t *testing.T) {
 	t.Parallel()
+
 	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "secret"})
 
 	resolved, err := Load(environment, nil)
@@ -61,6 +64,7 @@ func TestResolved_MaskedViewHidesTokenButKeepsEffectiveSettings(t *testing.T) {
 
 func TestPath_UsesXDGConfigHomeWhenSet(t *testing.T) {
 	t.Parallel()
+
 	environment := isolatedEnvironment(t, map[string]string{"XDG_CONFIG_HOME": "/tmp/xdg"})
 
 	got, err := configPath(environment)
@@ -71,6 +75,7 @@ func TestPath_UsesXDGConfigHomeWhenSet(t *testing.T) {
 
 func TestPath_FallsBackToDotConfigUnderUserHome(t *testing.T) {
 	t.Parallel()
+
 	environment := Environment{UserHomeDir: func() (string, error) { return "/home/dev", nil }}
 
 	got, err := configPath(environment)
@@ -81,6 +86,7 @@ func TestPath_FallsBackToDotConfigUnderUserHome(t *testing.T) {
 
 func TestEnvKey_StripsPrefixLowercasesAndSplitsOnUnderscore(t *testing.T) {
 	t.Parallel()
+
 	key, value := envKey("CTWCTL_O2_TOKEN", "secret")
 
 	assert.Equal(t, "o2.token", key)

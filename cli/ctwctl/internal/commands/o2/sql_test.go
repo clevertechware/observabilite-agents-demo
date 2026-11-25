@@ -9,6 +9,7 @@ import (
 
 func TestLogFilterSQL_BuildsOneConditionPerFilterInAnOrderedQuery(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name   string
 		filter logFilter
@@ -40,6 +41,7 @@ func TestLogFilterSQL_BuildsOneConditionPerFilterInAnOrderedQuery(t *testing.T) 
 	for _, tt := range tests {
 		t.Run(tt.name, func(st *testing.T) {
 			st.Parallel()
+
 			assert.Equal(st, tt.want, tt.filter.sql(tt.order))
 		})
 	}
@@ -47,6 +49,7 @@ func TestLogFilterSQL_BuildsOneConditionPerFilterInAnOrderedQuery(t *testing.T) 
 
 func TestNewLogFilter_MapsLevelNamesToSeverityNumbers(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		level string
 		want  int
@@ -57,6 +60,7 @@ func TestNewLogFilter_MapsLevelNamesToSeverityNumbers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run("level "+tt.level, func(st *testing.T) {
 			st.Parallel()
+
 			filter, err := newLogFilter("", "", "", tt.level)
 
 			require.NoError(st, err)
@@ -67,6 +71,7 @@ func TestNewLogFilter_MapsLevelNamesToSeverityNumbers(t *testing.T) {
 
 func TestNewLogFilter_WithUnknownLevel_ListsTheValidOnes(t *testing.T) {
 	t.Parallel()
+
 	_, err := newLogFilter("", "", "", "loud")
 
 	require.Error(t, err)

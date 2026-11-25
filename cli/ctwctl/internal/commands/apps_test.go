@@ -22,6 +22,7 @@ func appDeps(client app.Client) dependencies {
 
 func TestAppsList_WithJSONOutput_PrintsOneEntryPerApp(t *testing.T) {
 	t.Parallel()
+
 	client := appmocks.NewClient(t)
 	client.EXPECT().ListApps(mock.Anything).Return(appStatuses, nil)
 
@@ -35,6 +36,7 @@ func TestAppsList_WithJSONOutput_PrintsOneEntryPerApp(t *testing.T) {
 
 func TestAppsList_WithTextOutput_PrintsReadyOverDesiredAndAvailability(t *testing.T) {
 	t.Parallel()
+
 	client := appmocks.NewClient(t)
 	client.EXPECT().ListApps(mock.Anything).Return(appStatuses, nil)
 
@@ -48,6 +50,7 @@ func TestAppsList_WithTextOutput_PrintsReadyOverDesiredAndAvailability(t *testin
 
 func TestAppsList_BuildsTheClientFromNamespaceAndContextFlags(t *testing.T) {
 	t.Parallel()
+
 	client := appmocks.NewClient(t)
 	client.EXPECT().ListApps(mock.Anything).Return(nil, nil)
 	var got settings
@@ -65,6 +68,7 @@ func TestAppsList_BuildsTheClientFromNamespaceAndContextFlags(t *testing.T) {
 
 func TestAppsList_WhenClientFails_ReturnsItsError(t *testing.T) {
 	t.Parallel()
+
 	client := appmocks.NewClient(t)
 	client.EXPECT().ListApps(mock.Anything).Return(nil, errors.New("kubectl : You must be logged in to the server"))
 
@@ -76,6 +80,7 @@ func TestAppsList_WhenClientFails_ReturnsItsError(t *testing.T) {
 
 func TestAppsRestart_RestartsTheNamedAppAndPrintsTheOutput(t *testing.T) {
 	t.Parallel()
+
 	client := appmocks.NewClient(t)
 	client.EXPECT().RestartApp(mock.Anything, "load-generator").
 		Return("deployment.apps/load-generator restarted\n", nil)
@@ -88,6 +93,7 @@ func TestAppsRestart_RestartsTheNamedAppAndPrintsTheOutput(t *testing.T) {
 
 func TestAppsRestart_WithJSONOutput_ReportsTheRestartedApp(t *testing.T) {
 	t.Parallel()
+
 	client := appmocks.NewClient(t)
 	client.EXPECT().RestartApp(mock.Anything, "load-generator").Return("restarted", nil)
 
@@ -99,6 +105,7 @@ func TestAppsRestart_WithJSONOutput_ReportsTheRestartedApp(t *testing.T) {
 
 func TestAppsRestart_WhenClientFails_ReturnsItsError(t *testing.T) {
 	t.Parallel()
+
 	client := appmocks.NewClient(t)
 	client.EXPECT().RestartApp(mock.Anything, "load-generator").Return("", errors.New("kubectl not found in PATH"))
 
@@ -110,6 +117,7 @@ func TestAppsRestart_WhenClientFails_ReturnsItsError(t *testing.T) {
 
 func TestAppsRestart_RejectsInvalidNamesWithoutCallingTheClient(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name string
 		args []string
@@ -124,6 +132,7 @@ func TestAppsRestart_RejectsInvalidNamesWithoutCallingTheClient(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(st *testing.T) {
 			st.Parallel()
+
 			client := appmocks.NewClient(st)
 
 			_, err := run(st, appDeps(client), append([]string{"apps", "restart", "--"}, tt.args...)...)

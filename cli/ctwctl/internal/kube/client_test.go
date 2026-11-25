@@ -33,6 +33,7 @@ func fakeKubectl(t *testing.T, client *Client, wantArgs []string, output []byte,
 
 func TestClientListApps_GetsDeploymentsOfTheNamespaceAsJSON(t *testing.T) {
 	t.Parallel()
+
 	client := NewClient("demo", "")
 	fakeKubectl(t, client, []string{"get", "deployments", "-n", "demo", "-o", "json"}, []byte(`{"items":[]}`), nil)
 
@@ -44,6 +45,7 @@ func TestClientListApps_GetsDeploymentsOfTheNamespaceAsJSON(t *testing.T) {
 
 func TestClientListApps_WhenContextIsGiven_ForwardsItToKubectl(t *testing.T) {
 	t.Parallel()
+
 	client := NewClient("staging", "prod-cluster")
 	fakeKubectl(t, client,
 		[]string{"get", "deployments", "-n", "staging", "-o", "json", "--context", "prod-cluster"},
@@ -56,6 +58,7 @@ func TestClientListApps_WhenContextIsGiven_ForwardsItToKubectl(t *testing.T) {
 
 func TestClientListApps_ReportsReadinessReplicasAndAvailability(t *testing.T) {
 	t.Parallel()
+
 	client := NewClient("demo", "")
 	fakeKubectl(t, client, nil, deploymentsJSON, nil)
 
@@ -71,6 +74,7 @@ func TestClientListApps_ReportsReadinessReplicasAndAvailability(t *testing.T) {
 
 func TestClientListApps_WhenKubectlPrintsInvalidJSON_ReturnsDecodeError(t *testing.T) {
 	t.Parallel()
+
 	client := NewClient("demo", "")
 	fakeKubectl(t, client, nil, []byte("pas du json"), nil)
 
@@ -82,6 +86,7 @@ func TestClientListApps_WhenKubectlPrintsInvalidJSON_ReturnsDecodeError(t *testi
 
 func TestClientRestartApp_RunsRolloutRestartOnTheNamedDeployment(t *testing.T) {
 	t.Parallel()
+
 	client := NewClient("demo", "prod-cluster")
 	fakeKubectl(t, client,
 		[]string{"rollout", "restart", "deployment/load-generator", "-n", "demo", "--context", "prod-cluster"},
@@ -95,6 +100,7 @@ func TestClientRestartApp_RunsRolloutRestartOnTheNamedDeployment(t *testing.T) {
 
 func TestClient_WhenKubectlFails_TranslatesTheError(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name    string
 		err     error
@@ -109,6 +115,7 @@ func TestClient_WhenKubectlFails_TranslatesTheError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(st *testing.T) {
 			st.Parallel()
+
 			client := NewClient("demo", "")
 			fakeKubectl(st, client, nil, nil, tt.err)
 

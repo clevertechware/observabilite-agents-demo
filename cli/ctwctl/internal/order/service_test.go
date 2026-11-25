@@ -13,9 +13,11 @@ import (
 
 func TestOrdersCreate_RejectsNonPositiveQuantitiesWithoutCallingClient(t *testing.T) {
 	t.Parallel()
+
 	for _, quantity := range []int{0, -1} {
 		t.Run(strconv.Itoa(quantity), func(st *testing.T) {
 			st.Parallel()
+
 			client := mocks.NewClient(st)
 
 			_, err := order.NewOrders(client).Create(st.Context(), "SKU-001", quantity)
@@ -27,6 +29,7 @@ func TestOrdersCreate_RejectsNonPositiveQuantitiesWithoutCallingClient(t *testin
 
 func TestOrdersCreate_DelegatesValidOrder(t *testing.T) {
 	t.Parallel()
+
 	want := order.Order{ID: 42, SKU: "SKU-001", Quantity: 2}
 	client := mocks.NewClient(t)
 	client.EXPECT().Create(mock.Anything, "SKU-001", 2).Return(want, nil)
@@ -39,6 +42,7 @@ func TestOrdersCreate_DelegatesValidOrder(t *testing.T) {
 
 func TestOrdersGet_DelegatesToClient(t *testing.T) {
 	t.Parallel()
+
 	want := order.Order{ID: 42, SKU: "SKU-001", Quantity: 2}
 	client := mocks.NewClient(t)
 	client.EXPECT().Get(mock.Anything, int64(42)).Return(want, nil)

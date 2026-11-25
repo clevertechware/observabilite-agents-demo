@@ -13,6 +13,7 @@ import (
 
 func TestOrderClientCreate_WhenStockIsInsufficient_ReturnsTypedError(t *testing.T) {
 	t.Parallel()
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)
 		assert.Equal(t, "/orders", r.URL.Path)
@@ -28,6 +29,7 @@ func TestOrderClientCreate_WhenStockIsInsufficient_ReturnsTypedError(t *testing.
 
 func TestOrderClientCreate_WhenServerAnswers201_ReturnsOrderWithLocation(t *testing.T) {
 	t.Parallel()
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var body createRequest
 		assert.NoError(t, json.NewDecoder(r.Body).Decode(&body))
@@ -51,6 +53,7 @@ func TestOrderClientCreate_WhenServerAnswers201_ReturnsOrderWithLocation(t *test
 
 func TestOrderClientCreate_WhenServerAnswers200_ReportsUnexpectedStatus(t *testing.T) {
 	t.Parallel()
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -65,6 +68,7 @@ func TestOrderClientCreate_WhenServerAnswers200_ReportsUnexpectedStatus(t *testi
 
 func TestOrderClientErrors_MapStatusToTypedErrorWithProblemDetail(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name   string
 		status int
@@ -80,6 +84,7 @@ func TestOrderClientErrors_MapStatusToTypedErrorWithProblemDetail(t *testing.T) 
 	for _, tt := range tests {
 		t.Run(tt.name, func(st *testing.T) {
 			st.Parallel()
+
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.status)
 				_, _ = w.Write([]byte(`{"detail":"détail du serveur"}`))
@@ -96,6 +101,7 @@ func TestOrderClientErrors_MapStatusToTypedErrorWithProblemDetail(t *testing.T) 
 
 func TestOrderClientCreate_WhenIPIsNotAllowed_ReturnsStatusErrorWithoutSentinel(t *testing.T) {
 	t.Parallel()
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 	}))
@@ -110,6 +116,7 @@ func TestOrderClientCreate_WhenIPIsNotAllowed_ReturnsStatusErrorWithoutSentinel(
 
 func TestOrderClientGet_ReadsTheOrderAtItsPath(t *testing.T) {
 	t.Parallel()
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodGet, r.Method)
 		assert.Equal(t, "/orders/42", r.URL.Path)
@@ -126,6 +133,7 @@ func TestOrderClientGet_ReadsTheOrderAtItsPath(t *testing.T) {
 
 func TestOrderClientGet_WhenOrderIsMissing_ReturnsNotFound(t *testing.T) {
 	t.Parallel()
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
