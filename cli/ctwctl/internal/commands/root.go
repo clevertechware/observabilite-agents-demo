@@ -5,11 +5,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/app"
+	appscmd "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/apps"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	o2cmd "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/o2"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/kube"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/shop"
 	"github.com/urfave/cli/v3"
@@ -21,16 +20,13 @@ const (
 )
 
 type dependencies struct {
-	newAppClient   func(settings) app.Client
+	apps           appscmd.Dependencies
 	o2             o2cmd.Dependencies
 	newOrderClient func(settings) order.Client
 	environment    config.Environment
 }
 
 func (d dependencies) withDefaults() dependencies {
-	if d.newAppClient == nil {
-		d.newAppClient = func(s settings) app.Client { return kube.NewClient(s.Kube.Namespace, s.Kube.Context) }
-	}
 	if d.newOrderClient == nil {
 		d.newOrderClient = func(s settings) order.Client { return shop.NewOrderClient(s.Shop.URL) }
 	}
@@ -60,7 +56,7 @@ func newRootCommand(deps dependencies) *cli.Command {
 		Before: cmdutil.LoadConfig(deps.environment),
 		Commands: []*cli.Command{
 			configCommand(deps.environment),
-			appsCommand(deps),
+			appscmd.NewCommand(deps.apps),
 			ordersCommand(deps),
 			o2cmd.NewCommand(deps.o2),
 		},

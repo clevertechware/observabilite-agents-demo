@@ -1,4 +1,4 @@
-package commands
+package apps
 
 import (
 	"errors"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/app"
 	appmocks "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/app/mocks"
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -16,8 +17,8 @@ var appStatuses = []app.Status{
 	{Name: "pricing-service", Ready: 1, Replicas: 2, Available: false},
 }
 
-func appDeps(client app.Client) dependencies {
-	return dependencies{newAppClient: func(settings) app.Client { return client }}
+func appDeps(client app.Client) Dependencies {
+	return Dependencies{NewAppClient: func(config.Settings) app.Client { return client }}
 }
 
 func TestAppsList_WithJSONOutput_PrintsOneEntryPerApp(t *testing.T) {
@@ -53,8 +54,8 @@ func TestAppsList_BuildsTheClientFromNamespaceAndContextFlags(t *testing.T) {
 
 	client := appmocks.NewClient(t)
 	client.EXPECT().ListApps(mock.Anything).Return(nil, nil)
-	var got settings
-	deps := dependencies{newAppClient: func(s settings) app.Client {
+	var got config.Settings
+	deps := Dependencies{NewAppClient: func(s config.Settings) app.Client {
 		got = s
 		return client
 	}}
