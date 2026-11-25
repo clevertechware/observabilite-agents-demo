@@ -8,6 +8,7 @@ import (
 
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/app"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/urfave/cli/v3"
 )
 
@@ -30,7 +31,7 @@ func restartApp(ctx context.Context, cmd *cli.Command, deps Dependencies) error 
 		return err
 	}
 
-	if s.Output == cmdutil.OutputJSON {
+	if s.Output == config.OutputJSON {
 		return cmdutil.WriteJSON(cmdutil.Writer(cmd), map[string]any{"name": name, "restarted": true})
 	}
 

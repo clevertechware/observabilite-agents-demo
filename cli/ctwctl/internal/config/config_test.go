@@ -48,6 +48,15 @@ func TestLoad_UsesEnvironmentWhenNoFlagOverridesIt(t *testing.T) {
 	assert.Equal(t, "from-env", settings.Kube.Namespace)
 }
 
+func TestLoad_WhenOutputFormatIsUnknown_ReturnsError(t *testing.T) {
+	t.Parallel()
+
+	_, err := Load(isolatedEnvironment(t, nil), map[string]any{"output": "yaml"})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "yaml")
+}
+
 func TestSettingsMasked_HidesTheTokenWithoutChangingTheLoadedSettings(t *testing.T) {
 	t.Parallel()
 

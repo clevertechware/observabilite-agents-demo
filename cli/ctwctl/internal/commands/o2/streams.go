@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/o2"
 	"github.com/urfave/cli/v3"
 )
@@ -39,7 +40,7 @@ func listStreams(ctx context.Context, cmd *cli.Command, deps Dependencies) error
 		streams = append(streams, found...)
 	}
 
-	if s.Output == cmdutil.OutputJSON {
+	if s.Output == config.OutputJSON {
 		return cmdutil.WriteJSON(w, streams)
 	}
 

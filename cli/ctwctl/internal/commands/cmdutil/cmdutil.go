@@ -3,18 +3,10 @@ package cmdutil
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/urfave/cli/v3"
-)
-
-const (
-	// OutputText selects human-readable command output.
-	OutputText = "text"
-	// OutputJSON selects JSON command output.
-	OutputJSON = "json"
 )
 
 var flagKeys = map[string]string{
@@ -38,16 +30,7 @@ type SettingsLoader func(cmd *cli.Command) (config.Settings, error)
 // NewSettingsLoader returns a SettingsLoader that resolves the settings from environment and the flags of the command.
 func NewSettingsLoader(environment config.Environment) SettingsLoader {
 	return func(cmd *cli.Command) (config.Settings, error) {
-		settings, err := config.Load(environment, flagsSet(cmd))
-		if err != nil {
-			return config.Settings{}, err
-		}
-
-		if settings.Output != OutputText && settings.Output != OutputJSON {
-			return config.Settings{}, fmt.Errorf("unknown output format %q: text or json expected", settings.Output)
-		}
-
-		return settings, nil
+		return config.Load(environment, flagsSet(cmd))
 	}
 }
 

@@ -18,6 +18,11 @@ import (
 )
 
 const (
+	// OutputText selects human-readable command output.
+	OutputText = "text"
+	// OutputJSON selects JSON command output.
+	OutputJSON = "json"
+
 	envPrefix  = "CTWCTL_"
 	maskedLine = "********"
 )
@@ -30,7 +35,7 @@ var defaults = map[string]any{
 	"shop.url":       "https://shop.example.com",
 	"kube.namespace": "demo",
 	"kube.context":   "",
-	"output":         "text",
+	"output":         OutputText,
 }
 
 // Settings is the resolved ctwctl configuration. The json tags give the configuration keys: o2.token is O2.Token.
@@ -85,7 +90,7 @@ func (e Environment) environ() []string {
 }
 
 // Load resolves the settings from, in increasing priority, the defaults, the configuration file, the CTWCTL_*
-// variables of environment and flagValues.
+// variables of environment and flagValues. It fails when the output format is neither text nor json.
 func Load(environment Environment, flagValues map[string]any) (Settings, error) {
 	k := koanf.New(".")
 	if err := k.Load(confmap.Provider(defaults, "."), nil); err != nil {
@@ -118,6 +123,10 @@ func Load(environment Environment, flagValues map[string]any) (Settings, error) 
 	var settings Settings
 	if err = k.UnmarshalWithConf("", &settings, koanf.UnmarshalConf{Tag: "json"}); err != nil {
 		return Settings{}, fmt.Errorf("read configuration: %w", err)
+	}
+
+	if settings.Output != OutputText && settings.Output != OutputJSON {
+		return Settings{}, fmt.Errorf("unknown output format %q: text or json expected", settings.Output)
 	}
 
 	return settings, nil

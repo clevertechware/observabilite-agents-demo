@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order"
 	ordermocks "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order/mocks"
@@ -16,8 +15,8 @@ import (
 )
 
 var (
-	textOutput = config.Settings{Output: cmdutil.OutputText}
-	jsonOutput = config.Settings{Output: cmdutil.OutputJSON}
+	textOutput = config.Settings{Output: config.OutputText}
+	jsonOutput = config.Settings{Output: config.OutputJSON}
 )
 
 func ordersDeps(client order.Client, settings config.Settings) Dependencies {
@@ -143,7 +142,7 @@ func TestOrders_BuildTheClientFromTheLoadedSettings(t *testing.T) {
 	var got config.Settings
 	client := ordermocks.NewClient(t)
 	client.EXPECT().Get(mock.Anything, int64(1)).Return(order.Order{ID: 1}, nil)
-	loaded := config.Settings{Output: cmdutil.OutputText, Shop: config.ShopSettings{URL: "https://shop.example.test"}}
+	loaded := config.Settings{Output: config.OutputText, Shop: config.ShopSettings{URL: "https://shop.example.test"}}
 	deps := Dependencies{
 		LoadSettings: func(*cli.Command) (config.Settings, error) { return loaded, nil },
 		NewOrderClient: func(s config.Settings) order.Client {

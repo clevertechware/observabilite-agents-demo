@@ -10,7 +10,7 @@ import (
 )
 
 func printOrder(cmd *cli.Command, s config.Settings, item order.Order, verb string) error {
-	if s.Output == cmdutil.OutputJSON {
+	if s.Output == config.OutputJSON {
 		return cmdutil.WriteJSON(cmdutil.Writer(cmd), item)
 	}
 

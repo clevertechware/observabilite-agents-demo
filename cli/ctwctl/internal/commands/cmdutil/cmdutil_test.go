@@ -55,7 +55,7 @@ func TestSettingsLoader_GlobalFlagsOverrideTheEnvironmentWhereverTheyAreGiven(t 
 
 	assert.Equal(t, "from-flag", beforeTheCommand.Kube.Namespace)
 	assert.Equal(t, "from-flag", afterTheCommand.Kube.Namespace)
-	assert.Equal(t, cmdutil.OutputJSON, afterTheCommand.Output)
+	assert.Equal(t, config.OutputJSON, afterTheCommand.Output)
 }
 
 func TestSettingsLoader_WhenOutputFormatIsUnknown_ReturnsError(t *testing.T) {

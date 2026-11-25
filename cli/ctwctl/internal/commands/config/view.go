@@ -17,7 +17,7 @@ func viewConfig(loadSettings cmdutil.SettingsLoader) cli.ActionFunc {
 		}
 
 		masked := settings.Masked()
-		if settings.Output == cmdutil.OutputJSON {
+		if settings.Output == config.OutputJSON {
 			return cmdutil.WriteJSON(cmdutil.Writer(cmd), masked)
 		}
 
