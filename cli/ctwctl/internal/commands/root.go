@@ -24,6 +24,7 @@ type dependencies struct {
 	newAppClient   func(settings) app.Client
 	o2             o2cmd.Dependencies
 	newOrderClient func(settings) order.Client
+	environment    config.Environment
 }
 
 func (d dependencies) withDefaults() dependencies {
@@ -45,7 +46,7 @@ func resolvedConfigFrom(ctx context.Context) *config.Resolved {
 }
 
 func NewRootCommand() *cli.Command {
-	return newRootCommand(dependencies{})
+	return newRootCommand(dependencies{environment: config.ProcessEnvironment()})
 }
 
 func newRootCommand(deps dependencies) *cli.Command {
@@ -56,9 +57,9 @@ func newRootCommand(deps dependencies) *cli.Command {
 		Usage:  "applications, OpenObserve logs and orders of the observability demo",
 		Writer: os.Stdout,
 		Flags:  cmdutil.GlobalFlags(),
-		Before: cmdutil.Before,
+		Before: cmdutil.LoadConfig(deps.environment),
 		Commands: []*cli.Command{
-			configCommand(),
+			configCommand(deps.environment),
 			appsCommand(deps),
 			ordersCommand(deps),
 			o2cmd.NewCommand(deps.o2),

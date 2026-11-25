@@ -6,20 +6,21 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func writeConfigFile(t *testing.T, dir, content string) {
+func writeConfigFile(t *testing.T, environment config.Environment, content string) {
 	t.Helper()
-	path := filepath.Join(dir, "ctwctl", "config.toml")
+	path := configFilePath(environment)
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
 }
 
-func resolvedConfig(t *testing.T, args ...string) map[string]any {
+func resolvedConfig(t *testing.T, environment config.Environment, args ...string) map[string]any {
 	t.Helper()
-	out, err := run(t, dependencies{}, append(args, "config", "view", "-o", "json")...)
+	out, err := run(t, dependencies{environment: environment}, append(args, "config", "view", "-o", "json")...)
 	require.NoError(t, err)
 	var view map[string]any
 	require.NoError(t, json.Unmarshal([]byte(out), &view))
@@ -61,15 +62,12 @@ func TestLoadConfig_SourcesOverrideEachOtherInTheDocumentedOrder(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(st *testing.T) {
-			dir := isolatedConfigDir(st)
+			environment := isolatedEnvironment(st, tt.env)
 			if tt.file != "" {
-				writeConfigFile(st, dir, tt.file)
-			}
-			for key, value := range tt.env {
-				st.Setenv(key, value)
+				writeConfigFile(st, environment, tt.file)
 			}
 
-			view := resolvedConfig(st, tt.args...)
+			view := resolvedConfig(st, environment, tt.args...)
 
 			assert.Equal(st, tt.wantNamespace, namespaceOf(view))
 		})
@@ -77,27 +75,24 @@ func TestLoadConfig_SourcesOverrideEachOtherInTheDocumentedOrder(t *testing.T) {
 }
 
 func TestLoadConfig_EnvironmentVariableMapsToTheDottedKey(t *testing.T) {
-	isolatedConfigDir(t)
-	t.Setenv("CTWCTL_O2_URL", "https://o2.example.test")
+	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_O2_URL": "https://o2.example.test"})
 
-	view := resolvedConfig(t)
+	view := resolvedConfig(t, environment)
 
 	assert.Equal(t, "https://o2.example.test", view["o2"].(map[string]any)["url"])
 }
 
 func TestLoadConfig_WhenFileIsNotValidTOML_NamesTheFile(t *testing.T) {
-	dir := isolatedConfigDir(t)
-	writeConfigFile(t, dir, "ceci n'est pas du toml [")
+	environment := isolatedEnvironment(t, nil)
+	writeConfigFile(t, environment, "ceci n'est pas du toml [")
 
-	_, err := run(t, dependencies{}, "config", "view")
+	_, err := run(t, dependencies{environment: environment}, "config", "view")
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), filepath.Join(dir, "ctwctl", "config.toml"))
+	assert.Contains(t, err.Error(), configFilePath(environment))
 }
 
 func TestRoot_WhenOutputFormatIsUnknown_ReturnsError(t *testing.T) {
-	isolatedConfigDir(t)
-
 	_, err := run(t, dependencies{}, "-o", "yaml", "config", "view")
 
 	require.Error(t, err)
@@ -105,12 +100,12 @@ func TestRoot_WhenOutputFormatIsUnknown_ReturnsError(t *testing.T) {
 }
 
 func TestConfigSet_WritesTheFileWithOwnerOnlyPermissions(t *testing.T) {
-	dir := isolatedConfigDir(t)
+	environment := isolatedEnvironment(t, nil)
 
-	out, err := run(t, dependencies{}, "config", "set", "o2.token", "jeton-secret")
+	out, err := run(t, dependencies{environment: environment}, "config", "set", "o2.token", "jeton-secret")
 
 	require.NoError(t, err)
-	path := filepath.Join(dir, "ctwctl", "config.toml")
+	path := configFilePath(environment)
 	info, statErr := os.Stat(path)
 	require.NoError(t, statErr)
 	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
@@ -119,12 +114,12 @@ func TestConfigSet_WritesTheFileWithOwnerOnlyPermissions(t *testing.T) {
 }
 
 func TestConfigSet_TightensPermissionsOfAnExistingOpenFile(t *testing.T) {
-	dir := isolatedConfigDir(t)
-	writeConfigFile(t, dir, "[o2]\nurl = \"https://o2.example.test\"\n")
-	path := filepath.Join(dir, "ctwctl", "config.toml")
+	environment := isolatedEnvironment(t, nil)
+	writeConfigFile(t, environment, "[o2]\nurl = \"https://o2.example.test\"\n")
+	path := configFilePath(environment)
 	require.NoError(t, os.Chmod(path, 0o644))
 
-	_, err := run(t, dependencies{}, "config", "set", "kube.namespace", "staging")
+	_, err := run(t, dependencies{environment: environment}, "config", "set", "kube.namespace", "staging")
 
 	require.NoError(t, err)
 	info, statErr := os.Stat(path)
@@ -133,54 +128,50 @@ func TestConfigSet_TightensPermissionsOfAnExistingOpenFile(t *testing.T) {
 }
 
 func TestConfigSet_KeepsValuesAlreadyInTheFile(t *testing.T) {
-	dir := isolatedConfigDir(t)
-	writeConfigFile(t, dir, "[o2]\nurl = \"https://o2.example.test\"\n")
+	environment := isolatedEnvironment(t, nil)
+	writeConfigFile(t, environment, "[o2]\nurl = \"https://o2.example.test\"\n")
 
-	_, err := run(t, dependencies{}, "config", "set", "kube.namespace", "staging")
+	_, err := run(t, dependencies{environment: environment}, "config", "set", "kube.namespace", "staging")
 
 	require.NoError(t, err)
-	view := resolvedConfig(t)
+	view := resolvedConfig(t, environment)
 	assert.Equal(t, "https://o2.example.test", view["o2"].(map[string]any)["url"])
 	assert.Equal(t, "staging", namespaceOf(view))
 }
 
 func TestConfigSet_DoesNotPersistEnvironmentValuesInTheFile(t *testing.T) {
-	dir := isolatedConfigDir(t)
-	t.Setenv("CTWCTL_O2_TOKEN", "jeton-de-l-environnement")
+	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "jeton-de-l-environnement"})
 
-	_, err := run(t, dependencies{}, "config", "set", "kube.namespace", "staging")
+	_, err := run(t, dependencies{environment: environment}, "config", "set", "kube.namespace", "staging")
 
 	require.NoError(t, err)
-	content, readErr := os.ReadFile(filepath.Join(dir, "ctwctl", "config.toml"))
+	content, readErr := os.ReadFile(configFilePath(environment))
 	require.NoError(t, readErr)
 	assert.NotContains(t, string(content), "jeton-de-l-environnement")
 }
 
 func TestConfigSet_RejectsUnknownKeysAndListsTheKnownOnes(t *testing.T) {
-	dir := isolatedConfigDir(t)
+	environment := isolatedEnvironment(t, nil)
 
-	_, err := run(t, dependencies{}, "config", "set", "o2.stream.type", "logs")
+	_, err := run(t, dependencies{environment: environment}, "config", "set", "o2.stream.type", "logs")
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "o2.token")
-	assert.NoFileExists(t, filepath.Join(dir, "ctwctl", "config.toml"))
+	assert.NoFileExists(t, configFilePath(environment))
 }
 
 func TestConfigSet_WithoutValue_ReturnsUsageError(t *testing.T) {
-	isolatedConfigDir(t)
-
 	_, err := run(t, dependencies{}, "config", "set", "o2.token")
 
 	require.Error(t, err)
 }
 
 func TestConfigView_MasksTheTokenInTextAndJSON(t *testing.T) {
-	isolatedConfigDir(t)
-	t.Setenv("CTWCTL_O2_TOKEN", "jeton-secret")
+	deps := dependencies{environment: isolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "jeton-secret"})}
 
-	text, err := run(t, dependencies{}, "config", "view")
+	text, err := run(t, deps, "config", "view")
 	require.NoError(t, err)
-	jsonOut, err := run(t, dependencies{}, "config", "view", "-o", "json")
+	jsonOut, err := run(t, deps, "config", "view", "-o", "json")
 	require.NoError(t, err)
 
 	assert.NotContains(t, text, "jeton-secret")
@@ -189,8 +180,6 @@ func TestConfigView_MasksTheTokenInTextAndJSON(t *testing.T) {
 }
 
 func TestConfigView_WithTextOutput_PrintsOneSortedKeyPerLine(t *testing.T) {
-	isolatedConfigDir(t)
-
 	out, err := run(t, dependencies{}, "config", "view")
 
 	require.NoError(t, err)

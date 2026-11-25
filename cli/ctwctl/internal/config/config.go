@@ -60,18 +60,45 @@ type Resolved struct {
 	values   *koanf.Koanf
 }
 
+// Environment holds what the configuration is resolved from outside its file: the environment variables and the
+// lookup of the user's home directory.
+type Environment struct {
+	Variables   map[string]string
+	UserHomeDir func() (string, error)
+}
+
+// ProcessEnvironment returns the environment of the running process.
+func ProcessEnvironment() Environment {
+	variables := map[string]string{}
+	for _, entry := range os.Environ() {
+		name, value, _ := strings.Cut(entry, "=")
+		variables[name] = value
+	}
+
+	return Environment{Variables: variables, UserHomeDir: os.UserHomeDir}
+}
+
+func (e Environment) environ() []string {
+	entries := make([]string, 0, len(e.Variables))
+	for name, value := range e.Variables {
+		entries = append(entries, name+"="+value)
+	}
+
+	return entries
+}
+
 type View struct {
 	Raw    map[string]any
 	Values map[string]any
 }
 
-func Load(flagValues map[string]any) (*Resolved, error) {
+func Load(environment Environment, flagValues map[string]any) (*Resolved, error) {
 	k := koanf.New(".")
 	if err := k.Load(confmap.Provider(defaults, "."), nil); err != nil {
 		return nil, err
 	}
 
-	path, err := configPath(os.UserHomeDir)
+	path, err := configPath(environment)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +108,11 @@ func Load(flagValues map[string]any) (*Resolved, error) {
 		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
 
-	envProvider := env.Provider(".", env.Opt{Prefix: envPrefix, TransformFunc: envKey})
+	envProvider := env.Provider(".", env.Opt{
+		Prefix:        envPrefix,
+		TransformFunc: envKey,
+		EnvironFunc:   environment.environ,
+	})
 	if err = k.Load(envProvider, nil); err != nil {
 		return nil, err
 	}
@@ -123,8 +154,8 @@ func Keys() []string {
 	return keys
 }
 
-func SaveValue(key, value string) (string, error) {
-	path, err := configPath(os.UserHomeDir)
+func SaveValue(environment Environment, key, value string) (string, error) {
+	path, err := configPath(environment)
 	if err != nil {
 		return "", err
 	}
@@ -153,10 +184,10 @@ func SaveValue(key, value string) (string, error) {
 //
 // This directory is also used on macOS, as gh and git do, rather than the "~/Library/Application Support" returned
 // by os.UserConfigDir.
-func configPath(userHomeDir func() (string, error)) (string, error) {
-	base := os.Getenv("XDG_CONFIG_HOME")
+func configPath(environment Environment) (string, error) {
+	base := environment.Variables["XDG_CONFIG_HOME"]
 	if base == "" {
-		home, err := userHomeDir()
+		home, err := environment.UserHomeDir()
 		if err != nil {
 			return "", fmt.Errorf("home directory not found: %w", err)
 		}

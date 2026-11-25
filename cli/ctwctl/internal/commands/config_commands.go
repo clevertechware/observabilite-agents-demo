@@ -9,7 +9,7 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-func configCommand() *cli.Command {
+func configCommand(environment config.Environment) *cli.Command {
 	return &cli.Command{
 		Name:  "config",
 		Usage: "read and write ~/.config/ctwctl/config.toml",
@@ -18,7 +18,7 @@ func configCommand() *cli.Command {
 				Name:      "set",
 				Usage:     "write a value to the configuration file",
 				ArgsUsage: "<key> <value>",
-				Action:    setConfig,
+				Action:    setConfig(environment),
 			},
 			{
 				Name:   "view",
@@ -29,23 +29,25 @@ func configCommand() *cli.Command {
 	}
 }
 
-func setConfig(_ context.Context, cmd *cli.Command) error {
-	if cmd.Args().Len() != 2 {
-		return fmt.Errorf("a key and a value are expected: ctwctl config set <key> <value>")
-	}
+func setConfig(environment config.Environment) cli.ActionFunc {
+	return func(_ context.Context, cmd *cli.Command) error {
+		if cmd.Args().Len() != 2 {
+			return fmt.Errorf("a key and a value are expected: ctwctl config set <key> <value>")
+		}
 
-	key, value := cmd.Args().Get(0), cmd.Args().Get(1)
-	if !config.IsKey(key) {
-		return fmt.Errorf("unknown key %q: %s", key, strings.Join(config.Keys(), ", "))
-	}
+		key, value := cmd.Args().Get(0), cmd.Args().Get(1)
+		if !config.IsKey(key) {
+			return fmt.Errorf("unknown key %q: %s", key, strings.Join(config.Keys(), ", "))
+		}
 
-	path, err := config.SaveValue(key, value)
-	if err != nil {
+		path, err := config.SaveValue(environment, key, value)
+		if err != nil {
+			return err
+		}
+
+		_, err = fmt.Fprintf(writer(cmd), "%s written to %s\n", key, path)
 		return err
 	}
-
-	_, err = fmt.Fprintf(writer(cmd), "%s written to %s\n", key, path)
-	return err
 }
 
 func viewConfig(ctx context.Context, cmd *cli.Command) error {

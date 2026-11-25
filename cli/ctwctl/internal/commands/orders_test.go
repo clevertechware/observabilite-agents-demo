@@ -108,15 +108,16 @@ func TestOrdersGet_WhenOrderIsMissing_ReturnsNotFound(t *testing.T) {
 }
 
 func TestOrders_UseTheShopURLFromTheConfiguration(t *testing.T) {
-	isolatedConfigDir(t)
-	t.Setenv("CTWCTL_SHOP_URL", "https://shop.example.test")
 	var gotURL string
 	client := ordermocks.NewClient(t)
 	client.EXPECT().Get(mock.Anything, int64(1)).Return(order.Order{ID: 1}, nil)
-	deps := dependencies{newOrderClient: func(s settings) order.Client {
-		gotURL = s.Shop.URL
-		return client
-	}}
+	deps := dependencies{
+		newOrderClient: func(s settings) order.Client {
+			gotURL = s.Shop.URL
+			return client
+		},
+		environment: isolatedEnvironment(t, map[string]string{"CTWCTL_SHOP_URL": "https://shop.example.test"}),
+	}
 
 	_, err := run(t, deps, "orders", "get", "1")
 

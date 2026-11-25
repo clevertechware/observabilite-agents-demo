@@ -35,18 +35,20 @@ func GlobalFlags() []cli.Flag {
 	}
 }
 
-// Before loads and validates the CLI configuration before a command runs.
-func Before(ctx context.Context, cmd *cli.Command) (context.Context, error) {
-	resolved, err := config.Load(flagsSet(cmd))
-	if err != nil {
-		return ctx, err
-	}
+// LoadConfig returns the hook that loads and validates the CLI configuration from environment before a command runs.
+func LoadConfig(environment config.Environment) cli.BeforeFunc {
+	return func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
+		resolved, err := config.Load(environment, flagsSet(cmd))
+		if err != nil {
+			return ctx, err
+		}
 
-	if resolved.Settings.Output != OutputText && resolved.Settings.Output != OutputJSON {
-		return ctx, fmt.Errorf("unknown output format %q: text or json expected", resolved.Settings.Output)
-	}
+		if resolved.Settings.Output != OutputText && resolved.Settings.Output != OutputJSON {
+			return ctx, fmt.Errorf("unknown output format %q: text or json expected", resolved.Settings.Output)
+		}
 
-	return context.WithValue(ctx, resolvedKey{}, resolved), nil
+		return context.WithValue(ctx, resolvedKey{}, resolved), nil
+	}
 }
 
 // Resolved returns the configuration resolved by Before, if present in ctx.

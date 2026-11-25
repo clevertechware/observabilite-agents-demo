@@ -4,52 +4,42 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"os"
-	"strings"
+	"maps"
+	"path/filepath"
 	"testing"
 
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/urfave/cli/v3"
 )
 
-func TestMain(m *testing.M) {
-	dir, err := os.MkdirTemp("", "ctwctl-test-")
-	if err != nil {
-		panic(err)
-	}
-
-	for _, entry := range os.Environ() {
-		if name, _, _ := strings.Cut(entry, "="); strings.HasPrefix(name, "CTWCTL_") {
-			os.Unsetenv(name)
-		}
-	}
-
-	os.Setenv("XDG_CONFIG_HOME", dir)
-	code := m.Run()
-	if err = os.RemoveAll(dir); err != nil {
-		code = 1
-	}
-
-	os.Exit(code)
-}
-
+// run executes ctwctl with args and returns its output. Without an environment in deps, it runs in an isolated one so
+// that the user's configuration and variables never leak into a test.
 func run(t *testing.T, deps dependencies, args ...string) (string, error) {
 	t.Helper()
-	return runWithContext(t.Context(), deps, args...)
-}
+	if deps.environment.Variables == nil {
+		deps.environment = isolatedEnvironment(t, nil)
+	}
 
-func runWithContext(ctx context.Context, deps dependencies, args ...string) (string, error) {
 	var out bytes.Buffer
 	cmd := newRootCommand(deps)
 	cmd.Writer = &out
 	cmd.ErrWriter = io.Discard
 	cmd.ExitErrHandler = func(context.Context, *cli.Command, error) {}
-	err := cmd.Run(ctx, append([]string{"ctwctl"}, args...))
+	err := cmd.Run(t.Context(), append([]string{"ctwctl"}, args...))
 	return out.String(), err
 }
 
-func isolatedConfigDir(t *testing.T) string {
+func isolatedEnvironment(t *testing.T, variables map[string]string) config.Environment {
 	t.Helper()
-	dir := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", dir)
-	return dir
+	all := map[string]string{"XDG_CONFIG_HOME": t.TempDir()}
+	maps.Copy(all, variables)
+
+	return config.Environment{Variables: all, UserHomeDir: func() (string, error) {
+		t.Fatal("user home should not be requested when XDG_CONFIG_HOME is set")
+		return "", nil
+	}}
+}
+
+func configFilePath(environment config.Environment) string {
+	return filepath.Join(environment.Variables["XDG_CONFIG_HOME"], "ctwctl", "config.toml")
 }
