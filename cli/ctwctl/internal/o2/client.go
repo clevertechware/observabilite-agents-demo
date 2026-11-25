@@ -196,7 +196,7 @@ func (c *Client) do(ctx context.Context, method, path string, payload []byte) ([
 			}
 		}
 
-		body, retryable, err := c.once(ctx, method, path, payload)
+		body, retryable, err := c.tryOnce(ctx, method, path, payload)
 		if err == nil {
 			return body, nil
 		}
@@ -210,7 +210,7 @@ func (c *Client) do(ctx context.Context, method, path string, payload []byte) ([
 	return nil, lastErr
 }
 
-func (c *Client) once(ctx context.Context, method, path string, payload []byte) ([]byte, bool, error) {
+func (c *Client) tryOnce(ctx context.Context, method, path string, payload []byte) ([]byte, bool, error) {
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(payload))
 	if err != nil {
 		return nil, false, fmt.Errorf("build request: %w", err)
