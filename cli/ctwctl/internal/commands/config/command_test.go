@@ -210,3 +210,20 @@ func TestConfigView_WithTextOutput_PrintsOneSortedKeyPerLine(t *testing.T) {
 		"output = text\n"+
 		"shop.url = https://shop.example.com\n", out)
 }
+
+func TestConfigView_WithJSONOutput_ShowsOnlyTheKnownKeys(t *testing.T) {
+	t.Parallel()
+
+	environment := cmdtest.IsolatedEnvironment(t, map[string]string{"CTWCTL_FOO_BAR": "from-env"})
+	writeConfigFile(t, environment, "[o2]\nstream = \"from-file\"\n")
+
+	out, err := run(t, environment, "config", "view", "-o", "json")
+
+	require.NoError(t, err)
+	assert.JSONEq(t, `{
+		"output": "json",
+		"o2": {"url": "https://o2.example.com", "org": "default", "user": "", "token": ""},
+		"shop": {"url": "https://shop.example.com"},
+		"kube": {"namespace": "demo", "context": ""}
+	}`, out)
+}

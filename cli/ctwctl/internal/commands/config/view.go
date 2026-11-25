@@ -10,17 +10,19 @@ import (
 )
 
 func viewConfig(ctx context.Context, cmd *cli.Command) error {
-	view, err := cmdutil.Resolved(ctx).MaskedView()
+	settings := cmdutil.Settings(ctx)
+	masked := settings.Masked()
+	if settings.Output == cmdutil.OutputJSON {
+		return cmdutil.WriteJSON(cmdutil.Writer(cmd), masked)
+	}
+
+	byKey, err := masked.ByKey()
 	if err != nil {
 		return err
 	}
 
-	if cmdutil.Settings(ctx).Output == cmdutil.OutputJSON {
-		return cmdutil.WriteJSON(cmdutil.Writer(cmd), view.Raw)
-	}
-
 	for _, key := range config.Keys() {
-		if _, err = fmt.Fprintf(cmdutil.Writer(cmd), "%s = %v\n", key, view.Values[key]); err != nil {
+		if _, err = fmt.Fprintf(cmdutil.Writer(cmd), "%s = %v\n", key, byKey[key]); err != nil {
 			return err
 		}
 	}

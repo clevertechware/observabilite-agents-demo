@@ -24,7 +24,7 @@ var flagKeys = map[string]string{
 	"context":   "kube.context",
 }
 
-type resolvedKey struct{}
+type settingsKey struct{}
 
 // GlobalFlags returns the flags shared by all ctwctl commands.
 func GlobalFlags() []cli.Flag {
@@ -37,13 +37,15 @@ func GlobalFlags() []cli.Flag {
 
 // LoadConfig returns the hook that loads and validates the CLI configuration from environment before a command runs.
 func LoadConfig(environment config.Environment) cli.BeforeFunc {
+	load := NewSettingsLoader(environment)
+
 	return func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
-		resolved, err := resolve(environment, cmd)
+		settings, err := load(cmd)
 		if err != nil {
 			return ctx, err
 		}
 
-		return context.WithValue(ctx, resolvedKey{}, resolved), nil
+		return context.WithValue(ctx, settingsKey{}, settings), nil
 	}
 }
 
@@ -53,42 +55,23 @@ type SettingsLoader func(cmd *cli.Command) (config.Settings, error)
 // NewSettingsLoader returns a SettingsLoader that resolves the settings from environment and the flags of the command.
 func NewSettingsLoader(environment config.Environment) SettingsLoader {
 	return func(cmd *cli.Command) (config.Settings, error) {
-		resolved, err := resolve(environment, cmd)
+		settings, err := config.Load(environment, flagsSet(cmd))
 		if err != nil {
 			return config.Settings{}, err
 		}
 
-		return resolved.Settings, nil
+		if settings.Output != OutputText && settings.Output != OutputJSON {
+			return config.Settings{}, fmt.Errorf("unknown output format %q: text or json expected", settings.Output)
+		}
+
+		return settings, nil
 	}
-}
-
-func resolve(environment config.Environment, cmd *cli.Command) (*config.Resolved, error) {
-	resolved, err := config.Load(environment, flagsSet(cmd))
-	if err != nil {
-		return nil, err
-	}
-
-	if resolved.Settings.Output != OutputText && resolved.Settings.Output != OutputJSON {
-		return nil, fmt.Errorf("unknown output format %q: text or json expected", resolved.Settings.Output)
-	}
-
-	return resolved, nil
-}
-
-// Resolved returns the configuration resolved by Before, if present in ctx.
-func Resolved(ctx context.Context) *config.Resolved {
-	resolved, _ := ctx.Value(resolvedKey{}).(*config.Resolved)
-	return resolved
 }
 
 // Settings returns the settings resolved by Before, or their zero value if absent.
 func Settings(ctx context.Context) config.Settings {
-	resolved := Resolved(ctx)
-	if resolved == nil {
-		return config.Settings{}
-	}
-
-	return resolved.Settings
+	settings, _ := ctx.Value(settingsKey{}).(config.Settings)
+	return settings
 }
 
 // Writer returns the root command's output writer.

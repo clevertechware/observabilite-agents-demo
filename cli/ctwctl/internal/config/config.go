@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -32,32 +33,28 @@ var defaults = map[string]any{
 	"output":         "text",
 }
 
+// Settings is the resolved ctwctl configuration. The json tags give the configuration keys: o2.token is O2.Token.
 type Settings struct {
-	Output string       `koanf:"output"`
-	O2     O2Settings   `koanf:"o2"`
-	Shop   ShopSettings `koanf:"shop"`
-	Kube   KubeSettings `koanf:"kube"`
+	Output string       `json:"output"`
+	O2     O2Settings   `json:"o2"`
+	Shop   ShopSettings `json:"shop"`
+	Kube   KubeSettings `json:"kube"`
 }
 
 type O2Settings struct {
-	URL   string `koanf:"url"`
-	Org   string `koanf:"org"`
-	User  string `koanf:"user"`
-	Token string `koanf:"token"`
+	URL   string `json:"url"`
+	Org   string `json:"org"`
+	User  string `json:"user"`
+	Token string `json:"token"`
 }
 
 type ShopSettings struct {
-	URL string `koanf:"url"`
+	URL string `json:"url"`
 }
 
 type KubeSettings struct {
-	Namespace string `koanf:"namespace"`
-	Context   string `koanf:"context"`
-}
-
-type Resolved struct {
-	Settings Settings
-	values   *koanf.Koanf
+	Namespace string `json:"namespace"`
+	Context   string `json:"context"`
 }
 
 // Environment holds what the configuration is resolved from outside its file: the environment variables and the
@@ -87,25 +84,22 @@ func (e Environment) environ() []string {
 	return entries
 }
 
-type View struct {
-	Raw    map[string]any
-	Values map[string]any
-}
-
-func Load(environment Environment, flagValues map[string]any) (*Resolved, error) {
+// Load resolves the settings from, in increasing priority, the defaults, the configuration file, the CTWCTL_*
+// variables of environment and flagValues.
+func Load(environment Environment, flagValues map[string]any) (Settings, error) {
 	k := koanf.New(".")
 	if err := k.Load(confmap.Provider(defaults, "."), nil); err != nil {
-		return nil, err
+		return Settings{}, err
 	}
 
 	path, err := configPath(environment)
 	if err != nil {
-		return nil, err
+		return Settings{}, err
 	}
 
 	err = k.Load(file.Provider(path), toml.Parser())
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("read %s: %w", path, err)
+		return Settings{}, fmt.Errorf("read %s: %w", path, err)
 	}
 
 	envProvider := env.Provider(".", env.Opt{
@@ -114,30 +108,48 @@ func Load(environment Environment, flagValues map[string]any) (*Resolved, error)
 		EnvironFunc:   environment.environ,
 	})
 	if err = k.Load(envProvider, nil); err != nil {
-		return nil, err
+		return Settings{}, err
 	}
 
 	if err = k.Load(confmap.Provider(flagValues, "."), nil); err != nil {
-		return nil, err
+		return Settings{}, err
 	}
 
 	var settings Settings
-	if err = k.Unmarshal("", &settings); err != nil {
-		return nil, fmt.Errorf("read configuration: %w", err)
+	if err = k.UnmarshalWithConf("", &settings, koanf.UnmarshalConf{Tag: "json"}); err != nil {
+		return Settings{}, fmt.Errorf("read configuration: %w", err)
 	}
 
-	return &Resolved{Settings: settings, values: k}, nil
+	return settings, nil
 }
 
-func (r *Resolved) MaskedView() (View, error) {
-	view := r.values.Copy()
-	if view.String("o2.token") != "" {
-		if err := view.Set("o2.token", maskedLine); err != nil {
-			return View{}, err
-		}
+// Masked returns a copy of s whose token, when set, is replaced so that it can be displayed.
+func (s Settings) Masked() Settings {
+	if s.O2.Token != "" {
+		s.O2.Token = maskedLine
 	}
 
-	return View{Raw: view.Raw(), Values: view.All()}, nil
+	return s
+}
+
+// ByKey returns the settings as a map from each configuration key, for example o2.token, to its value.
+func (s Settings) ByKey() (map[string]any, error) {
+	data, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+
+	var nested map[string]any
+	if err = json.Unmarshal(data, &nested); err != nil {
+		return nil, err
+	}
+
+	k := koanf.New(".")
+	if err = k.Load(confmap.Provider(nested, "."), nil); err != nil {
+		return nil, err
+	}
+
+	return k.All(), nil
 }
 
 func IsKey(key string) bool {

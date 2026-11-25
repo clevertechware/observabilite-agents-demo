@@ -4,6 +4,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,10 +31,10 @@ func TestLoad_AppliesSourcesInPriorityOrder(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
 	require.NoError(t, os.WriteFile(path, []byte("[kube]\nnamespace = \"from-file\"\n"), 0o600))
 
-	resolved, err := Load(environment, map[string]any{"kube.namespace": "from-flag"})
+	settings, err := Load(environment, map[string]any{"kube.namespace": "from-flag"})
 
 	require.NoError(t, err)
-	assert.Equal(t, "from-flag", resolved.Settings.Kube.Namespace)
+	assert.Equal(t, "from-flag", settings.Kube.Namespace)
 }
 
 func TestLoad_UsesEnvironmentWhenNoFlagOverridesIt(t *testing.T) {
@@ -41,25 +42,43 @@ func TestLoad_UsesEnvironmentWhenNoFlagOverridesIt(t *testing.T) {
 
 	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_KUBE_NAMESPACE": "from-env"})
 
-	resolved, err := Load(environment, nil)
+	settings, err := Load(environment, nil)
 
 	require.NoError(t, err)
-	assert.Equal(t, "from-env", resolved.Settings.Kube.Namespace)
+	assert.Equal(t, "from-env", settings.Kube.Namespace)
 }
 
-func TestResolved_MaskedViewHidesTokenButKeepsEffectiveSettings(t *testing.T) {
+func TestSettingsMasked_HidesTheTokenWithoutChangingTheLoadedSettings(t *testing.T) {
 	t.Parallel()
 
 	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "secret"})
-
-	resolved, err := Load(environment, nil)
+	settings, err := Load(environment, nil)
 	require.NoError(t, err)
-	view, err := resolved.MaskedView()
+
+	masked := settings.Masked()
+
+	assert.Equal(t, "secret", settings.O2.Token)
+	assert.Equal(t, "********", masked.O2.Token)
+}
+
+func TestSettingsMasked_KeepsAnEmptyTokenEmpty(t *testing.T) {
+	t.Parallel()
+
+	assert.Empty(t, Settings{}.Masked().O2.Token)
+}
+
+func TestSettingsByKey_GivesEveryConfigurationKeyItsValue(t *testing.T) {
+	t.Parallel()
+
+	settings, err := Load(isolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "secret"}), nil)
+	require.NoError(t, err)
+
+	byKey, err := settings.ByKey()
 
 	require.NoError(t, err)
-	assert.Equal(t, "secret", resolved.Settings.O2.Token)
-	assert.Equal(t, "********", view.Values["o2.token"])
-	assert.Equal(t, "********", view.Raw["o2"].(map[string]any)["token"])
+	assert.ElementsMatch(t, Keys(), slices.Collect(maps.Keys(byKey)))
+	assert.Equal(t, "secret", byKey["o2.token"])
+	assert.Equal(t, "demo", byKey["kube.namespace"])
 }
 
 func TestPath_UsesXDGConfigHomeWhenSet(t *testing.T) {
