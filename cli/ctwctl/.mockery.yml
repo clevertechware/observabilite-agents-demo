@@ -1,0 +1,26 @@
+template: file://./mock_testify.templ
+packages:
+  github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/app:
+    config:
+      dir: '{{.InterfaceDir}}/mocks'
+      pkgname: mocks
+      structname: '{{ .InterfaceName | firstUpper }}'
+      filename: '{{ .InterfaceName | snakecase }}.go'
+    interfaces:
+      Client:
+  github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order:
+    config:
+      dir: '{{.InterfaceDir}}/mocks'
+      pkgname: mocks
+      structname: '{{ .InterfaceName | firstUpper }}'
+      filename: '{{ .InterfaceName | snakecase }}.go'
+    interfaces:
+      Client:
+  github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/o2:
+    config:
+      dir: '{{.InterfaceDir}}/mocks'
+      pkgname: mocks
+      structname: '{{ .InterfaceName | firstUpper }}'
+      filename: '{{ .InterfaceName | snakecase }}.go'
+    interfaces:
+      LogSearcher:

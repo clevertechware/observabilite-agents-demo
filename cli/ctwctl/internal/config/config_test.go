@@ -1,0 +1,155 @@
+package config
+
+import (
+	"maps"
+	"os"
+	"path/filepath"
+	"slices"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func isolatedEnvironment(t *testing.T, variables map[string]string) Environment {
+	t.Helper()
+	all := map[string]string{"XDG_CONFIG_HOME": t.TempDir()}
+	maps.Copy(all, variables)
+
+	return Environment{Variables: all, UserHomeDir: func() (string, error) {
+		t.Fatal("user home should not be requested when XDG_CONFIG_HOME is set")
+		return "", nil
+	}}
+}
+
+func TestLoad_AppliesSourcesInPriorityOrder(t *testing.T) {
+	t.Parallel()
+
+	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_KUBE_NAMESPACE": "from-env"})
+	dir := environment.Variables["XDG_CONFIG_HOME"]
+	path := filepath.Join(dir, "ctwctl", "config.toml")
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
+	require.NoError(t, os.WriteFile(path, []byte("[kube]\nnamespace = \"from-file\"\n"), 0o600))
+
+	settings, err := Load(environment, map[string]any{"kube.namespace": "from-flag"})
+
+	require.NoError(t, err)
+	assert.Equal(t, "from-flag", settings.Kube.Namespace)
+}
+
+func TestLoad_UsesEnvironmentWhenNoFlagOverridesIt(t *testing.T) {
+	t.Parallel()
+
+	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_KUBE_NAMESPACE": "from-env"})
+
+	settings, err := Load(environment, nil)
+
+	require.NoError(t, err)
+	assert.Equal(t, "from-env", settings.Kube.Namespace)
+}
+
+func TestLoad_MapsEachEnvironmentVariableToItsDottedKey(t *testing.T) {
+	t.Parallel()
+
+	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_O2_URL": "https://o2.example.test"})
+
+	settings, err := Load(environment, nil)
+
+	require.NoError(t, err)
+	assert.Equal(t, "https://o2.example.test", settings.O2.URL)
+}
+
+func TestLoad_WhenFileIsNotValidTOML_NamesTheFile(t *testing.T) {
+	t.Parallel()
+
+	environment := isolatedEnvironment(t, nil)
+	path := filepath.Join(environment.Variables["XDG_CONFIG_HOME"], "ctwctl", "config.toml")
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
+	require.NoError(t, os.WriteFile(path, []byte("ceci n'est pas du toml ["), 0o600))
+
+	_, err := Load(environment, nil)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), path)
+}
+
+func TestLoad_WhenOutputFormatIsUnknown_ReturnsError(t *testing.T) {
+	t.Parallel()
+
+	_, err := Load(isolatedEnvironment(t, nil), map[string]any{"output": "yaml"})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "yaml")
+}
+
+func TestSettingsMasked_HidesTheTokenWithoutChangingTheLoadedSettings(t *testing.T) {
+	t.Parallel()
+
+	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "secret"})
+	settings, err := Load(environment, nil)
+	require.NoError(t, err)
+
+	masked := settings.Masked()
+
+	assert.Equal(t, "secret", settings.O2.Token)
+	assert.Equal(t, "********", masked.O2.Token)
+}
+
+func TestSettingsMasked_KeepsAnEmptyTokenEmpty(t *testing.T) {
+	t.Parallel()
+
+	assert.Empty(t, Settings{}.Masked().O2.Token)
+}
+
+func TestSettingsByKey_GivesEveryConfigurationKeyItsValue(t *testing.T) {
+	t.Parallel()
+
+	settings, err := Load(isolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "secret"}), nil)
+	require.NoError(t, err)
+
+	byKey, err := settings.ByKey()
+
+	require.NoError(t, err)
+	assert.ElementsMatch(t, Keys(), slices.Collect(maps.Keys(byKey)))
+	assert.Equal(t, "secret", byKey["o2.token"])
+	assert.Equal(t, "demo", byKey["kube.namespace"])
+}
+
+func TestPath_UsesXDGConfigHomeWhenSet(t *testing.T) {
+	t.Parallel()
+
+	environment := isolatedEnvironment(t, map[string]string{"XDG_CONFIG_HOME": "/tmp/xdg"})
+
+	got, err := configPath(environment)
+
+	require.NoError(t, err)
+	assert.Equal(t, "/tmp/xdg/ctwctl/config.toml", got)
+}
+
+func TestPath_FallsBackToDotConfigUnderUserHome(t *testing.T) {
+	t.Parallel()
+
+	environment := Environment{UserHomeDir: func() (string, error) { return "/home/dev", nil }}
+
+	got, err := configPath(environment)
+
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join("/home/dev", ".config", "ctwctl", "config.toml"), got)
+}
+
+func TestEnvKey_StripsPrefixLowercasesAndSplitsOnUnderscore(t *testing.T) {
+	t.Parallel()
+
+	key, value := envKey("CTWCTL_O2_TOKEN", "secret")
+
+	assert.Equal(t, "o2.token", key)
+	assert.Equal(t, "secret", value)
+}
+
+func TestProcessEnvironment_ReadsTheVariablesOfTheRunningProcess(t *testing.T) {
+	t.Setenv("CTWCTL_O2_URL", "https://o2.example.test?a=b")
+
+	environment := ProcessEnvironment()
+
+	assert.Equal(t, "https://o2.example.test?a=b", environment.Variables["CTWCTL_O2_URL"])
+}
