@@ -15,12 +15,11 @@ const (
 	followPageSize = 1000
 )
 
-// follower relit les logs par polling. Chaque tour interroge une fenêtre qui recouvre le tour précédent, car
-// OpenObserve indexe les logs avec un délai : une ligne plus ancienne que la dernière affichée peut arriver ensuite.
-// La déduplication s'appuie sur le contenu complet de la ligne, conservé tant qu'elle reste dans la fenêtre.
-// La fenêtre ne descend jamais sous windowFloor, la plus ancienne ligne du lot initial, pour ne pas réafficher hors ordre
-// l'arriéré que --limit a écarté. Une page pleine est suivie des pages suivantes : des doublons ne masquent pas une ligne
-// nouvelle.
+// follower polls the logs. Each round queries a window that overlaps the previous one, because OpenObserve indexes
+// logs with a delay: a line older than the last one printed can arrive later.
+// Deduplication relies on the full content of the line, kept as long as it stays in the window.
+// The window never goes below windowFloor, the oldest line of the initial batch, so that the backlog dropped by
+// --limit is not printed out of order. A full page is followed by the next pages: duplicates do not hide a new line.
 type follower struct {
 	searcher        LogSearcher
 	filter          logFilter
@@ -87,7 +86,7 @@ func (f *follower) initialBatch(ctx context.Context, start, end time.Time) error
 		Size:  f.limit,
 	})
 	if err != nil {
-		return fmt.Errorf("suivi des logs : %w", err)
+		return fmt.Errorf("follow logs: %w", err)
 	}
 
 	hits := slices.Clone(result.Hits)
@@ -116,7 +115,7 @@ func (f *follower) poll(ctx context.Context) error {
 			Size:  f.pageSize,
 		})
 		if err != nil {
-			return fmt.Errorf("suivi des logs : %w", err)
+			return fmt.Errorf("follow logs: %w", err)
 		}
 
 		if err = f.emit(result.Hits); err != nil {
@@ -162,7 +161,7 @@ func (f *follower) forgetBefore(micros int64) {
 func dedupKey(hit o2.Hit) (string, error) {
 	data, err := json.Marshal(hit)
 	if err != nil {
-		return "", fmt.Errorf("encodage d'un log : %w", err)
+		return "", fmt.Errorf("encode log: %w", err)
 	}
 	return string(data), nil
 }

@@ -73,7 +73,7 @@ func TestClientListApps_WhenKubectlPrintsInvalidJSON_ReturnsDecodeError(t *testi
 	_, err := client.ListApps(t.Context())
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "décodage")
+	assert.Contains(t, err.Error(), "decode")
 }
 
 func TestClientRestartApp_RunsRolloutRestartOnTheNamedDeployment(t *testing.T) {
@@ -95,9 +95,9 @@ func TestClient_WhenKubectlFails_TranslatesTheError(t *testing.T) {
 		wantMsg string
 	}{
 		{"stderr is reported", &exec.ExitError{Stderr: []byte("error: You must be logged in to the server\n")},
-			"kubectl : error: You must be logged in to the server"},
-		{"a missing binary is explained", exec.ErrNotFound, "kubectl est introuvable dans le PATH"},
-		{"other errors are wrapped", context.Canceled, "kubectl : context canceled"},
+			"kubectl: error: You must be logged in to the server"},
+		{"a missing binary is explained", exec.ErrNotFound, "kubectl not found in PATH"},
+		{"other errors are wrapped", context.Canceled, "kubectl: context canceled"},
 	}
 
 	for _, tt := range tests {

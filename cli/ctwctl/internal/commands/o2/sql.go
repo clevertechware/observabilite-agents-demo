@@ -31,7 +31,7 @@ func newLogFilter(service, namespace, grep, level string) (logFilter, error) {
 
 	severity, ok := severityNumbers[strings.ToLower(level)]
 	if !ok {
-		return logFilter{}, fmt.Errorf("niveau %q inconnu : trace, debug, info, warn, error ou fatal", level)
+		return logFilter{}, fmt.Errorf("unknown level %q: trace, debug, info, warn, error or fatal", level)
 	}
 
 	filter.minSeverity = severity

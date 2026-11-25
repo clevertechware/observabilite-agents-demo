@@ -75,7 +75,7 @@ type deploymentList struct {
 func parseDeployments(data []byte) ([]app.Status, error) {
 	var list deploymentList
 	if err := json.Unmarshal(data, &list); err != nil {
-		return nil, fmt.Errorf("décodage de la sortie de kubectl : %w", err)
+		return nil, fmt.Errorf("decode kubectl output: %w", err)
 	}
 
 	apps := make([]app.Status, 0, len(list.Items))
@@ -107,10 +107,10 @@ func kubectlFailure(err error) error {
 	var exitErr *exec.ExitError
 	switch {
 	case errors.Is(err, exec.ErrNotFound):
-		return errors.New("kubectl est introuvable dans le PATH")
+		return errors.New("kubectl not found in PATH")
 	case errors.As(err, &exitErr) && len(exitErr.Stderr) > 0:
-		return fmt.Errorf("kubectl : %s", strings.TrimSpace(string(exitErr.Stderr)))
+		return fmt.Errorf("kubectl: %s", strings.TrimSpace(string(exitErr.Stderr)))
 	default:
-		return fmt.Errorf("kubectl : %w", err)
+		return fmt.Errorf("kubectl: %w", err)
 	}
 }

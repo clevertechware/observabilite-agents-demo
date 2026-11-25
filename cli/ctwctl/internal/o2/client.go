@@ -63,12 +63,12 @@ type StatusError struct {
 
 func (e *StatusError) Error() string {
 	if e.Body == "" {
-		return fmt.Sprintf("openobserve a répondu %d", e.Status)
+		return fmt.Sprintf("openobserve responded %d", e.Status)
 	}
-	return fmt.Sprintf("openobserve a répondu %d : %s", e.Status, e.Body)
+	return fmt.Sprintf("openobserve responded %d: %s", e.Status, e.Body)
 }
 
-// SearchRequest décrit une recherche SQL. Une fenêtre vide couvre la dernière heure.
+// SearchRequest describes an SQL search. An empty window covers the last hour.
 type SearchRequest struct {
 	SQL        string
 	Start      time.Time
@@ -134,7 +134,7 @@ func (c *Client) Search(ctx context.Context, req SearchRequest) (SearchResult, e
 		Size:      size,
 	}})
 	if err != nil {
-		return SearchResult{}, fmt.Errorf("encodage de la requête : %w", err)
+		return SearchResult{}, fmt.Errorf("encode request: %w", err)
 	}
 
 	path := fmt.Sprintf("/api/%s/_search?type=%s", url.PathEscape(c.org), url.QueryEscape(streamType))
@@ -145,7 +145,7 @@ func (c *Client) Search(ctx context.Context, req SearchRequest) (SearchResult, e
 
 	var result SearchResult
 	if err = decodeJSON(body, &result); err != nil {
-		return SearchResult{}, fmt.Errorf("décodage de la réponse de _search : %w", err)
+		return SearchResult{}, fmt.Errorf("decode _search response: %w", err)
 	}
 
 	return result, nil
@@ -170,7 +170,7 @@ func (c *Client) Streams(ctx context.Context, streamType string) ([]Stream, erro
 
 	var response streamsResponse
 	if err = decodeJSON(body, &response); err != nil {
-		return nil, fmt.Errorf("décodage de la réponse de streams : %w", err)
+		return nil, fmt.Errorf("decode streams response: %w", err)
 	}
 
 	streams := make([]Stream, 0, len(response.List))
@@ -211,7 +211,7 @@ func (c *Client) do(ctx context.Context, method, path string, payload []byte) ([
 func (c *Client) once(ctx context.Context, method, path string, payload []byte) ([]byte, bool, error) {
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(payload))
 	if err != nil {
-		return nil, false, fmt.Errorf("construction de la requête : %w", err)
+		return nil, false, fmt.Errorf("build request: %w", err)
 	}
 
 	req.SetBasicAuth(c.user, c.token)
@@ -222,13 +222,13 @@ func (c *Client) once(ctx context.Context, method, path string, payload []byte) 
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, ctx.Err() == nil, fmt.Errorf("appel à openobserve : %w", err)
+		return nil, ctx.Err() == nil, fmt.Errorf("call openobserve: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, ctx.Err() == nil, fmt.Errorf("lecture de la réponse : %w", err)
+		return nil, ctx.Err() == nil, fmt.Errorf("read response: %w", err)
 	}
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {

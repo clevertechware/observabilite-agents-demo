@@ -43,7 +43,7 @@ func Before(ctx context.Context, cmd *cli.Command) (context.Context, error) {
 	}
 
 	if resolved.Settings.Output != OutputText && resolved.Settings.Output != OutputJSON {
-		return ctx, fmt.Errorf("format de sortie %q inconnu : text ou json attendu", resolved.Settings.Output)
+		return ctx, fmt.Errorf("unknown output format %q: text or json expected", resolved.Settings.Output)
 	}
 
 	return context.WithValue(ctx, resolvedKey{}, resolved), nil

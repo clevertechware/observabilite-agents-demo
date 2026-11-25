@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	ErrInvalidName = errors.New("nom de Deployment invalide")
+	ErrInvalidName = errors.New("invalid Deployment name")
 	deploymentName = regexp.MustCompile(`^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$`)
 )
 

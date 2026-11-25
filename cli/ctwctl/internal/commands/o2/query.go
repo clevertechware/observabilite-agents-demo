@@ -12,7 +12,7 @@ import (
 
 func runQuery(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 	if cmd.Args().Len() != 1 {
-		return errors.New("une requête SQL est attendue : ctwctl o2 query \"<SQL>\"")
+		return errors.New("an SQL query is expected: ctwctl o2 query \"<SQL>\"")
 	}
 
 	s := cmdutil.Settings(ctx)
@@ -34,7 +34,7 @@ func runQuery(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 		Size:  limit,
 	})
 	if err != nil {
-		return fmt.Errorf("exécution de la requête : %w", err)
+		return fmt.Errorf("run query: %w", err)
 	}
 
 	if s.Output == cmdutil.OutputJSON {

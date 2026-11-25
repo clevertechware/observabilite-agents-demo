@@ -30,7 +30,7 @@ func listStreams(ctx context.Context, cmd *cli.Command, deps Dependencies) error
 		var found []o2.Stream
 		found, err = searcher.Streams(ctx, t)
 		if err != nil {
-			return fmt.Errorf("listing des streams %s : %w", t, err)
+			return fmt.Errorf("list %s streams: %w", t, err)
 		}
 		streams = append(streams, found...)
 	}

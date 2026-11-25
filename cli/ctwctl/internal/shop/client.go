@@ -16,11 +16,11 @@ import (
 )
 
 var (
-	ErrInvalidRequest    = errors.New("requête refusée par order-service")
-	ErrNotFound          = errors.New("SKU inconnu ou commande absente")
-	ErrInsufficientStock = errors.New("stock insuffisant")
-	ErrUpstreamFailure   = errors.New("inventory-service indisponible")
-	ErrRateLimited       = errors.New("limite de débit atteinte")
+	ErrInvalidRequest    = errors.New("request rejected by order-service")
+	ErrNotFound          = errors.New("unknown SKU or missing order")
+	ErrInsufficientStock = errors.New("insufficient stock")
+	ErrUpstreamFailure   = errors.New("inventory-service unavailable")
+	ErrRateLimited       = errors.New("rate limit reached")
 )
 
 type StatusError struct {
@@ -30,9 +30,9 @@ type StatusError struct {
 
 func (e *StatusError) Error() string {
 	if e.Detail == "" {
-		return fmt.Sprintf("order-service a répondu %d", e.Status)
+		return fmt.Sprintf("order-service responded %d", e.Status)
 	}
-	return fmt.Sprintf("order-service a répondu %d : %s", e.Status, e.Detail)
+	return fmt.Sprintf("order-service responded %d: %s", e.Status, e.Detail)
 }
 
 type OrderClient struct {
@@ -61,7 +61,7 @@ type response struct {
 func (c *OrderClient) Create(ctx context.Context, sku string, quantity int) (order.Order, error) {
 	payload, err := json.Marshal(createRequest{SKU: sku, Quantity: quantity})
 	if err != nil {
-		return order.Order{}, fmt.Errorf("encodage de la commande : %w", err)
+		return order.Order{}, fmt.Errorf("encode order: %w", err)
 	}
 
 	resp, err := c.do(ctx, http.MethodPost, "/orders", payload)
@@ -98,7 +98,7 @@ func (c *OrderClient) Get(ctx context.Context, id int64) (order.Order, error) {
 func (c *OrderClient) do(ctx context.Context, method, path string, payload []byte) (response, error) {
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(payload))
 	if err != nil {
-		return response{}, fmt.Errorf("construction de la requête : %w", err)
+		return response{}, fmt.Errorf("build request: %w", err)
 	}
 
 	req.Header.Set("Accept", "application/json")
@@ -108,13 +108,13 @@ func (c *OrderClient) do(ctx context.Context, method, path string, payload []byt
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return response{}, fmt.Errorf("appel à order-service : %w", err)
+		return response{}, fmt.Errorf("call order-service: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return response{}, fmt.Errorf("lecture de la réponse : %w", err)
+		return response{}, fmt.Errorf("read response: %w", err)
 	}
 
 	return response{statusCode: resp.StatusCode, location: resp.Header.Get("Location"), body: body}, nil
@@ -123,7 +123,7 @@ func (c *OrderClient) do(ctx context.Context, method, path string, payload []byt
 func decodeOrder(body []byte) (order.Order, error) {
 	var decoded order.Order
 	if err := json.Unmarshal(body, &decoded); err != nil {
-		return order.Order{}, fmt.Errorf("décodage de la commande : %w", err)
+		return order.Order{}, fmt.Errorf("decode order: %w", err)
 	}
 	return decoded, nil
 }
@@ -143,7 +143,7 @@ func statusError(status int, body []byte) error {
 	if problem.Detail == "" {
 		return sentinel
 	}
-	return fmt.Errorf("%w : %s", sentinel, problem.Detail)
+	return fmt.Errorf("%w: %s", sentinel, problem.Detail)
 }
 
 func sentinelFor(status int) error {

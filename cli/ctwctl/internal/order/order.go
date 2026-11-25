@@ -6,9 +6,9 @@ import (
 	"errors"
 )
 
-var ErrInvalidQuantity = errors.New("quantité invalide")
+var ErrInvalidQuantity = errors.New("invalid quantity")
 
-// Order est la commande renvoyée par order-service ; Location n'est renseigné qu'à la création.
+// Order is the order returned by order-service; Location is only set on creation.
 type Order struct {
 	ID        int64       `json:"id"`
 	SKU       string      `json:"sku"`

@@ -31,12 +31,12 @@ func configCommand() *cli.Command {
 
 func setConfig(_ context.Context, cmd *cli.Command) error {
 	if cmd.Args().Len() != 2 {
-		return fmt.Errorf("une clé et une valeur sont attendues : ctwctl config set <clé> <valeur>")
+		return fmt.Errorf("a key and a value are expected: ctwctl config set <key> <value>")
 	}
 
 	key, value := cmd.Args().Get(0), cmd.Args().Get(1)
 	if !config.IsKey(key) {
-		return fmt.Errorf("clé inconnue %q : %s", key, strings.Join(config.Keys(), ", "))
+		return fmt.Errorf("unknown key %q: %s", key, strings.Join(config.Keys(), ", "))
 	}
 
 	path, err := config.SaveValue(key, value)

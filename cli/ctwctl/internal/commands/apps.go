@@ -61,13 +61,13 @@ func listApps(ctx context.Context, cmd *cli.Command, apps *app.Apps) error {
 
 func restartApp(ctx context.Context, cmd *cli.Command, apps *app.Apps) error {
 	if cmd.Args().Len() != 1 {
-		return errors.New("un nom de Deployment est attendu : ctwctl apps restart <nom>")
+		return errors.New("a Deployment name is expected: ctwctl apps restart <name>")
 	}
 
 	name := cmd.Args().First()
 	out, err := apps.Restart(ctx, name)
 	if errors.Is(err, app.ErrInvalidName) {
-		return fmt.Errorf("nom de Deployment invalide : %q", name)
+		return fmt.Errorf("invalid Deployment name: %q", name)
 	}
 	if err != nil {
 		return err

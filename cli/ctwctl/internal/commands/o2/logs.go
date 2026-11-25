@@ -50,7 +50,7 @@ func showLogs(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 		Size:  limit,
 	})
 	if err != nil {
-		return fmt.Errorf("recherche des logs : %w", err)
+		return fmt.Errorf("search logs: %w", err)
 	}
 
 	return printer.printAll(result.Hits)

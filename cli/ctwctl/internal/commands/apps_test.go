@@ -93,12 +93,12 @@ func TestAppsRestart_WithJSONOutput_ReportsTheRestartedApp(t *testing.T) {
 
 func TestAppsRestart_WhenClientFails_ReturnsItsError(t *testing.T) {
 	client := appmocks.NewClient(t)
-	client.EXPECT().RestartApp(mock.Anything, "load-generator").Return("", errors.New("kubectl est introuvable dans le PATH"))
+	client.EXPECT().RestartApp(mock.Anything, "load-generator").Return("", errors.New("kubectl not found in PATH"))
 
 	_, err := run(t, appDeps(client), "apps", "restart", "load-generator")
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "introuvable dans le PATH")
+	assert.Contains(t, err.Error(), "not found in PATH")
 }
 
 func TestAppsRestart_RejectsInvalidNamesWithoutCallingTheClient(t *testing.T) {

@@ -78,7 +78,7 @@ func Load(flagValues map[string]any) (*Resolved, error) {
 
 	err = k.Load(file.Provider(path), toml.Parser())
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("lecture de %s : %w", path, err)
+		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
 
 	envProvider := env.Provider(".", env.Opt{Prefix: envPrefix, TransformFunc: envKey})
@@ -92,7 +92,7 @@ func Load(flagValues map[string]any) (*Resolved, error) {
 
 	var settings Settings
 	if err = k.Unmarshal("", &settings); err != nil {
-		return nil, fmt.Errorf("lecture de la configuration : %w", err)
+		return nil, fmt.Errorf("read configuration: %w", err)
 	}
 
 	return &Resolved{Settings: settings, values: k}, nil
@@ -132,7 +132,7 @@ func SaveValue(key, value string) (string, error) {
 	k := koanf.New(".")
 	err = k.Load(file.Provider(path), toml.Parser())
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return "", fmt.Errorf("lecture de %s : %w", path, err)
+		return "", fmt.Errorf("read %s: %w", path, err)
 	}
 
 	if err = k.Set(key, value); err != nil {
@@ -141,24 +141,24 @@ func SaveValue(key, value string) (string, error) {
 
 	data, err := k.Marshal(toml.Parser())
 	if err != nil {
-		return "", fmt.Errorf("encodage TOML : %w", err)
+		return "", fmt.Errorf("encode TOML: %w", err)
 	}
 
 	return path, writePrivateFile(path, data)
 }
 
-// configPath suit la spécification XDG Base Directory et retourne le chemin du fichier de configuration.
+// configPath follows the XDG Base Directory specification and returns the path of the configuration file.
 //
-// XDG_CONFIG_HOME désigne le répertoire des fichiers de configuration de l'utilisateur avec ~/.config par défaut.
+// XDG_CONFIG_HOME names the directory of the user's configuration files, ~/.config by default.
 //
-// Ce répertoire est retenu aussi sous macOS, comme le font gh ou git, plutôt que le "~/Library/Application Support"
-// renvoyé par os.UserConfigDir.
+// This directory is also used on macOS, as gh and git do, rather than the "~/Library/Application Support" returned
+// by os.UserConfigDir.
 func configPath(userHomeDir func() (string, error)) (string, error) {
 	base := os.Getenv("XDG_CONFIG_HOME")
 	if base == "" {
 		home, err := userHomeDir()
 		if err != nil {
-			return "", fmt.Errorf("répertoire personnel introuvable : %w", err)
+			return "", fmt.Errorf("home directory not found: %w", err)
 		}
 		base = filepath.Join(home, ".config")
 	}
@@ -174,27 +174,27 @@ func envKey(name, value string) (string, any) {
 func writePrivateFile(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return fmt.Errorf("création de %s : %w", dir, err)
+		return fmt.Errorf("create %s: %w", dir, err)
 	}
 
 	tmp, err := os.CreateTemp(dir, ".config-*.toml")
 	if err != nil {
-		return fmt.Errorf("création du fichier temporaire : %w", err)
+		return fmt.Errorf("create temporary file: %w", err)
 	}
 	defer os.Remove(tmp.Name())
 
 	if err = tmp.Chmod(0o600); err != nil {
 		tmp.Close()
-		return fmt.Errorf("droits du fichier temporaire : %w", err)
+		return fmt.Errorf("set temporary file permissions: %w", err)
 	}
 
 	if _, err = tmp.Write(data); err != nil {
 		tmp.Close()
-		return fmt.Errorf("écriture de %s : %w", path, err)
+		return fmt.Errorf("write %s: %w", path, err)
 	}
 
 	if err = tmp.Close(); err != nil {
-		return fmt.Errorf("écriture de %s : %w", path, err)
+		return fmt.Errorf("write %s: %w", path, err)
 	}
 
 	return os.Rename(tmp.Name(), path)

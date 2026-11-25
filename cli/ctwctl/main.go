@@ -14,7 +14,7 @@ func main() {
 	defer stop()
 
 	if err := commands.NewRootCommand().Run(ctx, os.Args); err != nil {
-		fmt.Fprintf(os.Stderr, "ctwctl : %v\n", err)
+		fmt.Fprintf(os.Stderr, "ctwctl: %v\n", err)
 		stop()
 		os.Exit(1)
 	}

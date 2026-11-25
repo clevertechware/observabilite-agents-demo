@@ -43,7 +43,7 @@ func createOrder(ctx context.Context, cmd *cli.Command, deps dependencies) error
 	s := settingsFrom(ctx)
 	created, err := order.NewOrders(deps.newOrderClient(s)).Create(ctx, cmd.String("sku"), quantity)
 	if errors.Is(err, order.ErrInvalidQuantity) {
-		return fmt.Errorf("--quantity doit être strictement positif, reçu %d", quantity)
+		return fmt.Errorf("--quantity must be strictly positive, got %d", quantity)
 	}
 	if err != nil {
 		return err
@@ -54,12 +54,12 @@ func createOrder(ctx context.Context, cmd *cli.Command, deps dependencies) error
 
 func getOrder(ctx context.Context, cmd *cli.Command, deps dependencies) error {
 	if cmd.Args().Len() != 1 {
-		return errors.New("un identifiant est attendu : ctwctl orders get <id>")
+		return errors.New("an order id is expected: ctwctl orders get <id>")
 	}
 
 	id, err := strconv.ParseInt(cmd.Args().First(), 10, 64)
 	if err != nil {
-		return fmt.Errorf("identifiant de commande invalide %q", cmd.Args().First())
+		return fmt.Errorf("invalid order id %q", cmd.Args().First())
 	}
 
 	s := settingsFrom(ctx)
