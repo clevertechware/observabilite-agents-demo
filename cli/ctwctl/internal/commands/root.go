@@ -53,7 +53,7 @@ func newRootCommand(deps dependencies) *cli.Command {
 
 	return &cli.Command{
 		Name:   "ctwctl",
-		Usage:  "applications, logs OpenObserve et commandes de la démo d'observabilité",
+		Usage:  "applications, OpenObserve logs and orders of the observability demo",
 		Writer: os.Stdout,
 		Flags:  cmdutil.GlobalFlags(),
 		Before: cmdutil.Before,

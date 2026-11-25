@@ -29,9 +29,9 @@ type resolvedKey struct{}
 // GlobalFlags returns the flags shared by all ctwctl commands.
 func GlobalFlags() []cli.Flag {
 	return []cli.Flag{
-		&cli.StringFlag{Name: "output", Aliases: []string{"o"}, Usage: "format de sortie : text ou json"},
-		&cli.StringFlag{Name: "context", Usage: "contexte kubectl (défaut : le contexte courant)"},
-		&cli.StringFlag{Name: "namespace", Usage: "namespace Kubernetes (défaut : demo)"},
+		&cli.StringFlag{Name: "output", Aliases: []string{"o"}, Usage: "output format: text or json"},
+		&cli.StringFlag{Name: "context", Usage: "kubectl context (default: the current context)"},
+		&cli.StringFlag{Name: "namespace", Usage: "Kubernetes namespace (default: demo)"},
 	}
 }
 

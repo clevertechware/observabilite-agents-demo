@@ -39,9 +39,9 @@ func TestAppsList_WithTextOutput_PrintsReadyOverDesiredAndAvailability(t *testin
 	out, err := run(t, appDeps(client), "apps", "list")
 
 	require.NoError(t, err)
-	assert.Equal(t, "NOM              PRÊTS  DISPONIBLE\n"+
-		"order-service    1/1    oui\n"+
-		"pricing-service  1/2    non\n", out)
+	assert.Equal(t, "NAME             READY  AVAILABLE\n"+
+		"order-service    1/1    yes\n"+
+		"pricing-service  1/2    no\n", out)
 }
 
 func TestAppsList_BuildsTheClientFromNamespaceAndContextFlags(t *testing.T) {

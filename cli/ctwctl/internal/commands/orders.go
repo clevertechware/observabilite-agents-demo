@@ -13,14 +13,14 @@ import (
 func ordersCommand(deps dependencies) *cli.Command {
 	return &cli.Command{
 		Name:  "orders",
-		Usage: "commandes d'order-service, par l'hôte public",
+		Usage: "order-service orders, through the public host",
 		Commands: []*cli.Command{
 			{
 				Name:  "create",
-				Usage: "crée une commande (POST /orders)",
+				Usage: "create an order (POST /orders)",
 				Flags: []cli.Flag{
-					&cli.StringFlag{Name: "sku", Usage: "référence de l'article, par exemple SKU-001", Required: true},
-					&cli.IntFlag{Name: "quantity", Usage: "quantité commandée", Value: 1},
+					&cli.StringFlag{Name: "sku", Usage: "item reference, for example SKU-001", Required: true},
+					&cli.IntFlag{Name: "quantity", Usage: "ordered quantity", Value: 1},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					return createOrder(ctx, cmd, deps)
@@ -28,7 +28,7 @@ func ordersCommand(deps dependencies) *cli.Command {
 			},
 			{
 				Name:      "get",
-				Usage:     "lit une commande (GET /orders/{id})",
+				Usage:     "read an order (GET /orders/{id})",
 				ArgsUsage: "<id>",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					return getOrder(ctx, cmd, deps)
@@ -49,7 +49,7 @@ func createOrder(ctx context.Context, cmd *cli.Command, deps dependencies) error
 		return err
 	}
 
-	return printOrder(cmd, s, created, "créée")
+	return printOrder(cmd, s, created, "created")
 }
 
 func getOrder(ctx context.Context, cmd *cli.Command, deps dependencies) error {
@@ -68,7 +68,7 @@ func getOrder(ctx context.Context, cmd *cli.Command, deps dependencies) error {
 		return err
 	}
 
-	return printOrder(cmd, s, got, "lue")
+	return printOrder(cmd, s, got, "read")
 }
 
 func printOrder(cmd *cli.Command, s settings, item order.Order, verb string) error {
@@ -76,7 +76,7 @@ func printOrder(cmd *cli.Command, s settings, item order.Order, verb string) err
 		return writeJSON(writer(cmd), item)
 	}
 
-	_, err := fmt.Fprintf(writer(cmd), "commande %d %s : %s x%d, prix unitaire %s, total %s\n",
+	_, err := fmt.Fprintf(writer(cmd), "order %d %s: %s x%d, unit price %s, total %s\n",
 		item.ID, verb, item.SKU, item.Quantity, item.UnitPrice, item.Total)
 	if err == nil && item.Location != "" {
 		_, err = fmt.Fprintf(writer(cmd), "Location: %s\n", item.Location)

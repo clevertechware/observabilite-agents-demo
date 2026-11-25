@@ -54,18 +54,18 @@ func (d Dependencies) withDefaults() Dependencies {
 func NewCommand(deps Dependencies) *cli.Command {
 	deps = deps.withDefaults()
 
-	sinceFlag := &cli.StringFlag{Name: "since", Usage: "fenêtre de temps, par exemple 15m ou 1h", Value: "1h"}
-	limitFlag := &cli.IntFlag{Name: "limit", Usage: "nombre maximal de résultats", Value: defaultLimit}
+	sinceFlag := &cli.StringFlag{Name: "since", Usage: "time window, for example 15m or 1h", Value: "1h"}
+	limitFlag := &cli.IntFlag{Name: "limit", Usage: "maximum number of results", Value: defaultLimit}
 
 	return &cli.Command{
 		Name:  "o2",
-		Usage: "streams, logs et requêtes SQL d'OpenObserve",
+		Usage: "OpenObserve streams, logs and SQL queries",
 		Commands: []*cli.Command{
 			{
 				Name:  "streams",
-				Usage: "liste les streams et leurs champs",
+				Usage: "list streams and their fields",
 				Flags: []cli.Flag{
-					&cli.StringFlag{Name: "type", Usage: "logs, metrics ou traces (défaut : logs et traces)"},
+					&cli.StringFlag{Name: "type", Usage: "logs, metrics or traces (default: logs and traces)"},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					return listStreams(ctx, cmd, deps)
@@ -73,14 +73,14 @@ func NewCommand(deps Dependencies) *cli.Command {
 			},
 			{
 				Name:  "logs",
-				Usage: "lit les logs du stream default",
+				Usage: "read the logs of the default stream",
 				Flags: []cli.Flag{
-					&cli.StringFlag{Name: "service", Usage: "filtre sur service_name"},
-					&cli.StringFlag{Name: "grep", Usage: "filtre sur le texte du message"},
-					&cli.StringFlag{Name: "level", Usage: "niveau minimal : trace, debug, info, warn, error ou fatal"},
+					&cli.StringFlag{Name: "service", Usage: "filter on service_name"},
+					&cli.StringFlag{Name: "grep", Usage: "filter on the message text"},
+					&cli.StringFlag{Name: "level", Usage: "minimum level: trace, debug, info, warn, error or fatal"},
 					sinceFlag,
 					limitFlag,
-					&cli.BoolFlag{Name: "follow", Aliases: []string{"f"}, Usage: "relit les logs à intervalle fixe"},
+					&cli.BoolFlag{Name: "follow", Aliases: []string{"f"}, Usage: "poll the logs at a fixed interval"},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					return showLogs(ctx, cmd, deps)
@@ -88,7 +88,7 @@ func NewCommand(deps Dependencies) *cli.Command {
 			},
 			{
 				Name:      "query",
-				Usage:     "exécute une requête SQL telle quelle",
+				Usage:     "run an SQL query as is",
 				ArgsUsage: "<SQL>",
 				Flags:     []cli.Flag{sinceFlag, limitFlag},
 				Action: func(ctx context.Context, cmd *cli.Command) error {

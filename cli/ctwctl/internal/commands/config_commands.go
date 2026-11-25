@@ -12,17 +12,17 @@ import (
 func configCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "config",
-		Usage: "lit et écrit ~/.config/ctwctl/config.toml",
+		Usage: "read and write ~/.config/ctwctl/config.toml",
 		Commands: []*cli.Command{
 			{
 				Name:      "set",
-				Usage:     "écrit une valeur dans le fichier de configuration",
-				ArgsUsage: "<clé> <valeur>",
+				Usage:     "write a value to the configuration file",
+				ArgsUsage: "<key> <value>",
 				Action:    setConfig,
 			},
 			{
 				Name:   "view",
-				Usage:  "affiche la configuration résolue, jeton masqué",
+				Usage:  "show the resolved configuration, token masked",
 				Action: viewConfig,
 			},
 		},
@@ -44,7 +44,7 @@ func setConfig(_ context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	_, err = fmt.Fprintf(writer(cmd), "%s écrit dans %s\n", key, path)
+	_, err = fmt.Fprintf(writer(cmd), "%s written to %s\n", key, path)
 	return err
 }
 

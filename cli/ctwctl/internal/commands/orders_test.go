@@ -26,7 +26,7 @@ func TestOrdersCreate_SendsSkuAndQuantityAndPrintsTheCreatedOrder(t *testing.T) 
 	out, err := run(t, ordersDeps(client), "orders", "create", "--sku", "SKU-001", "--quantity", "2")
 
 	require.NoError(t, err)
-	assert.Equal(t, "commande 42 créée : SKU-001 x2, prix unitaire 9.90, total 19.80\nLocation: /orders/42\n", out)
+	assert.Equal(t, "order 42 created: SKU-001 x2, unit price 9.90, total 19.80\nLocation: /orders/42\n", out)
 }
 
 func TestOrdersCreate_WithJSONOutput_PrintsTheOrderWithItsLocation(t *testing.T) {
@@ -75,7 +75,7 @@ func TestOrdersGet_PrintsTheOrderReadByItsIdentifier(t *testing.T) {
 	out, err := run(t, ordersDeps(client), "orders", "get", "42")
 
 	require.NoError(t, err)
-	assert.Equal(t, "commande 42 lue : SKU-001 x2, prix unitaire 9.90, total 19.80\n", out)
+	assert.Equal(t, "order 42 read: SKU-001 x2, unit price 9.90, total 19.80\n", out)
 }
 
 func TestOrdersGet_WithJSONOutput_OmitsTheLocation(t *testing.T) {

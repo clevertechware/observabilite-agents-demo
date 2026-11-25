@@ -14,19 +14,19 @@ import (
 func appsCommand(deps dependencies) *cli.Command {
 	return &cli.Command{
 		Name:  "apps",
-		Usage: "applications déployées sur Kubernetes",
+		Usage: "applications deployed on Kubernetes",
 		Commands: []*cli.Command{
 			{
 				Name:  "list",
-				Usage: "liste les Deployments du namespace",
+				Usage: "list the Deployments of the namespace",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					return listApps(ctx, cmd, app.NewApps(deps.newAppClient(settingsFrom(ctx))))
 				},
 			},
 			{
 				Name:      "restart",
-				Usage:     "redémarre un Deployment (kubectl rollout restart)",
-				ArgsUsage: "<nom>",
+				Usage:     "restart a Deployment (kubectl rollout restart)",
+				ArgsUsage: "<name>",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					return restartApp(ctx, cmd, app.NewApps(deps.newAppClient(settingsFrom(ctx))))
 				},
@@ -46,12 +46,12 @@ func listApps(ctx context.Context, cmd *cli.Command, apps *app.Apps) error {
 	}
 
 	tw := tabwriter.NewWriter(writer(cmd), 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "NOM\tPRÊTS\tDISPONIBLE")
+	fmt.Fprintln(tw, "NAME\tREADY\tAVAILABLE")
 
 	for _, status := range statuses {
-		available := "non"
+		available := "no"
 		if status.Available {
-			available = "oui"
+			available = "yes"
 		}
 		fmt.Fprintf(tw, "%s\t%d/%d\t%s\n", status.Name, status.Ready, status.Replicas, available)
 	}
