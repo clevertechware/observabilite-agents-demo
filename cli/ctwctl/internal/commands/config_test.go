@@ -32,6 +32,7 @@ func namespaceOf(view map[string]any) any {
 }
 
 func TestLoadConfig_SourcesOverrideEachOtherInTheDocumentedOrder(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		file          string
@@ -62,6 +63,7 @@ func TestLoadConfig_SourcesOverrideEachOtherInTheDocumentedOrder(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(st *testing.T) {
+			st.Parallel()
 			environment := isolatedEnvironment(st, tt.env)
 			if tt.file != "" {
 				writeConfigFile(st, environment, tt.file)
@@ -75,6 +77,7 @@ func TestLoadConfig_SourcesOverrideEachOtherInTheDocumentedOrder(t *testing.T) {
 }
 
 func TestLoadConfig_EnvironmentVariableMapsToTheDottedKey(t *testing.T) {
+	t.Parallel()
 	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_O2_URL": "https://o2.example.test"})
 
 	view := resolvedConfig(t, environment)
@@ -83,6 +86,7 @@ func TestLoadConfig_EnvironmentVariableMapsToTheDottedKey(t *testing.T) {
 }
 
 func TestLoadConfig_WhenFileIsNotValidTOML_NamesTheFile(t *testing.T) {
+	t.Parallel()
 	environment := isolatedEnvironment(t, nil)
 	writeConfigFile(t, environment, "ceci n'est pas du toml [")
 
@@ -93,6 +97,7 @@ func TestLoadConfig_WhenFileIsNotValidTOML_NamesTheFile(t *testing.T) {
 }
 
 func TestRoot_WhenOutputFormatIsUnknown_ReturnsError(t *testing.T) {
+	t.Parallel()
 	_, err := run(t, dependencies{}, "-o", "yaml", "config", "view")
 
 	require.Error(t, err)
@@ -100,6 +105,7 @@ func TestRoot_WhenOutputFormatIsUnknown_ReturnsError(t *testing.T) {
 }
 
 func TestConfigSet_WritesTheFileWithOwnerOnlyPermissions(t *testing.T) {
+	t.Parallel()
 	environment := isolatedEnvironment(t, nil)
 
 	out, err := run(t, dependencies{environment: environment}, "config", "set", "o2.token", "jeton-secret")
@@ -114,6 +120,7 @@ func TestConfigSet_WritesTheFileWithOwnerOnlyPermissions(t *testing.T) {
 }
 
 func TestConfigSet_TightensPermissionsOfAnExistingOpenFile(t *testing.T) {
+	t.Parallel()
 	environment := isolatedEnvironment(t, nil)
 	writeConfigFile(t, environment, "[o2]\nurl = \"https://o2.example.test\"\n")
 	path := configFilePath(environment)
@@ -128,6 +135,7 @@ func TestConfigSet_TightensPermissionsOfAnExistingOpenFile(t *testing.T) {
 }
 
 func TestConfigSet_KeepsValuesAlreadyInTheFile(t *testing.T) {
+	t.Parallel()
 	environment := isolatedEnvironment(t, nil)
 	writeConfigFile(t, environment, "[o2]\nurl = \"https://o2.example.test\"\n")
 
@@ -140,6 +148,7 @@ func TestConfigSet_KeepsValuesAlreadyInTheFile(t *testing.T) {
 }
 
 func TestConfigSet_DoesNotPersistEnvironmentValuesInTheFile(t *testing.T) {
+	t.Parallel()
 	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "jeton-de-l-environnement"})
 
 	_, err := run(t, dependencies{environment: environment}, "config", "set", "kube.namespace", "staging")
@@ -151,6 +160,7 @@ func TestConfigSet_DoesNotPersistEnvironmentValuesInTheFile(t *testing.T) {
 }
 
 func TestConfigSet_RejectsUnknownKeysAndListsTheKnownOnes(t *testing.T) {
+	t.Parallel()
 	environment := isolatedEnvironment(t, nil)
 
 	_, err := run(t, dependencies{environment: environment}, "config", "set", "o2.stream.type", "logs")
@@ -161,12 +171,14 @@ func TestConfigSet_RejectsUnknownKeysAndListsTheKnownOnes(t *testing.T) {
 }
 
 func TestConfigSet_WithoutValue_ReturnsUsageError(t *testing.T) {
+	t.Parallel()
 	_, err := run(t, dependencies{}, "config", "set", "o2.token")
 
 	require.Error(t, err)
 }
 
 func TestConfigView_MasksTheTokenInTextAndJSON(t *testing.T) {
+	t.Parallel()
 	deps := dependencies{environment: isolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "jeton-secret"})}
 
 	text, err := run(t, deps, "config", "view")
@@ -180,6 +192,7 @@ func TestConfigView_MasksTheTokenInTextAndJSON(t *testing.T) {
 }
 
 func TestConfigView_WithTextOutput_PrintsOneSortedKeyPerLine(t *testing.T) {
+	t.Parallel()
 	out, err := run(t, dependencies{}, "config", "view")
 
 	require.NoError(t, err)

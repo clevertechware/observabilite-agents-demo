@@ -50,6 +50,7 @@ func splitLines(out string) []string {
 }
 
 func TestO2Commands_WithoutCredentials_NameTheMissingConfigurationKeys(t *testing.T) {
+	t.Parallel()
 	environment := isolatedEnvironment(t, nil)
 	searcher := mocks.NewLogSearcher(t)
 
@@ -63,6 +64,7 @@ func TestO2Commands_WithoutCredentials_NameTheMissingConfigurationKeys(t *testin
 }
 
 func TestO2Streams_ByDefault_ListsLogsAndTraces(t *testing.T) {
+	t.Parallel()
 	environment := credentialedEnvironment(t)
 	searcher := mocks.NewLogSearcher(t)
 	searcher.EXPECT().Streams(mock.Anything, "logs").Return([]o2.Stream{
@@ -80,6 +82,7 @@ func TestO2Streams_ByDefault_ListsLogsAndTraces(t *testing.T) {
 }
 
 func TestO2Streams_WithTypeFlag_QueriesOnlyThatType(t *testing.T) {
+	t.Parallel()
 	environment := credentialedEnvironment(t)
 	searcher := mocks.NewLogSearcher(t)
 	searcher.EXPECT().Streams(mock.Anything, "metrics").Return([]o2.Stream{
@@ -93,6 +96,7 @@ func TestO2Streams_WithTypeFlag_QueriesOnlyThatType(t *testing.T) {
 }
 
 func TestO2Streams_WithNoStreamInJSON_PrintsAnEmptyArrayRatherThanNull(t *testing.T) {
+	t.Parallel()
 	environment := credentialedEnvironment(t)
 	searcher := mocks.NewLogSearcher(t)
 	searcher.EXPECT().Streams(mock.Anything, "metrics").Return(nil, nil)
@@ -104,6 +108,7 @@ func TestO2Streams_WithNoStreamInJSON_PrintsAnEmptyArrayRatherThanNull(t *testin
 }
 
 func TestO2Streams_WithManyFields_WrapsTheListUnderTheLineWidth(t *testing.T) {
+	t.Parallel()
 	environment := credentialedEnvironment(t)
 	fields := make([]string, 0, 30)
 	for range 30 {
@@ -123,6 +128,7 @@ func TestO2Streams_WithManyFields_WrapsTheListUnderTheLineWidth(t *testing.T) {
 }
 
 func TestO2Logs_ByDefault_SearchesTheLastHourNewestFirstAndPrintsOneLinePerLog(t *testing.T) {
+	t.Parallel()
 	environment := credentialedEnvironment(t)
 	searcher := mocks.NewLogSearcher(t)
 	searcher.EXPECT().Search(mock.Anything, o2.SearchRequest{
@@ -143,6 +149,7 @@ func TestO2Logs_ByDefault_SearchesTheLastHourNewestFirstAndPrintsOneLinePerLog(t
 }
 
 func TestO2Logs_WithJSONOutput_PrintsOneCompactObjectPerLine(t *testing.T) {
+	t.Parallel()
 	environment := credentialedEnvironment(t)
 	searcher := mocks.NewLogSearcher(t)
 	searcher.EXPECT().Search(mock.Anything, mock.Anything).Return(o2.SearchResult{Hits: []o2.Hit{
@@ -159,6 +166,7 @@ func TestO2Logs_WithJSONOutput_PrintsOneCompactObjectPerLine(t *testing.T) {
 }
 
 func TestO2Logs_WithNoHits_PrintsNothing(t *testing.T) {
+	t.Parallel()
 	environment := credentialedEnvironment(t)
 	searcher := mocks.NewLogSearcher(t)
 	searcher.EXPECT().Search(mock.Anything, mock.Anything).Return(o2.SearchResult{}, nil)
@@ -170,6 +178,7 @@ func TestO2Logs_WithNoHits_PrintsNothing(t *testing.T) {
 }
 
 func TestO2Logs_WithAllFilters_GeneratesTheCombinedSQLAndWindow(t *testing.T) {
+	t.Parallel()
 	environment := credentialedEnvironment(t)
 	searcher := mocks.NewLogSearcher(t)
 	searcher.EXPECT().Search(mock.Anything, o2.SearchRequest{
@@ -187,6 +196,7 @@ func TestO2Logs_WithAllFilters_GeneratesTheCombinedSQLAndWindow(t *testing.T) {
 }
 
 func TestO2Logs_WithoutNamespaceFlag_DoesNotFilterOnTheDefaultKubeNamespace(t *testing.T) {
+	t.Parallel()
 	environment := credentialedEnvironment(t)
 	searcher := mocks.NewLogSearcher(t)
 	searcher.EXPECT().Search(mock.Anything, mock.MatchedBy(func(r o2.SearchRequest) bool {
@@ -199,6 +209,7 @@ func TestO2Logs_WithoutNamespaceFlag_DoesNotFilterOnTheDefaultKubeNamespace(t *t
 }
 
 func TestO2Logs_WithInvalidArguments_FailsBeforeAnySearch(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		args []string
@@ -213,6 +224,7 @@ func TestO2Logs_WithInvalidArguments_FailsBeforeAnySearch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(st *testing.T) {
+			st.Parallel()
 			environment := credentialedEnvironment(st)
 			searcher := mocks.NewLogSearcher(st)
 
@@ -225,8 +237,10 @@ func TestO2Logs_WithInvalidArguments_FailsBeforeAnySearch(t *testing.T) {
 }
 
 func TestO2Query_WithNonPositiveLimit_FailsBeforeSearch(t *testing.T) {
+	t.Parallel()
 	for _, value := range []string{"0", "-1"} {
 		t.Run(value, func(st *testing.T) {
+			st.Parallel()
 			environment := credentialedEnvironment(st)
 			searcher := mocks.NewLogSearcher(st)
 
@@ -239,6 +253,7 @@ func TestO2Query_WithNonPositiveLimit_FailsBeforeSearch(t *testing.T) {
 }
 
 func TestO2Logs_WhenSearchFails_ReturnsTheClientError(t *testing.T) {
+	t.Parallel()
 	environment := credentialedEnvironment(t)
 	searcher := mocks.NewLogSearcher(t)
 	searcher.EXPECT().Search(mock.Anything, mock.Anything).Return(o2.SearchResult{}, &o2.StatusError{Status: 401})
@@ -251,6 +266,7 @@ func TestO2Logs_WhenSearchFails_ReturnsTheClientError(t *testing.T) {
 }
 
 func TestO2Logs_WithFollow_PrintsOldestFirstThenOnlyLinesNotAlreadyShown(t *testing.T) {
+	t.Parallel()
 	environment := credentialedEnvironment(t)
 	base := fixedNow.Add(-30 * time.Second)
 	first := hitAt(base, "premier")
@@ -285,6 +301,7 @@ func TestO2Logs_WithFollow_PrintsOldestFirstThenOnlyLinesNotAlreadyShown(t *test
 }
 
 func TestO2Query_SendsTheSQLUnchangedOverTheRequestedWindow(t *testing.T) {
+	t.Parallel()
 	environment := credentialedEnvironment(t)
 	sql := `SELECT service_name, count(*) AS erreurs FROM "default" WHERE severity_number >= 17 GROUP BY service_name`
 	searcher := mocks.NewLogSearcher(t)
@@ -304,6 +321,7 @@ func TestO2Query_SendsTheSQLUnchangedOverTheRequestedWindow(t *testing.T) {
 }
 
 func TestO2Query_WithTextOutput_PrintsAnAlignedTableWithSortedColumns(t *testing.T) {
+	t.Parallel()
 	environment := credentialedEnvironment(t)
 	searcher := mocks.NewLogSearcher(t)
 	searcher.EXPECT().Search(mock.Anything, mock.Anything).Return(o2.SearchResult{Hits: []o2.Hit{
@@ -318,6 +336,7 @@ func TestO2Query_WithTextOutput_PrintsAnAlignedTableWithSortedColumns(t *testing
 }
 
 func TestO2Query_WithoutSQL_ReturnsUsageError(t *testing.T) {
+	t.Parallel()
 	environment := credentialedEnvironment(t)
 	searcher := mocks.NewLogSearcher(t)
 
@@ -341,6 +360,7 @@ func newFollowFixture(searcher LogSearcher, limit, pageSize int) followFixture {
 }
 
 func TestFollowerEmit_PropagatesOutputError(t *testing.T) {
+	t.Parallel()
 	hit := hitAt(fixedNow, "message")
 	writeErr := errors.New("output unavailable")
 	flw := newFollower(nil, logFilter{}, 1, time.Millisecond, func() time.Time { return fixedNow },
@@ -362,6 +382,7 @@ func lines(out string) []string {
 }
 
 func TestFollowerPoll_WhenOverlapIsFullOfAlreadySeenLines_ReadsNextPagesUntilTheNewLine(t *testing.T) {
+	t.Parallel()
 	base := fixedNow.Add(-30 * time.Second)
 	seen := []o2.Hit{hitAt(base, "a"), hitAt(base.Add(time.Second), "b"), hitAt(base.Add(2*time.Second), "c")}
 	fresh := hitAt(base.Add(3*time.Second), "nouvelle")
@@ -384,6 +405,7 @@ func TestFollowerPoll_WhenOverlapIsFullOfAlreadySeenLines_ReadsNextPagesUntilThe
 }
 
 func TestFollowerPoll_WhenLimitDroppedOlderLinesOfTheInitialWindow_NeverShowsThemAfterwards(t *testing.T) {
+	t.Parallel()
 	base := fixedNow.Add(-30 * time.Second)
 	all := []o2.Hit{
 		hitAt(base, "ancienne-1"), hitAt(base.Add(time.Second), "ancienne-2"),

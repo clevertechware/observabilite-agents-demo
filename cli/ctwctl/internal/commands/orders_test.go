@@ -20,6 +20,7 @@ var createdOrder = order.Order{
 }
 
 func TestOrdersCreate_SendsSkuAndQuantityAndPrintsTheCreatedOrder(t *testing.T) {
+	t.Parallel()
 	client := ordermocks.NewClient(t)
 	client.EXPECT().Create(mock.Anything, "SKU-001", 2).Return(createdOrder, nil)
 
@@ -30,6 +31,7 @@ func TestOrdersCreate_SendsSkuAndQuantityAndPrintsTheCreatedOrder(t *testing.T) 
 }
 
 func TestOrdersCreate_WithJSONOutput_PrintsTheOrderWithItsLocation(t *testing.T) {
+	t.Parallel()
 	client := ordermocks.NewClient(t)
 	client.EXPECT().Create(mock.Anything, "SKU-001", 2).Return(createdOrder, nil)
 
@@ -41,6 +43,7 @@ func TestOrdersCreate_WithJSONOutput_PrintsTheOrderWithItsLocation(t *testing.T)
 }
 
 func TestOrdersCreate_WhenStockIsInsufficient_ReturnsTheTypedError(t *testing.T) {
+	t.Parallel()
 	client := ordermocks.NewClient(t)
 	client.EXPECT().Create(mock.Anything, "SKU-LOW", 5).Return(order.Order{}, shop.ErrInsufficientStock)
 
@@ -50,6 +53,7 @@ func TestOrdersCreate_WhenStockIsInsufficient_ReturnsTheTypedError(t *testing.T)
 }
 
 func TestOrdersCreate_WithoutSku_FailsBeforeAnyCall(t *testing.T) {
+	t.Parallel()
 	client := ordermocks.NewClient(t)
 
 	_, err := run(t, ordersDeps(client), "orders", "create")
@@ -58,6 +62,7 @@ func TestOrdersCreate_WithoutSku_FailsBeforeAnyCall(t *testing.T) {
 }
 
 func TestOrdersCreate_WithNonPositiveQuantity_FailsBeforeAnyCall(t *testing.T) {
+	t.Parallel()
 	client := ordermocks.NewClient(t)
 
 	_, err := run(t, ordersDeps(client), "orders", "create", "--sku", "SKU-001", "--quantity", "0")
@@ -67,6 +72,7 @@ func TestOrdersCreate_WithNonPositiveQuantity_FailsBeforeAnyCall(t *testing.T) {
 }
 
 func TestOrdersGet_PrintsTheOrderReadByItsIdentifier(t *testing.T) {
+	t.Parallel()
 	client := ordermocks.NewClient(t)
 	client.EXPECT().Get(mock.Anything, int64(42)).Return(order.Order{
 		ID: 42, SKU: "SKU-001", Quantity: 2, UnitPrice: "9.90", Total: "19.80",
@@ -79,6 +85,7 @@ func TestOrdersGet_PrintsTheOrderReadByItsIdentifier(t *testing.T) {
 }
 
 func TestOrdersGet_WithJSONOutput_OmitsTheLocation(t *testing.T) {
+	t.Parallel()
 	client := ordermocks.NewClient(t)
 	client.EXPECT().Get(mock.Anything, int64(42)).Return(order.Order{
 		ID: 42, SKU: "SKU-001", Quantity: 2, UnitPrice: "9.90", Total: "19.80",
@@ -91,6 +98,7 @@ func TestOrdersGet_WithJSONOutput_OmitsTheLocation(t *testing.T) {
 }
 
 func TestOrdersGet_WithNonNumericIdentifier_FailsBeforeAnyCall(t *testing.T) {
+	t.Parallel()
 	client := ordermocks.NewClient(t)
 
 	_, err := run(t, ordersDeps(client), "orders", "get", "abc")
@@ -99,6 +107,7 @@ func TestOrdersGet_WithNonNumericIdentifier_FailsBeforeAnyCall(t *testing.T) {
 }
 
 func TestOrdersGet_WhenOrderIsMissing_ReturnsNotFound(t *testing.T) {
+	t.Parallel()
 	client := ordermocks.NewClient(t)
 	client.EXPECT().Get(mock.Anything, int64(7)).Return(order.Order{}, shop.ErrNotFound)
 
@@ -108,6 +117,7 @@ func TestOrdersGet_WhenOrderIsMissing_ReturnsNotFound(t *testing.T) {
 }
 
 func TestOrders_UseTheShopURLFromTheConfiguration(t *testing.T) {
+	t.Parallel()
 	var gotURL string
 	client := ordermocks.NewClient(t)
 	client.EXPECT().Get(mock.Anything, int64(1)).Return(order.Order{ID: 1}, nil)

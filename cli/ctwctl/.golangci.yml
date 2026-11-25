@@ -5,9 +5,11 @@ linters:
     - bodyclose
     - errorlint
     - misspell
+    - paralleltest
     - revive
     - testifylint
     - thelper
+    - tparallel
     - usetesting
   settings:
     revive:

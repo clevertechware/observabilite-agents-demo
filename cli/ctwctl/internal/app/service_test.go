@@ -11,8 +11,10 @@ import (
 )
 
 func TestAppsRestart_RejectsInvalidNamesWithoutCallingClient(t *testing.T) {
+	t.Parallel()
 	for _, name := range []string{"", "--all", "statefulset/postgres", "Order"} {
 		t.Run(name, func(st *testing.T) {
+			st.Parallel()
 			client := mocks.NewClient(st)
 
 			_, err := app.NewApps(client).Restart(st.Context(), name)
@@ -23,6 +25,7 @@ func TestAppsRestart_RejectsInvalidNamesWithoutCallingClient(t *testing.T) {
 }
 
 func TestAppsRestart_DelegatesValidName(t *testing.T) {
+	t.Parallel()
 	client := mocks.NewClient(t)
 	client.EXPECT().RestartApp(mock.Anything, "load-generator").Return("restarted", nil)
 
@@ -33,6 +36,7 @@ func TestAppsRestart_DelegatesValidName(t *testing.T) {
 }
 
 func TestAppsList_DelegatesToClient(t *testing.T) {
+	t.Parallel()
 	want := []app.Status{{Name: "order-service", Ready: 1, Replicas: 1, Available: true}}
 	client := mocks.NewClient(t)
 	client.EXPECT().ListApps(mock.Anything).Return(want, nil)
