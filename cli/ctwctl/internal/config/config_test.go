@@ -48,6 +48,31 @@ func TestLoad_UsesEnvironmentWhenNoFlagOverridesIt(t *testing.T) {
 	assert.Equal(t, "from-env", settings.Kube.Namespace)
 }
 
+func TestLoad_MapsEachEnvironmentVariableToItsDottedKey(t *testing.T) {
+	t.Parallel()
+
+	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_O2_URL": "https://o2.example.test"})
+
+	settings, err := Load(environment, nil)
+
+	require.NoError(t, err)
+	assert.Equal(t, "https://o2.example.test", settings.O2.URL)
+}
+
+func TestLoad_WhenFileIsNotValidTOML_NamesTheFile(t *testing.T) {
+	t.Parallel()
+
+	environment := isolatedEnvironment(t, nil)
+	path := filepath.Join(environment.Variables["XDG_CONFIG_HOME"], "ctwctl", "config.toml")
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
+	require.NoError(t, os.WriteFile(path, []byte("ceci n'est pas du toml ["), 0o600))
+
+	_, err := Load(environment, nil)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), path)
+}
+
 func TestLoad_WhenOutputFormatIsUnknown_ReturnsError(t *testing.T) {
 	t.Parallel()
 

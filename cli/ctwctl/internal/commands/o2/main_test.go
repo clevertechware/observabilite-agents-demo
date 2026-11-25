@@ -1,24 +1,33 @@
 package o2
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"testing"
 
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdtest"
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
+	"github.com/urfave/cli/v3"
 )
 
-func run(t *testing.T, environment config.Environment, deps Dependencies, args ...string) (string, error) {
+func run(t *testing.T, deps Dependencies, args ...string) (string, error) {
 	t.Helper()
 
-	return runWithContext(t.Context(), environment, deps, args...)
+	return runWithContext(t.Context(), deps, args...)
 }
 
-func runWithContext(
-	ctx context.Context, environment config.Environment, deps Dependencies, args ...string,
-) (string, error) {
-	deps.LoadSettings = cmdutil.NewSettingsLoader(environment)
+// runWithContext executes the o2 commands under a root that declares --namespace, the global flag that o2 logs reads.
+func runWithContext(ctx context.Context, deps Dependencies, args ...string) (string, error) {
+	var out bytes.Buffer
+	root := &cli.Command{
+		Name:           "ctwctl",
+		Flags:          []cli.Flag{&cli.StringFlag{Name: "namespace"}},
+		Commands:       []*cli.Command{NewCommand(deps)},
+		Writer:         &out,
+		ErrWriter:      io.Discard,
+		ExitErrHandler: func(context.Context, *cli.Command, error) {},
+	}
 
-	return cmdtest.Run(ctx, NewCommand(deps), args...)
+	err := root.Run(ctx, append([]string{root.Name}, args...))
+
+	return out.String(), err
 }
