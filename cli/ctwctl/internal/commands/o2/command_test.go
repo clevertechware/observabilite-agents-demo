@@ -153,6 +153,7 @@ func TestO2Logs_WithJSONOutput_PrintsOneCompactObjectPerLine(t *testing.T) {
 	out, err := run(t, environment, o2Deps(searcher), "o2", "logs", "-o", "json")
 
 	require.NoError(t, err)
+	//nolint:testifylint // the exact bytes are the contract: one compact JSON object per line, HTML left unescaped.
 	assert.Equal(t, `{"_timestamp":1795167672000000,"body":"a <b> & c","severity_text":null}`+"\n"+
 		`{"_timestamp":1795167671000000,"body":"second"}`+"\n", out)
 }
@@ -299,7 +300,7 @@ func TestO2Query_SendsTheSQLUnchangedOverTheRequestedWindow(t *testing.T) {
 	out, err := run(t, environment, o2Deps(searcher), "o2", "query", sql, "--since", "24h", "-o", "json")
 
 	require.NoError(t, err)
-	assert.Equal(t, `{"erreurs":3,"service_name":"order-service"}`+"\n", out)
+	assert.JSONEq(t, `{"erreurs":3,"service_name":"order-service"}`, out)
 }
 
 func TestO2Query_WithTextOutput_PrintsAnAlignedTableWithSortedColumns(t *testing.T) {

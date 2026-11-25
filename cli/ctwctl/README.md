@@ -15,8 +15,9 @@ l'API HTTP d'OpenObserve pour les logs et l'API d'`order-service` par l'hôte pu
 ```bash
 make build        # go build -o bin/ctwctl .
 bin/ctwctl --help
+make lint         # golangci-lint run ./... (configuration dans .golangci.yml)
 make test         # go test ./...
-make check        # go generate, go vet, go test, puis échec si un mock généré est absent du dépôt ou diffère
+make check        # go generate, go vet, lint, go test, puis échec si un mock généré est absent du dépôt ou diffère
 ```
 
 Les mocks sont générés par mockery v3.9.1 (`go run github.com/vektra/mockery/v3@v3.9.1`, configuration dans

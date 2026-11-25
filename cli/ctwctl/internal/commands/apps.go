@@ -46,14 +46,18 @@ func listApps(ctx context.Context, cmd *cli.Command, apps *app.Apps) error {
 	}
 
 	tw := tabwriter.NewWriter(writer(cmd), 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "NAME\tREADY\tAVAILABLE")
+	if _, err = fmt.Fprintln(tw, "NAME\tREADY\tAVAILABLE"); err != nil {
+		return err
+	}
 
 	for _, status := range statuses {
 		available := "no"
 		if status.Available {
 			available = "yes"
 		}
-		fmt.Fprintf(tw, "%s\t%d/%d\t%s\n", status.Name, status.Ready, status.Replicas, available)
+		if _, err = fmt.Fprintf(tw, "%s\t%d/%d\t%s\n", status.Name, status.Ready, status.Replicas, available); err != nil {
+			return err
+		}
 	}
 
 	return tw.Flush()

@@ -212,15 +212,15 @@ func writePrivateFile(path string, data []byte) error {
 	if err != nil {
 		return fmt.Errorf("create temporary file: %w", err)
 	}
-	defer os.Remove(tmp.Name())
+	defer func() { _ = os.Remove(tmp.Name()) }()
 
 	if err = tmp.Chmod(0o600); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("set temporary file permissions: %w", err)
 	}
 
 	if _, err = tmp.Write(data); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("write %s: %w", path, err)
 	}
 
