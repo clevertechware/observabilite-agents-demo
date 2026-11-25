@@ -1,0 +1,28 @@
+name: ctwctl
+on:
+  push:
+    branches: [main]
+    paths:
+      - cli/ctwctl/**
+      - .github/workflows/ctwctl.yml
+  pull_request:
+    paths:
+      - cli/ctwctl/**
+      - .github/workflows/ctwctl.yml
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: cli/ctwctl/go.mod
+          cache-dependency-path: cli/ctwctl/go.sum
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.15
+          working-directory: cli/ctwctl
