@@ -147,6 +147,12 @@ func SaveValue(key, value string) (string, error) {
 	return path, writePrivateFile(path, data)
 }
 
+// configPath suit la spécification XDG Base Directory et retourne le chemin du fichier de configuration.
+//
+// XDG_CONFIG_HOME désigne le répertoire des fichiers de configuration de l'utilisateur avec ~/.config par défaut.
+//
+// Ce répertoire est retenu aussi sous macOS, comme le font gh ou git, plutôt que le "~/Library/Application Support"
+// renvoyé par os.UserConfigDir.
 func configPath(userHomeDir func() (string, error)) (string, error) {
 	base := os.Getenv("XDG_CONFIG_HOME")
 	if base == "" {
