@@ -119,15 +119,14 @@ par exemple le 403 de l'allowlist, donne une `StatusError`.
 ## Organisation
 
 ```text
-main.go                       point d'entrée, interruption par Ctrl+C
+main.go                       point d'entrée : assemble les commandes et leurs clients, interruption par Ctrl+C
 generate.go                   directive go:generate des mocks
-internal/commands/            commande racine : assemble les groupes de sous-commandes
 internal/commands/apps/       commandes apps list et apps restart
 internal/commands/config/     commandes config set et config view
 internal/commands/orders/     commandes orders create et orders get
 internal/commands/o2/         commandes OpenObserve et tests du package
 internal/commands/o2/mocks/   mock mockery v3 de LogSearcher
-internal/commands/cmdutil/    flags globaux, chargement de la configuration et helpers de sortie
+internal/commands/cmdutil/    flags globaux, chargeur de configuration et helpers de sortie
 internal/commands/cmdtest/    harnais de test partagé : environnement isolé, exécution d'une commande
 internal/app/                 domaine des applications : liste, redémarrage, validation du nom de Deployment
 internal/app/mocks/           mock mockery v3 de app.Client

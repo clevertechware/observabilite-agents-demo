@@ -7,30 +7,19 @@ import (
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order"
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/shop"
 	"github.com/urfave/cli/v3"
 )
 
 // Dependencies contains the configuration and the services used by the order commands.
 type Dependencies struct {
-	// LoadSettings resolves the settings of the invoked command. It is required.
+	// LoadSettings resolves the settings of the invoked command.
 	LoadSettings cmdutil.SettingsLoader
 	// NewOrderClient creates an order-service client from the resolved configuration.
 	NewOrderClient func(config.Settings) order.Client
 }
 
-func (d Dependencies) withDefaults() Dependencies {
-	if d.NewOrderClient == nil {
-		d.NewOrderClient = func(s config.Settings) order.Client { return shop.NewOrderClient(s.Shop.URL) }
-	}
-
-	return d
-}
-
-// NewCommand creates the order command tree.
+// NewCommand creates the order command tree. Every field of deps is required.
 func NewCommand(deps Dependencies) *cli.Command {
-	deps = deps.withDefaults()
-
 	return &cli.Command{
 		Name:  "orders",
 		Usage: "order-service orders, through the public host",

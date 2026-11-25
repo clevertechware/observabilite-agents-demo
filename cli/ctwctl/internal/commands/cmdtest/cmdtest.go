@@ -29,24 +29,19 @@ func IsolatedEnvironment(t *testing.T, variables map[string]string) config.Envir
 
 // Run executes command under a ctwctl root that only declares the global flags, and returns the output.
 func Run(ctx context.Context, command *cli.Command, args ...string) (string, error) {
-	return run(ctx, newRoot(command), args...)
+	root := &cli.Command{Name: "ctwctl", Flags: cmdutil.GlobalFlags(), Commands: []*cli.Command{command}}
+
+	return RunRoot(ctx, root, args...)
 }
 
-func newRoot(command *cli.Command) *cli.Command {
-	return &cli.Command{
-		Name:           "ctwctl",
-		Flags:          cmdutil.GlobalFlags(),
-		Commands:       []*cli.Command{command},
-		ErrWriter:      io.Discard,
-		ExitErrHandler: func(context.Context, *cli.Command, error) {},
-	}
-}
-
-func run(ctx context.Context, root *cli.Command, args ...string) (string, error) {
+// RunRoot executes the root command with args, and returns what it writes to its output.
+func RunRoot(ctx context.Context, root *cli.Command, args ...string) (string, error) {
 	var out bytes.Buffer
 	root.Writer = &out
+	root.ErrWriter = io.Discard
+	root.ExitErrHandler = func(context.Context, *cli.Command, error) {}
 
-	err := root.Run(ctx, append([]string{"ctwctl"}, args...))
+	err := root.Run(ctx, append([]string{root.Name}, args...))
 
 	return out.String(), err
 }

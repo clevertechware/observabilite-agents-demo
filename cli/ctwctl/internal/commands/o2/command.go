@@ -13,8 +13,6 @@ import (
 
 const defaultLimit = 100
 
-const defaultPollInterval = 2 * time.Second
-
 // LogSearcher provides the OpenObserve search and stream operations used by the commands.
 type LogSearcher interface {
 	// Search executes a log search request.
@@ -25,7 +23,7 @@ type LogSearcher interface {
 
 // Dependencies contains the configuration, the services and the clock used by the OpenObserve commands.
 type Dependencies struct {
-	// LoadSettings resolves the settings of the invoked command. It is required.
+	// LoadSettings resolves the settings of the invoked command.
 	LoadSettings cmdutil.SettingsLoader
 	// NewLogSearcher creates a search client from the resolved configuration.
 	NewLogSearcher func(config.Settings) LogSearcher
@@ -35,28 +33,8 @@ type Dependencies struct {
 	Now func() time.Time
 }
 
-func (d Dependencies) withDefaults() Dependencies {
-	if d.NewLogSearcher == nil {
-		d.NewLogSearcher = func(s config.Settings) LogSearcher {
-			return o2.NewClient(s.O2.URL, s.O2.Org, s.O2.User, s.O2.Token)
-		}
-	}
-
-	if d.PollInterval == 0 {
-		d.PollInterval = defaultPollInterval
-	}
-
-	if d.Now == nil {
-		d.Now = time.Now
-	}
-
-	return d
-}
-
-// NewCommand creates the OpenObserve command tree.
+// NewCommand creates the OpenObserve command tree. Every field of deps is required.
 func NewCommand(deps Dependencies) *cli.Command {
-	deps = deps.withDefaults()
-
 	sinceFlag := &cli.StringFlag{Name: "since", Usage: "time window, for example 15m or 1h", Value: "1h"}
 	limitFlag := &cli.IntFlag{Name: "limit", Usage: "maximum number of results", Value: defaultLimit}
 
