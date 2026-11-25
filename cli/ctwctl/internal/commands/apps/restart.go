@@ -11,13 +11,18 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-func restartApp(ctx context.Context, cmd *cli.Command, apps *app.Apps) error {
+func restartApp(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 	if cmd.Args().Len() != 1 {
 		return errors.New("a Deployment name is expected: ctwctl apps restart <name>")
 	}
 
+	s, err := deps.LoadSettings(cmd)
+	if err != nil {
+		return err
+	}
+
 	name := cmd.Args().First()
-	out, err := apps.Restart(ctx, name)
+	out, err := app.NewApps(deps.NewAppClient(s)).Restart(ctx, name)
 	if errors.Is(err, app.ErrInvalidName) {
 		return fmt.Errorf("invalid Deployment name: %q", name)
 	}
@@ -25,7 +30,7 @@ func restartApp(ctx context.Context, cmd *cli.Command, apps *app.Apps) error {
 		return err
 	}
 
-	if cmdutil.Settings(ctx).Output == cmdutil.OutputJSON {
+	if s.Output == cmdutil.OutputJSON {
 		return cmdutil.WriteJSON(cmdutil.Writer(cmd), map[string]any{"name": name, "restarted": true})
 	}
 

@@ -9,23 +9,29 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-func viewConfig(ctx context.Context, cmd *cli.Command) error {
-	settings := cmdutil.Settings(ctx)
-	masked := settings.Masked()
-	if settings.Output == cmdutil.OutputJSON {
-		return cmdutil.WriteJSON(cmdutil.Writer(cmd), masked)
-	}
-
-	byKey, err := masked.ByKey()
-	if err != nil {
-		return err
-	}
-
-	for _, key := range config.Keys() {
-		if _, err = fmt.Fprintf(cmdutil.Writer(cmd), "%s = %v\n", key, byKey[key]); err != nil {
+func viewConfig(loadSettings cmdutil.SettingsLoader) cli.ActionFunc {
+	return func(_ context.Context, cmd *cli.Command) error {
+		settings, err := loadSettings(cmd)
+		if err != nil {
 			return err
 		}
-	}
 
-	return nil
+		masked := settings.Masked()
+		if settings.Output == cmdutil.OutputJSON {
+			return cmdutil.WriteJSON(cmdutil.Writer(cmd), masked)
+		}
+
+		byKey, err := masked.ByKey()
+		if err != nil {
+			return err
+		}
+
+		for _, key := range config.Keys() {
+			if _, err = fmt.Fprintf(cmdutil.Writer(cmd), "%s = %v\n", key, byKey[key]); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
 }

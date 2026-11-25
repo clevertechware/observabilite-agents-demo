@@ -11,8 +11,10 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-// Dependencies contains the services used by the application commands.
+// Dependencies contains the configuration and the services used by the application commands.
 type Dependencies struct {
+	// LoadSettings resolves the settings of the invoked command. It is required.
+	LoadSettings cmdutil.SettingsLoader
 	// NewAppClient creates a Kubernetes client from the resolved configuration.
 	NewAppClient func(config.Settings) app.Client
 }
@@ -23,10 +25,6 @@ func (d Dependencies) withDefaults() Dependencies {
 	}
 
 	return d
-}
-
-func (d Dependencies) apps(ctx context.Context) *app.Apps {
-	return app.NewApps(d.NewAppClient(cmdutil.Settings(ctx)))
 }
 
 // NewCommand creates the application command tree.
@@ -41,7 +39,7 @@ func NewCommand(deps Dependencies) *cli.Command {
 				Name:  "list",
 				Usage: "list the Deployments of the namespace",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return listApps(ctx, cmd, deps.apps(ctx))
+					return listApps(ctx, cmd, deps)
 				},
 			},
 			{
@@ -49,7 +47,7 @@ func NewCommand(deps Dependencies) *cli.Command {
 				Usage:     "restart a Deployment (kubectl rollout restart)",
 				ArgsUsage: "<name>",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return restartApp(ctx, cmd, deps.apps(ctx))
+					return restartApp(ctx, cmd, deps)
 				},
 			},
 		},

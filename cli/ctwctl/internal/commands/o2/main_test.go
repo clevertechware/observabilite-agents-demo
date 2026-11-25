@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdtest"
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 )
 
@@ -17,5 +18,7 @@ func run(t *testing.T, environment config.Environment, deps Dependencies, args .
 func runWithContext(
 	ctx context.Context, environment config.Environment, deps Dependencies, args ...string,
 ) (string, error) {
-	return cmdtest.RunWithEnvironment(ctx, environment, NewCommand(deps), args...)
+	deps.LoadSettings = cmdutil.NewSettingsLoader(environment)
+
+	return cmdtest.Run(ctx, NewCommand(deps), args...)
 }

@@ -15,7 +15,11 @@ func runQuery(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 		return errors.New("an SQL query is expected: ctwctl o2 query \"<SQL>\"")
 	}
 
-	s := cmdutil.Settings(ctx)
+	s, err := deps.LoadSettings(cmd)
+	if err != nil {
+		return err
+	}
+
 	searcher, err := searcherFor(s, deps)
 	if err != nil {
 		return err

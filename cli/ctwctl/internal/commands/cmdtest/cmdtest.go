@@ -32,17 +32,6 @@ func Run(ctx context.Context, command *cli.Command, args ...string) (string, err
 	return run(ctx, newRoot(command), args...)
 }
 
-// RunWithEnvironment executes command under a ctwctl root that loads its configuration from environment, and returns
-// the output.
-func RunWithEnvironment(
-	ctx context.Context, environment config.Environment, command *cli.Command, args ...string,
-) (string, error) {
-	root := newRoot(command)
-	root.Before = cmdutil.LoadConfig(environment)
-
-	return run(ctx, root, args...)
-}
-
 func newRoot(command *cli.Command) *cli.Command {
 	return &cli.Command{
 		Name:           "ctwctl",

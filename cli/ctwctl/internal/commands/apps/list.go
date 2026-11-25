@@ -10,13 +10,18 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-func listApps(ctx context.Context, cmd *cli.Command, apps *app.Apps) error {
-	statuses, err := apps.List(ctx)
+func listApps(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
+	s, err := deps.LoadSettings(cmd)
 	if err != nil {
 		return err
 	}
 
-	if cmdutil.Settings(ctx).Output == cmdutil.OutputJSON {
+	statuses, err := app.NewApps(deps.NewAppClient(s)).List(ctx)
+	if err != nil {
+		return err
+	}
+
+	if s.Output == cmdutil.OutputJSON {
 		return cmdutil.WriteJSON(cmdutil.Writer(cmd), statuses)
 	}
 

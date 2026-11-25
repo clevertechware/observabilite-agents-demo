@@ -24,18 +24,18 @@ func NewRootCommand() *cli.Command {
 }
 
 func newRootCommand(deps dependencies) *cli.Command {
-	if deps.orders.LoadSettings == nil {
-		deps.orders.LoadSettings = cmdutil.NewSettingsLoader(deps.environment)
-	}
+	loadSettings := cmdutil.NewSettingsLoader(deps.environment)
+	deps.apps.LoadSettings = loadSettings
+	deps.orders.LoadSettings = loadSettings
+	deps.o2.LoadSettings = loadSettings
 
 	return &cli.Command{
 		Name:   "ctwctl",
 		Usage:  "applications, OpenObserve logs and orders of the observability demo",
 		Writer: os.Stdout,
 		Flags:  cmdutil.GlobalFlags(),
-		Before: cmdutil.LoadConfig(deps.environment),
 		Commands: []*cli.Command{
-			configcmd.NewCommand(deps.environment),
+			configcmd.NewCommand(deps.environment, loadSettings),
 			appscmd.NewCommand(deps.apps),
 			orderscmd.NewCommand(deps.orders),
 			o2cmd.NewCommand(deps.o2),

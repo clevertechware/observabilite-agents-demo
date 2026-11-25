@@ -5,13 +5,16 @@ import (
 	"testing"
 
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdtest"
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 )
 
 func run(t *testing.T, environment config.Environment, args ...string) (string, error) {
 	t.Helper()
 
-	return cmdtest.RunWithEnvironment(t.Context(), environment, NewCommand(environment), args...)
+	command := NewCommand(environment, cmdutil.NewSettingsLoader(environment))
+
+	return cmdtest.Run(t.Context(), command, args...)
 }
 
 func configFilePath(environment config.Environment) string {

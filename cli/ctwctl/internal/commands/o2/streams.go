@@ -13,7 +13,11 @@ import (
 const lineWidth = 100
 
 func listStreams(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
-	s := cmdutil.Settings(ctx)
+	s, err := deps.LoadSettings(cmd)
+	if err != nil {
+		return err
+	}
+
 	searcher, err := searcherFor(s, deps)
 	if err != nil {
 		return err

@@ -2,7 +2,6 @@
 package cmdutil
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -24,28 +23,12 @@ var flagKeys = map[string]string{
 	"context":   "kube.context",
 }
 
-type settingsKey struct{}
-
 // GlobalFlags returns the flags shared by all ctwctl commands.
 func GlobalFlags() []cli.Flag {
 	return []cli.Flag{
 		&cli.StringFlag{Name: "output", Aliases: []string{"o"}, Usage: "output format: text or json"},
 		&cli.StringFlag{Name: "context", Usage: "kubectl context (default: the current context)"},
 		&cli.StringFlag{Name: "namespace", Usage: "Kubernetes namespace (default: demo)"},
-	}
-}
-
-// LoadConfig returns the hook that loads and validates the CLI configuration from environment before a command runs.
-func LoadConfig(environment config.Environment) cli.BeforeFunc {
-	load := NewSettingsLoader(environment)
-
-	return func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
-		settings, err := load(cmd)
-		if err != nil {
-			return ctx, err
-		}
-
-		return context.WithValue(ctx, settingsKey{}, settings), nil
 	}
 }
 
@@ -66,12 +49,6 @@ func NewSettingsLoader(environment config.Environment) SettingsLoader {
 
 		return settings, nil
 	}
-}
-
-// Settings returns the settings resolved by Before, or their zero value if absent.
-func Settings(ctx context.Context) config.Settings {
-	settings, _ := ctx.Value(settingsKey{}).(config.Settings)
-	return settings
 }
 
 // Writer returns the root command's output writer.
