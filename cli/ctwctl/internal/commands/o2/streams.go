@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/o2"
 	"github.com/urfave/cli/v3"
@@ -29,7 +28,7 @@ func listStreams(ctx context.Context, cmd *cli.Command, deps Dependencies) error
 		types = []string{t}
 	}
 
-	w := cmdutil.Writer(cmd)
+	w := cmd.Root().Writer
 	streams := []o2.Stream{}
 	for _, t := range types {
 		var found []o2.Stream
@@ -41,7 +40,7 @@ func listStreams(ctx context.Context, cmd *cli.Command, deps Dependencies) error
 	}
 
 	if s.Output == config.OutputJSON {
-		return cmdutil.WriteJSON(w, streams)
+		return writeJSON(w, streams)
 	}
 
 	for _, stream := range streams {

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/o2"
 	"github.com/urfave/cli/v3"
@@ -43,8 +42,8 @@ func runQuery(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 	}
 
 	if s.Output == config.OutputJSON {
-		return logPrinter{w: cmdutil.Writer(cmd), isJSON: true}.printAll(result.Hits)
+		return logPrinter{w: cmd.Root().Writer, isJSON: true}.printAll(result.Hits)
 	}
 
-	return writeTable(cmdutil.Writer(cmd), result.Hits)
+	return writeTable(cmd.Root().Writer, result.Hits)
 }

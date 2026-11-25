@@ -10,7 +10,6 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/o2"
 )
 
@@ -62,7 +61,7 @@ func (p logPrinter) printAll(hits []o2.Hit) error {
 
 func (p logPrinter) print(hit o2.Hit) error {
 	if p.isJSON {
-		return cmdutil.WriteJSON(p.w, hit)
+		return writeJSON(p.w, hit)
 	}
 	_, err := fmt.Fprintf(p.w, "%s %s  %s\n", formatTimestamp(hit), origin(hit), fmt.Sprint(hit["body"]))
 	return err
@@ -105,4 +104,11 @@ func timestampOf(hit o2.Hit) (int64, bool) {
 	default:
 		return 0, false
 	}
+}
+
+// writeJSON encodes v without escaping <, > and &, so that log bodies and SQL stay readable.
+func writeJSON(w io.Writer, v any) error {
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	return enc.Encode(v)
 }

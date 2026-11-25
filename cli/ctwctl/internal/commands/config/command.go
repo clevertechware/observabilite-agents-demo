@@ -2,14 +2,13 @@
 package config
 
 import (
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/urfave/cli/v3"
 )
 
 // NewCommand creates the configuration command tree. config set writes to the configuration file of environment and
 // config view shows the settings resolved by loadSettings.
-func NewCommand(environment config.Environment, loadSettings cmdutil.SettingsLoader) *cli.Command {
+func NewCommand(environment config.Environment, loadSettings func(*cli.Command) (config.Settings, error)) *cli.Command {
 	return &cli.Command{
 		Name:  "config",
 		Usage: "read and write ~/.config/ctwctl/config.toml",

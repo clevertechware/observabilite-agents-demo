@@ -9,7 +9,6 @@ import (
 
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/app"
 	appscmd "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/apps"
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	configcmd "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/config"
 	o2cmd "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/o2"
 	orderscmd "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/orders"
@@ -22,6 +21,12 @@ import (
 )
 
 const logPollInterval = 2 * time.Second
+
+var globalFlagKeys = map[string]string{
+	"output":    "output",
+	"namespace": "kube.namespace",
+	"context":   "kube.context",
+}
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -36,13 +41,19 @@ func main() {
 
 // newRootCommand assembles the command groups with the clients they use, all configured from environment.
 func newRootCommand(environment config.Environment) *cli.Command {
-	loadSettings := cmdutil.NewSettingsLoader(environment)
+	loadSettings := func(cmd *cli.Command) (config.Settings, error) {
+		return config.Load(environment, globalFlagValues(cmd))
+	}
 
 	return &cli.Command{
 		Name:   "ctwctl",
 		Usage:  "applications, OpenObserve logs and orders of the observability demo",
 		Writer: os.Stdout,
-		Flags:  cmdutil.GlobalFlags(),
+		Flags: []cli.Flag{
+			&cli.StringFlag{Name: "output", Aliases: []string{"o"}, Usage: "output format: text or json"},
+			&cli.StringFlag{Name: "context", Usage: "kubectl context (default: the current context)"},
+			&cli.StringFlag{Name: "namespace", Usage: "Kubernetes namespace (default: demo)"},
+		},
 		Commands: []*cli.Command{
 			configcmd.NewCommand(environment, loadSettings),
 			appscmd.NewCommand(appscmd.Dependencies{
@@ -61,6 +72,18 @@ func newRootCommand(environment config.Environment) *cli.Command {
 			}),
 		},
 	}
+}
+
+// globalFlagValues returns the configuration value of each global flag set on the command line.
+func globalFlagValues(cmd *cli.Command) map[string]any {
+	values := map[string]any{}
+	for flag, key := range globalFlagKeys {
+		if cmd.IsSet(flag) {
+			values[key] = cmd.String(flag)
+		}
+	}
+
+	return values
 }
 
 func newAppClient(s config.Settings) app.Client {

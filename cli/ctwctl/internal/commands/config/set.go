@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/urfave/cli/v3"
 )
@@ -27,7 +26,7 @@ func setConfig(environment config.Environment) cli.ActionFunc {
 			return err
 		}
 
-		_, err = fmt.Fprintf(cmdutil.Writer(cmd), "%s written to %s\n", key, path)
+		_, err = fmt.Fprintf(cmd.Root().Writer, "%s written to %s\n", key, path)
 		return err
 	}
 }

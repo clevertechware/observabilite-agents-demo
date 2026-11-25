@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/o2"
 	"github.com/urfave/cli/v3"
@@ -37,7 +36,7 @@ func showLogs(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 		return err
 	}
 
-	printer := logPrinter{w: cmdutil.Writer(cmd), isJSON: s.Output == config.OutputJSON}
+	printer := logPrinter{w: cmd.Root().Writer, isJSON: s.Output == config.OutputJSON}
 	if cmd.Bool("follow") {
 		flw := newFollower(searcher, filter, limit, deps.PollInterval, deps.Now, printer.print)
 		err = flw.run(ctx, since)

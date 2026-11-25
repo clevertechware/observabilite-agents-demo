@@ -2,11 +2,11 @@ package apps
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"text/tabwriter"
 
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/app"
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/urfave/cli/v3"
 )
@@ -23,10 +23,10 @@ func listApps(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 	}
 
 	if s.Output == config.OutputJSON {
-		return cmdutil.WriteJSON(cmdutil.Writer(cmd), statuses)
+		return json.NewEncoder(cmd.Root().Writer).Encode(statuses)
 	}
 
-	tw := tabwriter.NewWriter(cmdutil.Writer(cmd), 0, 0, 2, ' ', 0)
+	tw := tabwriter.NewWriter(cmd.Root().Writer, 0, 0, 2, ' ', 0)
 	if _, err = fmt.Fprintln(tw, "NAME\tREADY\tAVAILABLE"); err != nil {
 		return err
 	}

@@ -5,7 +5,6 @@ import (
 	"context"
 
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/app"
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/urfave/cli/v3"
 )
@@ -13,7 +12,7 @@ import (
 // Dependencies contains the configuration and the services used by the application commands.
 type Dependencies struct {
 	// LoadSettings resolves the settings of the invoked command.
-	LoadSettings cmdutil.SettingsLoader
+	LoadSettings func(*cli.Command) (config.Settings, error)
 	// NewAppClient creates a Kubernetes client from the resolved configuration.
 	NewAppClient func(config.Settings) app.Client
 }

@@ -5,7 +5,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdutil"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/o2"
 	"github.com/urfave/cli/v3"
@@ -24,7 +23,7 @@ type LogSearcher interface {
 // Dependencies contains the configuration, the services and the clock used by the OpenObserve commands.
 type Dependencies struct {
 	// LoadSettings resolves the settings of the invoked command.
-	LoadSettings cmdutil.SettingsLoader
+	LoadSettings func(*cli.Command) (config.Settings, error)
 	// NewLogSearcher creates a search client from the resolved configuration.
 	NewLogSearcher func(config.Settings) LogSearcher
 	// PollInterval is the delay between successive log-follow searches.
