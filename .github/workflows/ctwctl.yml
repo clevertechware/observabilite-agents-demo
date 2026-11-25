@@ -26,3 +26,16 @@ jobs:
         with:
           version: v2.15
           working-directory: cli/ctwctl
+
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cli/ctwctl
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: cli/ctwctl/go.mod
+          cache-dependency-path: cli/ctwctl/go.sum
+      - run: go test -race ./...
