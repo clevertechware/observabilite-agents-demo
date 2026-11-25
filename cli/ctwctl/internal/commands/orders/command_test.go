@@ -1,9 +1,10 @@
-package commands
+package orders
 
 import (
 	"testing"
 
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdtest"
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order"
 	ordermocks "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order/mocks"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/shop"
@@ -12,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func ordersDeps(client order.Client) dependencies {
-	return dependencies{newOrderClient: func(settings) order.Client { return client }}
+func ordersDeps(client order.Client) Dependencies {
+	return Dependencies{NewOrderClient: func(config.Settings) order.Client { return client }}
 }
 
 var createdOrder = order.Order{
@@ -132,15 +133,13 @@ func TestOrders_UseTheShopURLFromTheConfiguration(t *testing.T) {
 	var gotURL string
 	client := ordermocks.NewClient(t)
 	client.EXPECT().Get(mock.Anything, int64(1)).Return(order.Order{ID: 1}, nil)
-	deps := dependencies{
-		newOrderClient: func(s settings) order.Client {
-			gotURL = s.Shop.URL
-			return client
-		},
-		environment: cmdtest.IsolatedEnvironment(t, map[string]string{"CTWCTL_SHOP_URL": "https://shop.example.test"}),
-	}
+	deps := Dependencies{NewOrderClient: func(s config.Settings) order.Client {
+		gotURL = s.Shop.URL
+		return client
+	}}
+	environment := cmdtest.IsolatedEnvironment(t, map[string]string{"CTWCTL_SHOP_URL": "https://shop.example.test"})
 
-	_, err := run(t, deps, "orders", "get", "1")
+	_, err := runIn(t, environment, deps, "orders", "get", "1")
 
 	require.NoError(t, err)
 	assert.Equal(t, "https://shop.example.test", gotURL)
