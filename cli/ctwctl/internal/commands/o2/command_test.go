@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdtest"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/o2/mocks"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/o2"
@@ -29,7 +30,7 @@ func o2Deps(searcher LogSearcher) Dependencies {
 
 func credentialedEnvironment(t *testing.T) config.Environment {
 	t.Helper()
-	return isolatedEnvironment(t, map[string]string{
+	return cmdtest.IsolatedEnvironment(t, map[string]string{
 		"CTWCTL_O2_USER":  "ctwctl@sa.internal",
 		"CTWCTL_O2_TOKEN": "jeton-de-test",
 	})
@@ -52,7 +53,7 @@ func splitLines(out string) []string {
 func TestO2Commands_WithoutCredentials_NameTheMissingConfigurationKeys(t *testing.T) {
 	t.Parallel()
 
-	environment := isolatedEnvironment(t, nil)
+	environment := cmdtest.IsolatedEnvironment(t, nil)
 	searcher := mocks.NewLogSearcher(t)
 
 	for _, args := range [][]string{{"o2", "streams"}, {"o2", "logs"}, {"o2", "query", "SELECT 1"}} {

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdtest"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,7 +67,7 @@ func TestLoadConfig_SourcesOverrideEachOtherInTheDocumentedOrder(t *testing.T) {
 		t.Run(tt.name, func(st *testing.T) {
 			st.Parallel()
 
-			environment := isolatedEnvironment(st, tt.env)
+			environment := cmdtest.IsolatedEnvironment(st, tt.env)
 			if tt.file != "" {
 				writeConfigFile(st, environment, tt.file)
 			}
@@ -81,7 +82,7 @@ func TestLoadConfig_SourcesOverrideEachOtherInTheDocumentedOrder(t *testing.T) {
 func TestLoadConfig_EnvironmentVariableMapsToTheDottedKey(t *testing.T) {
 	t.Parallel()
 
-	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_O2_URL": "https://o2.example.test"})
+	environment := cmdtest.IsolatedEnvironment(t, map[string]string{"CTWCTL_O2_URL": "https://o2.example.test"})
 
 	view := resolvedConfig(t, environment)
 
@@ -91,7 +92,7 @@ func TestLoadConfig_EnvironmentVariableMapsToTheDottedKey(t *testing.T) {
 func TestLoadConfig_WhenFileIsNotValidTOML_NamesTheFile(t *testing.T) {
 	t.Parallel()
 
-	environment := isolatedEnvironment(t, nil)
+	environment := cmdtest.IsolatedEnvironment(t, nil)
 	writeConfigFile(t, environment, "ceci n'est pas du toml [")
 
 	_, err := run(t, dependencies{environment: environment}, "config", "view")
@@ -112,7 +113,7 @@ func TestRoot_WhenOutputFormatIsUnknown_ReturnsError(t *testing.T) {
 func TestConfigSet_WritesTheFileWithOwnerOnlyPermissions(t *testing.T) {
 	t.Parallel()
 
-	environment := isolatedEnvironment(t, nil)
+	environment := cmdtest.IsolatedEnvironment(t, nil)
 
 	out, err := run(t, dependencies{environment: environment}, "config", "set", "o2.token", "jeton-secret")
 
@@ -128,7 +129,7 @@ func TestConfigSet_WritesTheFileWithOwnerOnlyPermissions(t *testing.T) {
 func TestConfigSet_TightensPermissionsOfAnExistingOpenFile(t *testing.T) {
 	t.Parallel()
 
-	environment := isolatedEnvironment(t, nil)
+	environment := cmdtest.IsolatedEnvironment(t, nil)
 	writeConfigFile(t, environment, "[o2]\nurl = \"https://o2.example.test\"\n")
 	path := configFilePath(environment)
 	require.NoError(t, os.Chmod(path, 0o644))
@@ -144,7 +145,7 @@ func TestConfigSet_TightensPermissionsOfAnExistingOpenFile(t *testing.T) {
 func TestConfigSet_KeepsValuesAlreadyInTheFile(t *testing.T) {
 	t.Parallel()
 
-	environment := isolatedEnvironment(t, nil)
+	environment := cmdtest.IsolatedEnvironment(t, nil)
 	writeConfigFile(t, environment, "[o2]\nurl = \"https://o2.example.test\"\n")
 
 	_, err := run(t, dependencies{environment: environment}, "config", "set", "kube.namespace", "staging")
@@ -158,7 +159,7 @@ func TestConfigSet_KeepsValuesAlreadyInTheFile(t *testing.T) {
 func TestConfigSet_DoesNotPersistEnvironmentValuesInTheFile(t *testing.T) {
 	t.Parallel()
 
-	environment := isolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "jeton-de-l-environnement"})
+	environment := cmdtest.IsolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "jeton-de-l-environnement"})
 
 	_, err := run(t, dependencies{environment: environment}, "config", "set", "kube.namespace", "staging")
 
@@ -171,7 +172,7 @@ func TestConfigSet_DoesNotPersistEnvironmentValuesInTheFile(t *testing.T) {
 func TestConfigSet_RejectsUnknownKeysAndListsTheKnownOnes(t *testing.T) {
 	t.Parallel()
 
-	environment := isolatedEnvironment(t, nil)
+	environment := cmdtest.IsolatedEnvironment(t, nil)
 
 	_, err := run(t, dependencies{environment: environment}, "config", "set", "o2.stream.type", "logs")
 
@@ -191,7 +192,7 @@ func TestConfigSet_WithoutValue_ReturnsUsageError(t *testing.T) {
 func TestConfigView_MasksTheTokenInTextAndJSON(t *testing.T) {
 	t.Parallel()
 
-	deps := dependencies{environment: isolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "jeton-secret"})}
+	deps := dependencies{environment: cmdtest.IsolatedEnvironment(t, map[string]string{"CTWCTL_O2_TOKEN": "jeton-secret"})}
 
 	text, err := run(t, deps, "config", "view")
 	require.NoError(t, err)

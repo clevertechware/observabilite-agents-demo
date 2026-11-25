@@ -3,6 +3,7 @@ package commands
 import (
 	"testing"
 
+	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/commands/cmdtest"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order"
 	ordermocks "github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/order/mocks"
 	"github.com/clevertechware/observabilite-agents-demo/cli/ctwctl/internal/shop"
@@ -136,7 +137,7 @@ func TestOrders_UseTheShopURLFromTheConfiguration(t *testing.T) {
 			gotURL = s.Shop.URL
 			return client
 		},
-		environment: isolatedEnvironment(t, map[string]string{"CTWCTL_SHOP_URL": "https://shop.example.test"}),
+		environment: cmdtest.IsolatedEnvironment(t, map[string]string{"CTWCTL_SHOP_URL": "https://shop.example.test"}),
 	}
 
 	_, err := run(t, deps, "orders", "get", "1")
