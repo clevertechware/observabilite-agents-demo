@@ -9,7 +9,8 @@
 # (;, &&, |), and the denylist globs and the migration key have not been exercised by a run.
 # Prerequisites: ctwctl built (make -C cli/ctwctl build), SKILL_RUNS_DIR and
 # CTWCTL_O2_TOKEN_FILE exported, VIBE_EVAL_HOME pointing at the isolated vibe home (credentials,
-# trusted folders).
+# trusted folders). VIBE_EVAL_CONFIG optionally names the config copied to $VIBE_EVAL_HOME/config.toml
+# instead of vibe-eval-config.toml (e.g. vibe-eval-config-mcp.toml for the MCP variant of a case).
 set -euo pipefail
 
 version=${1:?version}
@@ -27,13 +28,14 @@ case $(cd "$out_root" 2>/dev/null && pwd -P || echo "$out_root")/ in
 esac
 token_file=${CTWCTL_O2_TOKEN_FILE:?CTWCTL_O2_TOKEN_FILE must name a file holding the token}
 vibe_home=${VIBE_EVAL_HOME:?VIBE_EVAL_HOME must point at the isolated vibe home}
+config_file=${VIBE_EVAL_CONFIG:-$evals_dir/vibe-eval-config.toml}
 prompt_file="$evals_dir/$case_name/prompt.md"
 
-if [[ ! -f $prompt_file || ! -d $vibe_home ]]; then
-  echo "run_vibe.sh: unknown case '$case_name' or missing vibe home $vibe_home" >&2
+if [[ ! -f $prompt_file || ! -d $vibe_home || ! -f $config_file ]]; then
+  echo "run_vibe.sh: unknown case '$case_name', missing vibe home $vibe_home or missing config $config_file" >&2
   exit 2
 fi
-cp "$evals_dir/vibe-eval-config.toml" "$vibe_home/config.toml"
+cp "$config_file" "$vibe_home/config.toml"
 
 out="$out_root/$version/$case_name-$run"
 mkdir -p "$out"
@@ -48,6 +50,9 @@ export CTWCTL_O2_URL=${CTWCTL_O2_URL:-https://o2.obs.scw.clevertechware.fr}
 export CTWCTL_O2_USER=${CTWCTL_O2_USER:-ctwctl@sa.internal}
 CTWCTL_O2_TOKEN=$(cat "$token_file")
 export CTWCTL_O2_TOKEN
+# Basic auth header for the o2 MCP server (vibe-eval-config-mcp.toml reads O2_MCP_AUTHORIZATION);
+# the token stays in the environment, never in a repo file.
+export O2_MCP_AUTHORIZATION="Basic $(printf '%s:%s' "${CTWCTL_O2_USER:-ctwctl@sa.internal}" "$CTWCTL_O2_TOKEN" | base64 | tr -d '\n')"
 
 # Headless mode never prompts: a call needing approval is denied, so the copied
 # config is what keeps the run read-only.
