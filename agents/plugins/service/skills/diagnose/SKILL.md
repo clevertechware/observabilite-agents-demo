@@ -1,9 +1,9 @@
 ---
-name: monitor
+name: diagnose
 description: Investigate an incident or an error reported by a user, either described in natural language or shown in a screenshot, by searching OpenObserve logs and traces with the ctwctl CLI. Produces a detailed report with the root cause and links to the error logs and to a trace in the OpenObserve UI. Use when someone reports that something failed, was slow or returned an error.
 ---
 
-# Monitor
+# Diagnose
 
 Turn an incident report into a diagnosed report backed by OpenObserve logs and traces.
 
