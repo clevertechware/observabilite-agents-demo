@@ -139,9 +139,10 @@ func TestO2Link_WithJSONOutput_PrintsTheURLInAnObject(t *testing.T) {
 func TestO2Link_WithoutCredentials_StillPrintsTheURL(t *testing.T) {
 	t.Parallel()
 
-	_, err := runLink(t, linkSettings, "--sql", "SELECT 1")
+	out, err := runLink(t, linkSettings, "--sql", "SELECT 1")
 
 	require.NoError(t, err)
+	assert.Contains(t, out, "https://o2.obs.scw.clevertechware.fr/web/logs?")
 }
 
 func TestO2Link_WithInvalidArguments_FailsWithoutPrinting(t *testing.T) {
