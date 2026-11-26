@@ -1,0 +1,26 @@
+# Vibe configuration of the read-only eval, copied by run_vibe.sh to $VIBE_EVAL_HOME/config.toml.
+# Each list replaces Vibe's defaults. Bash lists hold command prefixes; file-tool lists hold globs
+# matched against absolute paths, the denylist being evaluated first. A call outside the allowlists
+# needs an approval, which headless mode denies.
+# applied_migrations keeps Vibe from re-adding its default read-only commands (cat, find, grep...)
+# to the bash allowlist.
+applied_migrations = [
+    "bash_read_only_defaults_v1",
+]
+
+[tools.bash]
+allowlist = [
+    "ctwctl o2",
+    "ctwctl -o json o2",
+    "date",
+]
+
+[tools.read_file]
+permission = "always"
+outside_workdir = "deny"
+denylist = [
+    "*/evals/*/graders/*",
+    "*/services/*",
+    "*/deploy/*",
+    "*/infra/*",
+]

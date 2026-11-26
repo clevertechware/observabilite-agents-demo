@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # Usage: run_vibe.sh <version> <case> <run-number>
 # Same cases as run.sh, run with the vibe CLI (portability arm of the eval).
-# The agent runs through .agents/skills, discovered with --trust. Read-only: VIBE_EVAL_HOME
-# holds a config.toml whose [tools.bash] allowlist is ctwctl/date; in headless mode every
-# other bash command, and every pending approval, is denied instead of prompted.
+# The agent runs through .agents/skills, discovered with --trust. Read-only: the versioned
+# vibe-eval-config.toml is copied to $VIBE_EVAL_HOME/config.toml before each run. Its bash allowlist
+# is the prefixes "ctwctl o2", "ctwctl -o json o2" and "date"; read_file is denied on graders,
+# services, deploy and infra. In headless mode every call outside the allowlists is denied instead
+# of prompted. Vibe's documentation does not say how the bash prefixes apply to compound commands
+# (;, &&, |), and the denylist globs and the migration key have not been exercised by a run.
 # Prerequisites: ctwctl built (make -C cli/ctwctl build), SKILL_RUNS_DIR and
-# CTWCTL_O2_TOKEN_FILE exported, VIBE_EVAL_HOME pointing at the isolated vibe home.
+# CTWCTL_O2_TOKEN_FILE exported, VIBE_EVAL_HOME pointing at the isolated vibe home (credentials,
+# trusted folders).
 set -euo pipefail
 
 version=${1:?version}
@@ -22,13 +26,14 @@ case $(cd "$out_root" 2>/dev/null && pwd -P || echo "$out_root")/ in
     ;;
 esac
 token_file=${CTWCTL_O2_TOKEN_FILE:?CTWCTL_O2_TOKEN_FILE must name a file holding the token}
-vibe_home=${VIBE_EVAL_HOME:?VIBE_EVAL_HOME must point at the isolated vibe home (config.toml with [tools.bash] allowlist)}
+vibe_home=${VIBE_EVAL_HOME:?VIBE_EVAL_HOME must point at the isolated vibe home}
 prompt_file="$evals_dir/$case_name/prompt.md"
 
-if [[ ! -f $prompt_file || ! -f $vibe_home/config.toml ]]; then
-  echo "run_vibe.sh: unknown case '$case_name' or missing $vibe_home/config.toml" >&2
+if [[ ! -f $prompt_file || ! -d $vibe_home ]]; then
+  echo "run_vibe.sh: unknown case '$case_name' or missing vibe home $vibe_home" >&2
   exit 2
 fi
+cp "$evals_dir/vibe-eval-config.toml" "$vibe_home/config.toml"
 
 out="$out_root/$version/$case_name-$run"
 mkdir -p "$out"
@@ -44,8 +49,8 @@ export CTWCTL_O2_USER=${CTWCTL_O2_USER:-ctwctl@sa.internal}
 CTWCTL_O2_TOKEN=$(cat "$token_file")
 export CTWCTL_O2_TOKEN
 
-# Headless mode never prompts: a call needing approval is denied, so the isolated
-# config is what keeps the run read-only (bash allowlist ctwctl/date, ask elsewhere).
+# Headless mode never prompts: a call needing approval is denied, so the copied
+# config is what keeps the run read-only.
 cd "$repo_root"
 VIBE_HOME="$vibe_home" vibe --trust \
   --prompt-file "$prompt_tmp" \
