@@ -37,6 +37,7 @@ claude -p "$prompt" \
   --model sonnet \
   --output-format stream-json --verbose \
   --allowedTools "Bash(ctwctl o2 *)" Read Skill \
+  --disallowedTools "Read(agents/plugins/service/evals/*/graders/**)" \
   --strict-mcp-config \
   --max-budget-usd 5 \
   < /dev/null > "$out"
