@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Usage: run.sh <version> <case> <run-number>
 # Runs one case read-only with `claude -p` and stores the stream-json output outside the repository.
-# Prerequisites: ctwctl built (make -C cli/ctwctl build), MONITOR_RUNS_DIR and CTWCTL_O2_TOKEN_FILE exported.
+# Prerequisites: ctwctl built (make -C cli/ctwctl build), SKILL_RUNS_DIR and CTWCTL_O2_TOKEN_FILE exported.
 set -euo pipefail
 
 version=${1:?version}
@@ -10,10 +10,10 @@ run=${3:?run number}
 
 evals_dir=$(cd "$(dirname "$0")" && pwd)
 repo_root=$(cd "$evals_dir/../../../.." && pwd)
-out_root=${MONITOR_RUNS_DIR:?MONITOR_RUNS_DIR must point outside the repository}
+out_root=${SKILL_RUNS_DIR:?SKILL_RUNS_DIR must point outside the repository}
 case $(cd "$out_root" 2>/dev/null && pwd -P || echo "$out_root")/ in
   "$repo_root"/*)
-    echo "run.sh: MONITOR_RUNS_DIR must be outside the repository" >&2
+    echo "run.sh: SKILL_RUNS_DIR must be outside the repository" >&2
     exit 2
     ;;
 esac

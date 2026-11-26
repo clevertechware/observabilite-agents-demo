@@ -8,6 +8,7 @@ import json
 import re
 import sys
 
+SKILL = r"(?:^|:)diagnose$"
 O2 = r"https://o2\.obs\.scw\.clevertechware\.fr"
 
 
@@ -51,11 +52,11 @@ def main():
     results_text = "\n".join(body for _, body in tool_results(events))
 
     checks = {}
-    if case == "not-monitor":
-        checks["skill-not-invoked"] = not any("monitor" in s for s in skills)
+    if case == "not-diagnose":
+        checks["skill-not-invoked"] = not any(re.search(SKILL, s) for s in skills)
         checks["no-observability-query"] = not any("ctwctl o2" in c for c in commands)
     else:
-        checks["skill-invoked"] = any("monitor" in s for s in skills)
+        checks["skill-invoked"] = any(re.search(SKILL, s) for s in skills)
         forward = r"traefik[\s\S]{0,400}order-service[\s\S]{0,400}inventory-service[\s\S]{0,400}pricing-service"
         backward = r"pricing-service[\s\S]{0,400}inventory-service[\s\S]{0,400}order-service[\s\S]{0,400}traefik"
         checks["call-chain"] = bool(re.search(forward + "|" + backward, text, re.I))
