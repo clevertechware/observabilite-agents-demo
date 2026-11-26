@@ -76,7 +76,7 @@ def fault_checks(text):
         ),
         "slow-sql-query-mentioned": bool(re.search(r"pg_sleep|s\.quantity", text)),
         "pricing-named-as-origin": bool(
-            re.search(r"(?im)^[^\n]*origine[^\n]*pricing-service|^[^\n]*pricing-service[^\n]*origine", text)
+            re.search(r"(?i)(?:attribuée?s? à|comptée?s?(?: (?:une|1) fois)? sous|origine\W{0,6})\W{0,4}pricing-service", text)
         ),
         "pricing-oomkilled-around-1751": bool(re.search(r"(?s)OOMKilled.{0,400}?17[:h]5[01]|17[:h]5[01].{0,400}?OOMKilled", text)),
         "oomkilled-pod-listed-as-restart": "pricing-service-666cb5f467-nwn7r" in restarts,
@@ -85,9 +85,9 @@ def fault_checks(text):
 
 
 def inventory_not_sain(text):
-    """La première ligne qui cite inventory-service porte son verdict : il ne doit pas être `sain`."""
-    line = next((line for line in text.splitlines() if "inventory-service" in line), "")
-    return bool(line) and not re.search(r"\bsain\b", line)
+    """Le verdict écrit juste après inventory-service ne doit pas être `sain`."""
+    verdict = re.search(r"inventory-service\W+(sain|dégradé|critique)", text)
+    return bool(verdict) and verdict.group(1) != "sain"
 
 
 def is_raw_message(text, start):
