@@ -81,10 +81,10 @@ def fault_checks(text):
     }
 
 
-def is_raw_message(text):
-    """Le rapport est le message : ni clôture de code, ni préambule avant le titre."""
+def is_raw_message(text, start):
+    """Le rapport est le message : ni clôture de code, ni préambule avant le titre qui porte la date de début."""
     first = next((line for line in text.splitlines() if line.strip()), "")
-    return "```" not in text and "26/11/2026" in first
+    return "```" not in text and start.strftime("%d/%m/%Y") in first
 
 
 def load_claude(path):
@@ -191,7 +191,7 @@ def main():
         )
         checks["three-services-listed"] = all(s in text for s in SERVICES)
         checks["report-under-5000"] = len(text) <= 5000
-        checks["report-is-the-raw-message"] = is_raw_message(text)
+        checks["report-is-the-raw-message"] = is_raw_message(text, start)
         checks["restart-signal-queried"] = any("k8s_container_restarts" in c for c in commands)
         checks["error-logs-signal-queried"] = any("severity_number >= 17" in c for c in commands)
         checks["p99-signal-queried"] = any("approx_percentile_cont" in c for c in commands)
