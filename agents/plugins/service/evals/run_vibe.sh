@@ -35,6 +35,8 @@ mkdir -p "$out"
 prompt_tmp=$(mktemp)
 trap 'rm -f "$prompt_tmp"' EXIT
 awk 'BEGIN{n=0} /^---$/{n++; next} n>=2' "$prompt_file" > "$prompt_tmp"
+max_turns=$(awk 'NR==1 && $0=="---"{infm=1; next} infm && $0=="---"{exit} infm && /^max_turns:[ ]*/{sub(/^max_turns:[ ]*/,""); print; exit}' "$prompt_file")
+max_turns=${max_turns:-40}
 
 export PATH="$repo_root/cli/ctwctl/bin:$PATH"
 export CTWCTL_O2_URL=${CTWCTL_O2_URL:-https://o2.obs.scw.clevertechware.fr}
@@ -48,7 +50,8 @@ cd "$repo_root"
 VIBE_HOME="$vibe_home" vibe --trust \
   --prompt-file "$prompt_tmp" \
   --output-dir "$out" \
-  --max-turns 40 \
+  --max-turns "$max_turns" \
+  --time-limit 260 \
   --max-price 5 \
   > "$out/report.txt" 2> "$out/run.stderr"
 echo "$out"
