@@ -11,7 +11,7 @@ Turn a window of telemetry into a short health report of the three services, rea
 
 - Morning report without dates: scan the last 24 hours with `--since 24h`. On Monday, when `date +%u` prints `1`, scan the weekend with `--since 72h`.
 - A period given in the request overrides the rules above: use its start and end as an absolute window `--from <RFC 3339> --to <RFC 3339>`, in the timezone of the request.
-- Use the same window for every query and every link.
+- Use the same window for every query and every link. With `--since`, run `date` once and compute the absolute `--from`/`--to` from it: use them for every query and for `ctwctl o2 link`.
 
 ## Tools
 
@@ -30,14 +30,15 @@ Namespace `demo`. Traces are sampled at 100 %, so the P99 is computed on the spa
 
 1. 5xx per service — `--type traces`:
    `SELECT service_name, http_route, count(*) AS n FROM "default" WHERE span_kind='2' AND http_response_status_code LIKE '5%' AND service_name IN ('order-service','inventory-service','pricing-service') GROUP BY service_name, http_route`
-   Compute the rate against the total per service, and the first and last hour with `histogram(_timestamp, '1 hour')`.
+   Total per service: `SELECT service_name, count(*) AS total FROM "default" WHERE span_kind='2' AND service_name IN ('order-service','inventory-service','pricing-service') GROUP BY service_name`. Compute the rate against it, and the first and last hour with `histogram(_timestamp, '1 hour')`.
 2. P99 latency — `--type traces`, `duration` is in microseconds:
    `SELECT service_name, approx_percentile_cont(duration, 0.99) AS p99_us FROM "default" WHERE span_kind='2' AND service_name IN ('order-service','inventory-service','pricing-service') GROUP BY service_name`
-   Fixed budgets (P99): order-service 500 ms, inventory-service 300 ms, pricing-service 50 ms. Out of budget on 20 requests or more = slow.
-   Slowness origin: the client span that holds the time (database call, outbound HTTP call):
-   `SELECT service_name, operation_name, db_query_text, count(*) AS n, approx_percentile_cont(duration, 0.99) AS p99_us FROM "default" WHERE span_kind='3' AND duration > 300000 AND service_name IN ('order-service','inventory-service','pricing-service') GROUP BY service_name, operation_name, db_query_text ORDER BY n DESC`
+   Fixed budgets (P99): order-service 500 ms, inventory-service 300 ms, pricing-service 50 ms. A service is slow when it has 20 requests or more in the window and its P99 is over budget.
+   Slowness origin: the client span that holds the time (database call, outbound HTTP call); 50 ms is the smallest budget, read the largest groups first:
+   `SELECT service_name, operation_name, db_query_text, count(*) AS n, approx_percentile_cont(duration, 0.99) AS p99_us FROM "default" WHERE span_kind='3' AND duration > 50000 AND service_name IN ('order-service','inventory-service','pricing-service') GROUP BY service_name, operation_name, db_query_text ORDER BY n DESC`
 3. Restarts — `--type metrics`, cumulative counter per pod, a jump inside the window is a restart. The reason label is set by the restart itself, so the counter is split in two series (`""` then `OOMKilled`): never group by the reason.
-   `SELECT k8s_pod_name, max(value) - min(value) AS restarts, max(k8s_container_status_last_terminated_reason) AS reason FROM "k8s_container_restarts" WHERE k8s_namespace_name='demo' GROUP BY k8s_pod_name, k8s_pod_uid HAVING max(value) > min(value)`
+   `SELECT k8s_pod_name, k8s_container_name, max(value) - min(value) AS restarts, max(k8s_container_status_last_terminated_reason) AS reason FROM "k8s_container_restarts" WHERE k8s_namespace_name='demo' GROUP BY k8s_pod_uid, k8s_pod_name, k8s_container_name HAVING max(value) > min(value)`
+   `max(reason)` is the alphabetical maximum, not the latest reason: with several restarts of different reasons, query the pod alone.
 4. Error logs — `--type logs`:
    `SELECT service_name, coalesce(exception_type, body) AS signature, count(*) AS n FROM "default" WHERE severity_number >= 17 AND k8s_namespace_name='demo' GROUP BY service_name, signature ORDER BY n DESC`
 
@@ -55,7 +56,7 @@ Namespace `demo`. Traces are sampled at 100 %, so the P99 is computed on the spa
 One line per service, in this order; a service with no telemetry in the window is listed as such, never omitted.
 
 - `critique`: 5xx rate of 5 % or more on 20 requests or more, or a restart with reason `OOMKilled`.
-- `dégradé`: any 5xx below that rate, P99 out of budget on 20 requests or more, or any restart.
+- `dégradé`: any 5xx below that rate, the service is slow, or any restart.
 - `sain`: none of the above.
 
 A service whose only 5xx are consequences of another service is `dégradé` at most, never `critique`; its line names the origin service. Its consequences are not added to the origin's count.
