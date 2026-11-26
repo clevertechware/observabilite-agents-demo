@@ -176,3 +176,33 @@ func TestStreamsListsFieldNamesFromTheSchemaOfTheRequestedType(t *testing.T) {
 		{Name: "triggers", Type: "logs", Fields: []string{}},
 	}, streams)
 }
+
+func TestSearchSendsTheRequestedStreamTypeAndDefaultsToLogs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		streamType string
+		want       string
+	}{
+		{"traces", "traces", "traces"},
+		{"metrics", "metrics", "metrics"},
+		{"unset", "", "logs"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(st *testing.T) {
+			st.Parallel()
+
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(st, tt.want, r.URL.Query().Get("type"))
+				_, _ = w.Write([]byte(`{"hits":[],"total":0}`))
+			}))
+			defer srv.Close()
+
+			_, err := NewClient(srv.URL, "default", "u", "t").Search(st.Context(), SearchRequest{SQL: "SELECT 1", StreamType: tt.streamType})
+
+			require.NoError(st, err)
+		})
+	}
+}

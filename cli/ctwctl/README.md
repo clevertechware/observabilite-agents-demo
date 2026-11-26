@@ -92,12 +92,23 @@ ctwctl apps list | restart <nom>
 ctwctl orders create --sku <sku> [--quantity <n>] | get <id>
 ctwctl o2 streams [--type logs|metrics|traces]
 ctwctl o2 logs [--service s] [--grep texte] [--level error] [--since 1h] [--limit 100] [--follow]
-ctwctl o2 query "<SQL>" [--since 1h] [--limit 100]
+ctwctl o2 query "<SQL>" [--type logs|traces|metrics] [--since 1h | --from <RFC 3339> [--to <RFC 3339>]] [--limit 100]
+ctwctl o2 link (--sql "<SQL>" [--type logs|traces|metrics] | --trace-id <id>) [--stream default] [--since 1h | --from <RFC 3339> [--to <RFC 3339>]]
 options globales : -o text|json, --context, --namespace
 ```
 
 - `--namespace` filtre aussi `o2 logs` sur `k8s_namespace_name`, seulement quand l'option est posée.
 - `--level` s'appuie sur `severity_number` : `trace` 1, `debug` 5, `info` 9, `warn` 13, `error` 17, `fatal` 21.
+- `o2 query` interroge les logs par défaut. `--type traces` ou `--type metrics` interroge un autre type de stream : le
+  stream `default` existe en logs et en traces. Une autre valeur donne une erreur et le code de sortie 1.
+- `--since` fixe une fenêtre qui se termine maintenant. `--from` et `--to` fixent une fenêtre absolue, en RFC 3339 avec
+  le fuseau (`2026-11-26T14:05:00+01:00`) : un `ORDER BY _timestamp DESC` sur une fenêtre relative renvoie les entrées
+  récentes, pas celles d'un incident passé. `--from` seul termine la fenêtre maintenant. `--to` sans `--from`,
+  `--from` égal ou postérieur à la fin de la fenêtre, et `--since` combiné avec `--from` ou `--to` donnent une erreur.
+- `o2 link` imprime l'URL de l'interface d'OpenObserve construite à partir de `o2.url` et `o2.org`, sans appel réseau
+  et sans identifiants. `--sql` ouvre la page des logs en mode SQL, `--trace-id` la page de détail d'une trace ;
+  exactement l'un des deux est requis. `--type` ne s'applique qu'à `--sql`. La fenêtre en microsecondes et la requête
+  encodée sont calculées par la commande.
 - `o2 streams` sans `--type` liste les streams de logs et de traces.
 - `--follow` relit les logs toutes les 2 secondes sur une fenêtre qui recouvre le tour précédent de 10 secondes, et
   écarte les lignes déjà affichées. `Ctrl+C` termine avec le code 0.
@@ -107,8 +118,29 @@ options globales : -o text|json, --context, --namespace
 - `apps list` et `o2 streams` : un tableau JSON.
 - `o2 logs` et `o2 query` : un objet JSON compact par ligne (JSONL), avec les noms de champs d'OpenObserve. Le format
   s'écrit au fil de l'eau avec `--follow`, se lit ligne à ligne et passe dans `jq` sans tableau englobant.
+- `o2 link` : un objet `{"url": "..."}`.
 - `orders create` et `orders get` : l'objet commande, complété du champ `location` à la création.
 - Les erreurs vont sur la sortie d'erreur, avec le code de sortie 1.
+
+## URL de l'interface d'OpenObserve
+
+`o2 link` reproduit les paramètres que l'interface lit dans l'URL (OpenObserve v1.1.1, `web/src/composables/useLogs.ts`,
+`web/src/plugins/traces/TraceDetails.vue`) :
+
+| Page            | Chemin                      | Paramètres, dans cet ordre                                                        |
+|-----------------|-----------------------------|-----------------------------------------------------------------------------------|
+| Logs            | `/web/logs`                 | `org_identifier`, `stream_type`, `stream`, `from`, `to`, `sql_mode=true`, `query` |
+| Détail de trace | `/web/traces/trace-details` | `org_identifier`, `stream`, `trace_id`, `from`, `to`                              |
+
+`from` et `to` sont en microsecondes depuis l'époque Unix. `query` est la requête SQL, sans espaces de début ni de fin,
+encodée en UTF-8 puis en base64 standard, dont les caractères `+`, `/` et `=` sont remplacés par `-`, `_` et `.`
+(`b64EncodeUnicode`, `web/src/utils/formatters.ts`).
+
+```bash
+ctwctl o2 link --sql 'SELECT * FROM "default" WHERE severity_number >= 17' \
+  --from 2026-11-26T14:05:00+01:00 --to 2026-11-26T14:20:00+01:00
+ctwctl o2 link --trace-id 4bf92f3577b34da6a3ce929d0e0e4736 --since 6h
+```
 
 ## Erreurs d'order-service
 

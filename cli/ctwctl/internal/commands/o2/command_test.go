@@ -317,10 +317,11 @@ func TestO2Query_SendsTheSQLUnchangedOverTheRequestedWindow(t *testing.T) {
 	sql := `SELECT service_name, count(*) AS erreurs FROM "default" WHERE severity_number >= 17 GROUP BY service_name`
 	searcher := mocks.NewLogSearcher(t)
 	searcher.EXPECT().Search(mock.Anything, o2.SearchRequest{
-		SQL:   sql,
-		Start: fixedNow.Add(-24 * time.Hour),
-		End:   fixedNow,
-		Size:  100,
+		SQL:        sql,
+		Start:      fixedNow.Add(-24 * time.Hour),
+		End:        fixedNow,
+		Size:       100,
+		StreamType: "logs",
 	}).Return(o2.SearchResult{Hits: []o2.Hit{
 		{"service_name": "order-service", "erreurs": json.Number("3")},
 	}}, nil)
@@ -329,6 +330,99 @@ func TestO2Query_SendsTheSQLUnchangedOverTheRequestedWindow(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"erreurs":3,"service_name":"order-service"}`, out)
+}
+
+func TestO2Query_WithTypeFlag_SearchesThatStreamType(t *testing.T) {
+	t.Parallel()
+
+	for _, streamType := range []string{"logs", "traces", "metrics"} {
+		t.Run(streamType, func(st *testing.T) {
+			st.Parallel()
+
+			searcher := mocks.NewLogSearcher(st)
+			searcher.EXPECT().Search(mock.Anything, mock.MatchedBy(func(req o2.SearchRequest) bool {
+				return req.StreamType == streamType
+			})).Return(o2.SearchResult{}, nil)
+
+			_, err := run(st, o2Deps(searcher, credentialed), "o2", "query", "SELECT 1", "--type", streamType)
+
+			require.NoError(st, err)
+		})
+	}
+}
+
+func TestO2Query_WithUnknownType_FailsBeforeSearch(t *testing.T) {
+	t.Parallel()
+
+	searcher := mocks.NewLogSearcher(t)
+
+	_, err := run(t, o2Deps(searcher, credentialed), "o2", "query", "SELECT 1", "--type", "spans")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--type")
+	assert.Contains(t, err.Error(), "spans")
+}
+
+func TestO2Query_WithFromAndTo_SendsTheAbsoluteWindowInMicroseconds(t *testing.T) {
+	t.Parallel()
+
+	from := time.Date(2026, 11, 26, 13, 5, 0, 0, time.UTC)
+	to := time.Date(2026, 11, 26, 13, 20, 0, 0, time.UTC)
+	searcher := mocks.NewLogSearcher(t)
+	searcher.EXPECT().Search(mock.Anything, mock.MatchedBy(func(req o2.SearchRequest) bool {
+		return req.Start.UnixMicro() == from.UnixMicro() && req.End.UnixMicro() == to.UnixMicro()
+	})).Return(o2.SearchResult{}, nil)
+
+	_, err := run(t, o2Deps(searcher, credentialed), "o2", "query", "SELECT 1",
+		"--from", "2026-11-26T14:05:00+01:00", "--to", "2026-11-26T14:20:00+01:00")
+
+	require.NoError(t, err)
+}
+
+func TestO2Query_WithFromOnly_EndsTheWindowNow(t *testing.T) {
+	t.Parallel()
+
+	from := fixedNow.Add(-3 * time.Hour)
+	searcher := mocks.NewLogSearcher(t)
+	searcher.EXPECT().Search(mock.Anything, mock.MatchedBy(func(req o2.SearchRequest) bool {
+		return req.Start.UnixMicro() == from.UnixMicro() && req.End.UnixMicro() == fixedNow.UnixMicro()
+	})).Return(o2.SearchResult{}, nil)
+
+	_, err := run(t, o2Deps(searcher, credentialed), "o2", "query", "SELECT 1", "--from", from.Format(time.RFC3339))
+
+	require.NoError(t, err)
+}
+
+func TestO2Query_WithInvalidWindow_FailsBeforeSearch(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"since combined with from", []string{"--since", "1h", "--from", "2026-11-26T14:05:00+01:00"}, "--since"},
+		{"since combined with to", []string{"--since", "1h", "--to", "2026-11-26T14:05:00+01:00"}, "--since"},
+		{"to without from", []string{"--to", "2026-11-26T14:05:00+01:00"}, "--to requires --from"},
+		{"from after to", []string{"--from", "2026-11-26T15:00:00+01:00", "--to", "2026-11-26T14:00:00+01:00"}, "--from"},
+		{"from equal to to", []string{"--from", "2026-11-26T14:00:00+01:00", "--to", "2026-11-26T14:00:00+01:00"}, "--from"},
+		{"from in the future", []string{"--from", "2026-11-27T10:00:00Z"}, "--from"},
+		{"from without time zone", []string{"--from", "2026-11-26T14:05:00"}, "RFC 3339"},
+		{"to not a date", []string{"--from", "2026-11-26T14:05:00Z", "--to", "hier"}, "invalid --to"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(st *testing.T) {
+			st.Parallel()
+
+			searcher := mocks.NewLogSearcher(st)
+
+			_, err := run(st, o2Deps(searcher, credentialed), append([]string{"o2", "query", "SELECT 1"}, tt.args...)...)
+
+			require.Error(st, err)
+			assert.Contains(st, err.Error(), tt.want)
+		})
+	}
 }
 
 func TestO2Query_WithTextOutput_PrintsAnAlignedTableWithSortedColumns(t *testing.T) {

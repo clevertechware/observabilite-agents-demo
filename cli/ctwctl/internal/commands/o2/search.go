@@ -25,16 +25,34 @@ func searcherFor(s config.Settings, deps Dependencies) (LogSearcher, error) {
 }
 
 func parseSearchOptions(cmd *cli.Command) (time.Duration, int, error) {
-	sinceValue := cmd.String("since")
-	since, err := time.ParseDuration(sinceValue)
-	if err != nil || since <= 0 {
-		return 0, 0, fmt.Errorf("invalid --since %q: a positive duration is expected, for example 15m or 1h", sinceValue)
+	since, err := parseSince(cmd)
+	if err != nil {
+		return 0, 0, err
 	}
 
-	limit := cmd.Int("limit")
-	if limit <= 0 {
-		return 0, 0, fmt.Errorf("--limit must be strictly positive, got %d", limit)
+	limit, err := parseLimit(cmd)
+	if err != nil {
+		return 0, 0, err
 	}
 
 	return since, limit, nil
+}
+
+func parseSince(cmd *cli.Command) (time.Duration, error) {
+	value := cmd.String("since")
+	since, err := time.ParseDuration(value)
+	if err != nil || since <= 0 {
+		return 0, fmt.Errorf("invalid --since %q: a positive duration is expected, for example 15m or 1h", value)
+	}
+
+	return since, nil
+}
+
+func parseLimit(cmd *cli.Command) (int, error) {
+	limit := cmd.Int("limit")
+	if limit <= 0 {
+		return 0, fmt.Errorf("--limit must be strictly positive, got %d", limit)
+	}
+
+	return limit, nil
 }
