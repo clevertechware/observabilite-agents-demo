@@ -18,6 +18,7 @@ PARIS = timezone(timedelta(hours=1))
 WINDOWS = {
     "health-morning": (datetime(2026, 11, 25, 0, 0, tzinfo=PARIS), datetime(2026, 11, 26, 0, 0, tzinfo=PARIS)),
     "health-incident": (datetime(2026, 11, 26, 11, 0, tzinfo=PARIS), datetime(2026, 11, 26, 13, 30, tzinfo=PARIS)),
+    "health-faults": (datetime(2026, 11, 26, 16, 30, tzinfo=PARIS), datetime(2026, 11, 26, 18, 0, tzinfo=PARIS)),
 }
 SERVICES = ("order-service", "inventory-service", "pricing-service")
 FROM_TO = re.compile(r"ctwctl (?:-o \S+ )?o2 query\b[^;|&\n]*--from (\S+)[^;|&\n]*--to (\S+)")
@@ -41,6 +42,37 @@ def covers_requested_window(command, start, end):
         if begin <= start + timedelta(minutes=5) and last >= end - timedelta(minutes=5):
             return True
     return False
+
+
+POD = re.compile(r"[a-z]+-service-[0-9a-f]+-[a-z0-9]+")
+SECTION = r"^[#*\s]*{}\b"
+
+
+def section(text, title):
+    """Texte de la section `title`, jusqu'au titre suivant (Erreurs, Redémarrages, Lenteurs ou Liens)."""
+    start = re.search(SECTION.format(title), text, re.M)
+    if not start:
+        return ""
+    rest = text[start.end():]
+    following = re.search(SECTION.format(r"(?:Erreurs|Redémarrages|Lenteurs|Liens)"), rest, re.M)
+    return rest[: following.start()] if following else rest
+
+
+def fault_checks(text):
+    """Assertions propres au cas health-faults : lenteur d'inventory, OOMKilled de pricing, rollouts exclus."""
+    restarts = section(text, "Redémarrages")
+    return {
+        "inventory-slowness-over-p99-budget": bool(
+            re.search(r"(?s)inventory-service.{0,300}?(?:2[.,]\d+\s*s\b|2\s?\d{3}\s*ms)", text)
+            and re.search(r"300\s*ms", text)
+        ),
+        "order-slowness-presented-as-consequence": bool(
+            re.search(r"(?is)order-service[^\n]*(?:conséquence|répercu|propag|à cause|dû|due|aval|amont)", text)
+        ),
+        "slow-sql-query-mentioned": bool(re.search(r"pg_sleep|requête SQL|requête lente|span DB|span SELECT", text, re.I)),
+        "pricing-oomkilled-around-1751": bool(re.search(r"(?s)OOMKilled.{0,400}?17[:h]5[01]|17[:h]5[01].{0,400}?OOMKilled", text)),
+        "only-the-oomkilled-pod-listed-as-restart": set(POD.findall(restarts)) == {"pricing-service-666cb5f467-nwn7r"},
+    }
 
 
 def load_claude(path):
@@ -156,6 +188,8 @@ def main():
             not urls or any(re.search(r"o2 link\b.*(?:--sql|--trace-id)", c, re.S) for c in commands)
         )
         checks["every-url-comes-from-ctwctl"] = bool(urls) and all(u in bodies for u in urls)
+        if case == "health-faults":
+            checks.update(fault_checks(text))
         if case == "health-incident":
             checks["both-error-episodes-timed"] = bool(
                 re.search(r"12[:h]0", text) and re.search(r"13[:h]2", text)
