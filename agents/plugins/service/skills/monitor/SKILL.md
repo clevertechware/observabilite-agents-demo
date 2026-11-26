@@ -34,8 +34,10 @@ Namespace `demo`. Traces are sampled at 100 %, so the P99 is computed on the spa
 2. P99 latency — `--type traces`, `duration` is in microseconds:
    `SELECT service_name, approx_percentile_cont(duration, 0.99) AS p99_us FROM "default" WHERE span_kind='2' AND service_name IN ('order-service','inventory-service','pricing-service') GROUP BY service_name`
    Fixed budgets (P99): order-service 500 ms, inventory-service 300 ms, pricing-service 50 ms. Out of budget on 20 requests or more = slow.
-3. Restarts — `--type metrics`, cumulative counter per pod, a jump inside the window is a restart:
-   `SELECT k8s_pod_name, k8s_container_status_last_terminated_reason, max(value) - min(value) AS restarts FROM "k8s_container_restarts" WHERE k8s_namespace_name='demo' GROUP BY k8s_pod_name, k8s_pod_uid, k8s_container_status_last_terminated_reason HAVING max(value) > min(value)`
+   Slowness origin: the client span that holds the time (database call, outbound HTTP call):
+   `SELECT service_name, operation_name, db_query_text, count(*) AS n, approx_percentile_cont(duration, 0.99) AS p99_us FROM "default" WHERE span_kind='3' AND duration > 300000 AND service_name IN ('order-service','inventory-service','pricing-service') GROUP BY service_name, operation_name, db_query_text ORDER BY n DESC`
+3. Restarts — `--type metrics`, cumulative counter per pod, a jump inside the window is a restart. The reason label is set by the restart itself, so the counter is split in two series (`""` then `OOMKilled`): never group by the reason.
+   `SELECT k8s_pod_name, max(value) - min(value) AS restarts, max(k8s_container_status_last_terminated_reason) AS reason FROM "k8s_container_restarts" WHERE k8s_namespace_name='demo' GROUP BY k8s_pod_name, k8s_pod_uid HAVING max(value) > min(value)`
 4. Error logs — `--type logs`:
    `SELECT service_name, coalesce(exception_type, body) AS signature, count(*) AS n FROM "default" WHERE severity_number >= 17 AND k8s_namespace_name='demo' GROUP BY service_name, signature ORDER BY n DESC`
 
@@ -43,6 +45,8 @@ Namespace `demo`. Traces are sampled at 100 %, so the P99 is computed on the spa
 
 - Ignore 4xx: 409 insufficient stock, 429 rate limit and 403 allowlist are expected.
 - A 5xx that follows a 5xx of a downstream call in the same trace is a consequence, not a cause: attribute the errors of the whole trace to the origin service, the deepest failing span. pricing 500 → inventory 500 → order 502 counts once, under pricing-service, and order-service appears as a consequence.
+- A failed client span (`connection refused`, timeout) names its target service as the origin, even when that service recorded no span: a pod being killed answers nothing.
+- Slowness propagates the same way: a server span slow because of a slow child span is a consequence. The origin is the deepest slow client span; report its service, operation and `db_query_text`. A service slow only because of its call to another service is listed as a consequence of that service.
 - A rollout creates a new pod with a new `k8s_pod_uid` and no restart; only `max - min > 0` on the same pod is a restart.
 - Health probes are already excluded from spans and metrics.
 
@@ -54,9 +58,11 @@ One line per service, in this order; a service with no telemetry in the window i
 - `dégradé`: any 5xx below that rate, P99 out of budget on 20 requests or more, or any restart.
 - `sain`: none of the above.
 
+A service whose only 5xx are consequences of another service is `dégradé` at most, never `critique`; its line names the origin service. Its consequences are not added to the origin's count.
+
 ## Report
 
-The report is the message: no preamble, 5 000 characters at most (Rocket.Chat limit).
+The report is the message itself: it starts with the title and ends with the last link. No code fence around it, no preamble, no notes to the requester after it. 5 000 characters at most (Rocket.Chat limit).
 
 - a title with the window in full and its timezone
 - one line per service with its verdict
