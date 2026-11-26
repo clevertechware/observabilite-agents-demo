@@ -31,7 +31,8 @@ CTWCTL_O2_TOKEN=$(cat "$token_file")
 export CTWCTL_O2_TOKEN
 export CLAUDE_CODE_DISABLE_CLAUDE_MDS=1 CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
 
-# --allowedTools only pre-approves; --permission-mode dontAsk and --tools are what keep the run read-only.
+# --allowedTools only pre-approves; --permission-mode dontAsk and --tools keep the run read-only.
+# A "*" in a Bash rule also matches spaces: pinning "-o json" keeps "ctwctl -o json orders create ... o2" refused.
 cd "$repo_root"
 claude -p "$prompt" \
   --plugin-dir agents/plugins/service \
@@ -40,7 +41,7 @@ claude -p "$prompt" \
   --setting-sources project \
   --permission-mode dontAsk \
   --tools "Bash,Read,Skill" \
-  --allowedTools "Bash(ctwctl o2 *)" "Bash(ctwctl -o * o2 *)" "Bash(jq *)" "Bash(head *)" "Bash(date *)" Read Skill \
+  --allowedTools "Bash(ctwctl o2 *)" "Bash(ctwctl -o json o2 *)" "Bash(jq *)" "Bash(head *)" "Bash(date *)" Read Skill \
   --disallowedTools "Read(agents/plugins/service/evals/*/graders/**)" "Read(services/**)" "Read(deploy/**)" "Read(infra/**)" \
   --strict-mcp-config \
   --max-budget-usd 5 \
