@@ -1,6 +1,6 @@
 {
   "name": "service",
-  "description": "Skills d'exploitation de la démo d'observabilité : enquête sur incident avec OpenObserve.",
+  "description": "Skills d'exploitation de la démo d'observabilité : diagnostic d'incident et bilan de santé quotidien avec OpenObserve.",
   "version": "0.1.0",
   "author": { "name": "Clever Tech Ware" }
 }
