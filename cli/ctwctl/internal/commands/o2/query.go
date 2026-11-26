@@ -30,16 +30,20 @@ func runQuery(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 		return err
 	}
 
-	since, limit, err := parseSearchOptions(cmd)
+	window, err := parseWindow(cmd, deps.Now())
 	if err != nil {
 		return err
 	}
 
-	end := deps.Now()
+	limit, err := parseLimit(cmd)
+	if err != nil {
+		return err
+	}
+
 	result, err := searcher.Search(ctx, o2.SearchRequest{
 		SQL:        cmd.Args().First(),
-		Start:      end.Add(-since),
-		End:        end,
+		Start:      window.start,
+		End:        window.end,
 		Size:       limit,
 		StreamType: streamType,
 	})

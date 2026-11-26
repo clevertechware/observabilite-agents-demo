@@ -70,11 +70,10 @@ func NewCommand(deps Dependencies) *cli.Command {
 				Name:      "query",
 				Usage:     "run an SQL query as is",
 				ArgsUsage: "<SQL>",
-				Flags: []cli.Flag{
+				Flags: append([]cli.Flag{
 					&cli.StringFlag{Name: "type", Usage: "stream type: logs, traces or metrics", Value: streamTypeLogs},
-					sinceFlag,
 					limitFlag,
-				},
+				}, windowFlags()...),
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					return runQuery(ctx, cmd, deps)
 				},
