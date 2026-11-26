@@ -68,17 +68,26 @@ def fault_checks(text):
     slowness = section(text, "Lenteurs")
     return {
         "inventory-slowness-over-p99-budget": bool(
-            re.search(r"(?s)inventory-service.{0,300}?(?:2[.,]\d+\s*s\b|2\s?\d{3}\s*ms)", text)
-            and re.search(r"300\s*ms", text)
+            re.search(r"(?s)inventory-service.{0,300}?(?:2[.,]\d+\s*s\b|2\s?\d{3}\s*ms)", slowness)
+            and re.search(r"300\s*ms", slowness)
         ),
         "order-slowness-presented-as-consequence": bool(
             re.search(rf"(?is)order-service.{{0,250}}(?:{CONSEQUENCE})|(?:{CONSEQUENCE}).{{0,250}}order-service", slowness)
         ),
-        "slow-sql-query-mentioned": bool(re.search(r"pg_sleep|\bSELECT\b|requête SQL|requête lente|span DB", text, re.I)),
+        "slow-sql-query-mentioned": bool(re.search(r"pg_sleep|s\.quantity", text)),
+        "pricing-named-as-origin": bool(
+            re.search(r"(?im)^[^\n]*origine[^\n]*pricing-service|^[^\n]*pricing-service[^\n]*origine", text)
+        ),
         "pricing-oomkilled-around-1751": bool(re.search(r"(?s)OOMKilled.{0,400}?17[:h]5[01]|17[:h]5[01].{0,400}?OOMKilled", text)),
         "oomkilled-pod-listed-as-restart": "pricing-service-666cb5f467-nwn7r" in restarts,
         "rollout-pods-not-listed-as-restarts": not ROLLOUT_PODS.search(restarts),
     }
+
+
+def inventory_not_sain(text):
+    """La première ligne qui cite inventory-service porte son verdict : il ne doit pas être `sain`."""
+    line = next((line for line in text.splitlines() if "inventory-service" in line), "")
+    return bool(line) and not re.search(r"\bsain\b", line)
 
 
 def is_raw_message(text, start):
@@ -204,6 +213,7 @@ def main():
         if case == "health-faults":
             checks.update(fault_checks(text))
         if case == "health-incident":
+            checks["inventory-not-sain"] = inventory_not_sain(text)
             checks["both-error-episodes-timed"] = bool(
                 re.search(r"12[:h]0", text) and re.search(r"13[:h]2", text)
             )
