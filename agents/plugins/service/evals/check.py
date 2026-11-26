@@ -66,7 +66,7 @@ def main():
         urls = set(re.findall(O2 + r"/web/[^\s)>`\"']+", text))
         checks["every-url-comes-from-ctwctl"] = bool(urls) and all(u in results_text for u in urls)
         checks["window-uses-absolute-range"] = any(
-            "ctwctl o2" in c and "--from" in c and re.search(r"2026-11-26T1[12]:", c) for c in commands
+            re.search(r"ctwctl (-o \S+ )?o2 query\b[^;|&\n]*--from 2026-11-26T1[12]:", c) for c in commands
         )
         if case == "order-error-screenshot":
             checks["reads-image"] = any(c["name"] == "Read" and "erreur-commande.png" in json.dumps(c["input"]) for c in calls)
@@ -84,6 +84,8 @@ def main():
     for f in failed_queries:
         print(f"  ! {f}")
     print(f"num_turns={final.get('num_turns')} total_cost_usd={final.get('total_cost_usd')} is_error={final.get('is_error')}")
+    return all(checks.values())
 
 
-main()
+if __name__ == "__main__":
+    sys.exit(0 if main() else 1)
