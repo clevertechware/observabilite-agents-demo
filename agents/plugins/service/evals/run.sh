@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Usage: run.sh <version> <case> <run-number>
-# Lance un cas en lecture seule avec `claude -p` et enregistre le flux stream-json hors du dépôt.
-# Prérequis : ctwctl construit (make -C cli/ctwctl build), jeton OpenObserve dans CTWCTL_O2_TOKEN_FILE.
+# Runs one case read-only with `claude -p` and stores the stream-json output outside the repository.
+# Prerequisites: ctwctl built (make -C cli/ctwctl build), MONITOR_RUNS_DIR and CTWCTL_O2_TOKEN_FILE exported.
 set -euo pipefail
 
 version=${1:?version}
@@ -31,13 +31,17 @@ CTWCTL_O2_TOKEN=$(cat "$token_file")
 export CTWCTL_O2_TOKEN
 export CLAUDE_CODE_DISABLE_CLAUDE_MDS=1 CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
 
+# --allowedTools only pre-approves; --permission-mode dontAsk and --tools are what keep the run read-only.
 cd "$repo_root"
 claude -p "$prompt" \
   --plugin-dir agents/plugins/service \
   --model sonnet \
   --output-format stream-json --verbose \
-  --allowedTools "Bash(ctwctl o2 *)" Read Skill \
-  --disallowedTools "Read(agents/plugins/service/evals/*/graders/**)" \
+  --setting-sources project \
+  --permission-mode dontAsk \
+  --tools "Bash,Read,Skill" \
+  --allowedTools "Bash(ctwctl o2 *)" "Bash(ctwctl -o * o2 *)" "Bash(jq *)" "Bash(head *)" "Bash(date *)" Read Skill \
+  --disallowedTools "Read(agents/plugins/service/evals/*/graders/**)" "Read(services/**)" "Read(deploy/**)" "Read(infra/**)" \
   --strict-mcp-config \
   --max-budget-usd 5 \
   < /dev/null > "$out"

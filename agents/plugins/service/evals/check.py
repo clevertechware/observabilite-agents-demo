@@ -56,12 +56,13 @@ def main():
         checks["no-observability-query"] = not any("ctwctl o2" in c for c in commands)
     else:
         checks["skill-invoked"] = any("monitor" in s for s in skills)
-        checks["call-chain"] = bool(
-            re.search(r"traefik[\s\S]{0,400}order-service[\s\S]{0,400}inventory-service[\s\S]{0,400}pricing-service", text, re.I)
-        )
+        forward = r"traefik[\s\S]{0,400}order-service[\s\S]{0,400}inventory-service[\s\S]{0,400}pricing-service"
+        backward = r"pricing-service[\s\S]{0,400}inventory-service[\s\S]{0,400}order-service[\s\S]{0,400}traefik"
+        checks["call-chain"] = bool(re.search(forward + "|" + backward, text, re.I))
         checks["logs-link"] = bool(re.search(O2 + r"/web/logs\?", text))
         checks["trace-link"] = bool(re.search(O2 + r"/web/traces/trace-details\?[^\s)]*trace_id=[0-9a-f]{32}", text))
-        checks["links-built-by-ctwctl"] = sum("ctwctl o2 link" in c for c in commands) >= 2
+        checks["logs-link-built-by-ctwctl"] = any(re.search(r"o2 link\b.*--sql", c, re.S) for c in commands)
+        checks["trace-link-built-by-ctwctl"] = any(re.search(r"o2 link\b.*--trace-id", c, re.S) for c in commands)
         urls = set(re.findall(O2 + r"/web/[^\s)>`\"']+", text))
         checks["every-url-comes-from-ctwctl"] = bool(urls) and all(u in results_text for u in urls)
         checks["window-uses-absolute-range"] = any(
