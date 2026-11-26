@@ -7,9 +7,26 @@ Les assertions sémantiques (cause racine, fenêtre, champs inventés) restent �
 import json
 import re
 import sys
+from datetime import datetime, timedelta, timezone
 
 SKILL = r"(?:^|:)diagnose$"
 O2 = r"https://o2\.obs\.scw\.clevertechware\.fr"
+
+
+INCIDENT = datetime(2026, 11, 26, 12, 1, 43, tzinfo=timezone(timedelta(hours=1)))
+FROM_FLAG = re.compile(r"ctwctl (?:-o \S+ )?o2 query\b[^;|&\n]*--from (\S+)")
+
+
+def starts_before_incident(command):
+    """True when an o2 query window opens within the hour before the incident, in any UTC offset."""
+    for raw in FROM_FLAG.findall(command):
+        try:
+            start = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if start.tzinfo is not None and INCIDENT - timedelta(hours=1) <= start <= INCIDENT:
+            return True
+    return False
 
 
 def load(path):
@@ -66,9 +83,7 @@ def main():
         checks["trace-link-built-by-ctwctl"] = any(re.search(r"o2 link\b.*--trace-id", c, re.S) for c in commands)
         urls = set(re.findall(O2 + r"/web/[^\s)>`\"']+", text))
         checks["every-url-comes-from-ctwctl"] = bool(urls) and all(u in results_text for u in urls)
-        checks["window-uses-absolute-range"] = any(
-            re.search(r"ctwctl (-o \S+ )?o2 query\b[^;|&\n]*--from 2026-11-26T1[12]:", c) for c in commands
-        )
+        checks["window-uses-absolute-range"] = any(starts_before_incident(c) for c in commands)
         if case == "order-error-screenshot":
             checks["reads-image"] = any(c["name"] == "Read" and "erreur-commande.png" in json.dumps(c["input"]) for c in calls)
             checks["uses-screenshot-time"] = "12:01:43" in text
