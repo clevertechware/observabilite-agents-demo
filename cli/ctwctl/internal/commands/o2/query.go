@@ -15,6 +15,11 @@ func runQuery(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 		return errors.New("an SQL query is expected: ctwctl o2 query \"<SQL>\"")
 	}
 
+	streamType, err := parseStreamType(cmd.String("type"))
+	if err != nil {
+		return err
+	}
+
 	s, err := deps.LoadSettings(cmd)
 	if err != nil {
 		return err
@@ -32,10 +37,11 @@ func runQuery(ctx context.Context, cmd *cli.Command, deps Dependencies) error {
 
 	end := deps.Now()
 	result, err := searcher.Search(ctx, o2.SearchRequest{
-		SQL:   cmd.Args().First(),
-		Start: end.Add(-since),
-		End:   end,
-		Size:  limit,
+		SQL:        cmd.Args().First(),
+		Start:      end.Add(-since),
+		End:        end,
+		Size:       limit,
+		StreamType: streamType,
 	})
 	if err != nil {
 		return fmt.Errorf("run query: %w", err)

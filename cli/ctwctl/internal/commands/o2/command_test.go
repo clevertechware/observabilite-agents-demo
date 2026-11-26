@@ -317,10 +317,11 @@ func TestO2Query_SendsTheSQLUnchangedOverTheRequestedWindow(t *testing.T) {
 	sql := `SELECT service_name, count(*) AS erreurs FROM "default" WHERE severity_number >= 17 GROUP BY service_name`
 	searcher := mocks.NewLogSearcher(t)
 	searcher.EXPECT().Search(mock.Anything, o2.SearchRequest{
-		SQL:   sql,
-		Start: fixedNow.Add(-24 * time.Hour),
-		End:   fixedNow,
-		Size:  100,
+		SQL:        sql,
+		Start:      fixedNow.Add(-24 * time.Hour),
+		End:        fixedNow,
+		Size:       100,
+		StreamType: "logs",
 	}).Return(o2.SearchResult{Hits: []o2.Hit{
 		{"service_name": "order-service", "erreurs": json.Number("3")},
 	}}, nil)
@@ -329,6 +330,37 @@ func TestO2Query_SendsTheSQLUnchangedOverTheRequestedWindow(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"erreurs":3,"service_name":"order-service"}`, out)
+}
+
+func TestO2Query_WithTypeFlag_SearchesThatStreamType(t *testing.T) {
+	t.Parallel()
+
+	for _, streamType := range []string{"logs", "traces", "metrics"} {
+		t.Run(streamType, func(st *testing.T) {
+			st.Parallel()
+
+			searcher := mocks.NewLogSearcher(st)
+			searcher.EXPECT().Search(mock.Anything, mock.MatchedBy(func(req o2.SearchRequest) bool {
+				return req.StreamType == streamType
+			})).Return(o2.SearchResult{}, nil)
+
+			_, err := run(st, o2Deps(searcher, credentialed), "o2", "query", "SELECT 1", "--type", streamType)
+
+			require.NoError(st, err)
+		})
+	}
+}
+
+func TestO2Query_WithUnknownType_FailsBeforeSearch(t *testing.T) {
+	t.Parallel()
+
+	searcher := mocks.NewLogSearcher(t)
+
+	_, err := run(t, o2Deps(searcher, credentialed), "o2", "query", "SELECT 1", "--type", "spans")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--type")
+	assert.Contains(t, err.Error(), "spans")
 }
 
 func TestO2Query_WithTextOutput_PrintsAnAlignedTableWithSortedColumns(t *testing.T) {
