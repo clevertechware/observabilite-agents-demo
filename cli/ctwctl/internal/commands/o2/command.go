@@ -78,6 +78,14 @@ func NewCommand(deps Dependencies) *cli.Command {
 					return runQuery(ctx, cmd, deps)
 				},
 			},
+			{
+				Name:  "link",
+				Usage: "print the OpenObserve interface URL of an SQL query or a trace",
+				Flags: linkFlags(),
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					return printLink(ctx, cmd, deps)
+				},
+			},
 		},
 	}
 }
