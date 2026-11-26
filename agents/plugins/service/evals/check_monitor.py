@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Évalue les assertions mécaniques d'un run stream-json du skill monitor et imprime un résumé.
+"""Évalue les assertions mécaniques d'un run du skill monitor et imprime un résumé.
 
-Usage: check_monitor.py <case> <run.jsonl>
+Usage: check_monitor.py <case> <run>
+<run> est le stream-json claude (run.sh) ou le répertoire exporté par vibe (run_vibe.sh).
 Les assertions sémantiques (constats attendus, format du rapport) restent à lire dans le rapport.
 """
+import glob
 import json
+import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
@@ -18,9 +21,11 @@ WINDOWS = {
 }
 SERVICES = ("order-service", "inventory-service", "pricing-service")
 FROM_TO = re.compile(r"ctwctl (?:-o \S+ )?o2 query\b[^;|&\n]*--from (\S+)[^;|&\n]*--to (\S+)")
+FAILED = re.compile(r"unknown field|Search field not found|ctwctl: ")
 
 
 def parse(raw):
+    raw = raw.strip("'\"")
     try:
         return datetime.fromisoformat(raw.replace("Z", "+00:00"))
     except ValueError:
@@ -38,44 +43,97 @@ def covers_requested_window(command, start, end):
     return False
 
 
-def load(path):
+def load_claude(path):
     with open(path, encoding="utf-8") as fh:
-        return [json.loads(line) for line in fh if line.strip()]
+        events = [json.loads(line) for line in fh if line.strip()]
+    final = next((e for e in reversed(events) if e.get("type") == "result"), {})
 
-
-def tool_calls(events):
+    commands, skills, bodies, failed = [], [], [], []
     for ev in events:
-        if ev.get("type") != "assistant":
-            continue
-        for block in ev["message"]["content"]:
-            if block.get("type") == "tool_use":
-                yield block
-
-
-def tool_results(events):
-    for ev in events:
-        if ev.get("type") != "user":
-            continue
-        content = ev["message"]["content"]
-        if isinstance(content, str):
-            continue
-        for block in content:
-            if block.get("type") == "tool_result":
+        if ev.get("type") == "assistant":
+            for block in ev["message"]["content"]:
+                if block.get("type") != "tool_use":
+                    continue
+                if block["name"] == "Bash":
+                    commands.append(block["input"].get("command", ""))
+                if block["name"] == "Skill":
+                    skills.append(block["input"].get("skill", ""))
+        elif ev.get("type") == "user" and not isinstance(ev["message"]["content"], str):
+            for block in ev["message"]["content"]:
+                if block.get("type") != "tool_result":
+                    continue
                 body = block.get("content")
                 if isinstance(body, list):
-                    body = "".join(part.get("text", "") for part in body)
-                yield block, body or ""
+                    body = "".join(p.get("text", "") for p in body)
+                body = body or ""
+                bodies.append(body)
+                if block.get("is_error") or FAILED.search(body[:300]):
+                    failed.append(body)
+    stats = f"num_turns={final.get('num_turns')} total_cost_usd={final.get('total_cost_usd')} is_error={final.get('is_error')}"
+    return final.get("result", "") or "", commands, skills, "\n".join(bodies), failed, stats
+
+
+def load_vibe(run_dir):
+    events = []
+    for path in sorted(glob.glob(os.path.join(run_dir, "session", "journal", "*.jsonl"))):
+        with open(path, encoding="utf-8") as fh:
+            events.extend(json.loads(line) for line in fh if line.strip())
+
+    commands, skills, bodies, failed = [], [], [], []
+    for ev in events:
+        payload = ev.get("payload", {})
+        if ev["type"] == "action_intent" and payload.get("kind") == "tool":
+            call = payload.get("request", {}).get("call", {})
+            name, args = call.get("name", ""), call.get("arguments") or {}
+            if name.endswith("bash"):
+                commands.append(args.get("command", ""))
+            if ".skill" in name or name.startswith("skill"):
+                skills.append(args.get("name") or "")
+        elif ev["type"] == "action_result":
+            res = payload.get("result") or {}
+            if "call_id" not in res:
+                continue
+            inner = res.get("result")
+            if not isinstance(inner, dict) or "hook" in inner:
+                continue
+            structured = inner.get("structured_content") or {}
+            body = ""
+            if isinstance(structured, dict):
+                body = f"{structured.get('stdout', '')}\n{structured.get('stderr', '')}"
+            if not body and isinstance(inner.get("content"), list):
+                body = "\n".join(p.get("text", "") for p in inner["content"] if isinstance(p, dict))
+            bodies.append(body)
+            if inner.get("type") != "success" or FAILED.search(body[:300]):
+                failed.append(body or str(inner.get("type")))
+
+    text = ""
+    report = os.path.join(run_dir, "report.txt")
+    if os.path.isfile(report):
+        with open(report, encoding="utf-8") as fh:
+            text = fh.read()
+
+    export = {}
+    export_path = os.path.join(run_dir, "export.json")
+    if os.path.isfile(export_path):
+        with open(export_path, encoding="utf-8") as fh:
+            export = json.load(fh)
+    usage = export.get("usage", {}) or {}
+    warnings = export.get("warnings") or []
+    stats = (
+        f"steps={export.get('steps')} cost_usd={export.get('cost_usd')}"
+        f" out_tokens={usage.get('output_tokens')} warnings={len(warnings)}"
+    )
+    for w in warnings:
+        failed.append(str(w))
+    return text, commands, skills, "\n".join(bodies), failed, stats
 
 
 def main():
     case, path = sys.argv[1], sys.argv[2]
-    events = load(path)
-    final = next((e for e in reversed(events) if e.get("type") == "result"), {})
-    text = final.get("result", "") or ""
-    calls = list(tool_calls(events))
-    commands = [c["input"].get("command", "") for c in calls if c["name"] == "Bash"]
-    skills = [c["input"].get("skill", "") for c in calls if c["name"] == "Skill"]
-    results_text = "\n".join(body for _, body in tool_results(events))
+    if os.path.isdir(path):
+        text, commands, skills, bodies, failed, stats = load_vibe(path)
+    else:
+        text, commands, skills, bodies, failed, stats = load_claude(path)
 
     checks = {}
     if case == "not-monitor":
@@ -97,7 +155,7 @@ def main():
         checks["links-built-by-ctwctl"] = (
             not urls or any(re.search(r"o2 link\b.*(?:--sql|--trace-id)", c, re.S) for c in commands)
         )
-        checks["every-url-comes-from-ctwctl"] = bool(urls) and all(u in results_text for u in urls)
+        checks["every-url-comes-from-ctwctl"] = bool(urls) and all(u in bodies for u in urls)
         if case == "health-incident":
             checks["both-error-episodes-timed"] = bool(
                 re.search(r"12[:h]0", text) and re.search(r"13[:h]2", text)
@@ -106,18 +164,12 @@ def main():
         print(f"unknown case '{case}'")
         return False
 
-    failed_queries = [
-        body[:200].replace("\n", " ")
-        for blk, body in tool_results(events)
-        if blk.get("is_error") or re.search(r"unknown field|Search field not found|ctwctl: ", body[:300])
-    ]
-
     for name, ok in checks.items():
         print(f"{'PASS' if ok else 'FAIL'}  {name}")
-    print(f"report_chars={len(text)} commands={len(commands)} failed_tool_results={len(failed_queries)}")
-    for f in failed_queries:
-        print(f"  ! {f}")
-    print(f"num_turns={final.get('num_turns')} total_cost_usd={final.get('total_cost_usd')} is_error={final.get('is_error')}")
+    print(f"report_chars={len(text)} commands={len(commands)} failed_tool_results={len(failed)}")
+    for f in failed:
+        print(f"  ! {str(f)[:200].replace(chr(10), ' ')}")
+    print(stats)
     return all(checks.values())
 
 
