@@ -41,7 +41,7 @@ claude -p "$prompt" \
   --setting-sources project \
   --permission-mode dontAsk \
   --tools "Bash,Read,Skill" \
-  --allowedTools "Bash(ctwctl o2 *)" "Bash(ctwctl -o json o2 *)" "Bash(jq *)" "Bash(head *)" "Bash(date *)" Read Skill \
+  --allowedTools "Bash(ctwctl o2 *)" "Bash(ctwctl -o json o2 *)" "Bash(date)" "Read(./**)" Skill \
   --disallowedTools "Read(agents/plugins/service/evals/*/graders/**)" "Read(services/**)" "Read(deploy/**)" "Read(infra/**)" \
   --strict-mcp-config \
   --max-budget-usd 5 \
