@@ -1,0 +1,11 @@
+{
+  "name": "ctw-demo",
+  "owner": { "name": "Clever Tech Ware" },
+  "plugins": [
+    {
+      "name": "service",
+      "source": "./agents/plugins/service",
+      "description": "Skills d'exploitation de la démo d'observabilité."
+    }
+  ]
+}
