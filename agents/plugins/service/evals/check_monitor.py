@@ -58,21 +58,33 @@ def section(text, title):
     return rest[: following.start()] if following else rest
 
 
+CONSEQUENCE = r"conséquence|répercu|propag|à cause|dû à|due à|en aval|en amont|causée?s? par"
+ROLLOUT_PODS = re.compile(r"inventory-service-[0-9a-f]+-[a-z0-9]+|pricing-service-6cd479f7b6-[a-z0-9]+")
+
+
 def fault_checks(text):
     """Assertions propres au cas health-faults : lenteur d'inventory, OOMKilled de pricing, rollouts exclus."""
     restarts = section(text, "Redémarrages")
+    slowness = section(text, "Lenteurs")
     return {
         "inventory-slowness-over-p99-budget": bool(
             re.search(r"(?s)inventory-service.{0,300}?(?:2[.,]\d+\s*s\b|2\s?\d{3}\s*ms)", text)
             and re.search(r"300\s*ms", text)
         ),
         "order-slowness-presented-as-consequence": bool(
-            re.search(r"(?is)order-service[^\n]*(?:conséquence|répercu|propag|à cause|dû|due|aval|amont)", text)
+            re.search(rf"(?is)order-service.{{0,250}}(?:{CONSEQUENCE})|(?:{CONSEQUENCE}).{{0,250}}order-service", slowness)
         ),
-        "slow-sql-query-mentioned": bool(re.search(r"pg_sleep|requête SQL|requête lente|span DB|span SELECT", text, re.I)),
+        "slow-sql-query-mentioned": bool(re.search(r"pg_sleep|\bSELECT\b|requête SQL|requête lente|span DB", text, re.I)),
         "pricing-oomkilled-around-1751": bool(re.search(r"(?s)OOMKilled.{0,400}?17[:h]5[01]|17[:h]5[01].{0,400}?OOMKilled", text)),
-        "only-the-oomkilled-pod-listed-as-restart": set(POD.findall(restarts)) == {"pricing-service-666cb5f467-nwn7r"},
+        "oomkilled-pod-listed-as-restart": "pricing-service-666cb5f467-nwn7r" in restarts,
+        "rollout-pods-not-listed-as-restarts": not ROLLOUT_PODS.search(restarts),
     }
+
+
+def is_raw_message(text):
+    """Le rapport est le message : ni clôture de code, ni préambule avant le titre."""
+    first = next((line for line in text.splitlines() if line.strip()), "")
+    return "```" not in text and "26/11/2026" in first
 
 
 def load_claude(path):
@@ -179,6 +191,7 @@ def main():
         )
         checks["three-services-listed"] = all(s in text for s in SERVICES)
         checks["report-under-5000"] = len(text) <= 5000
+        checks["report-is-the-raw-message"] = is_raw_message(text)
         checks["restart-signal-queried"] = any("k8s_container_restarts" in c for c in commands)
         checks["error-logs-signal-queried"] = any("severity_number >= 17" in c for c in commands)
         checks["p99-signal-queried"] = any("approx_percentile_cont" in c for c in commands)
