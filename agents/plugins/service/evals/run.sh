@@ -11,6 +11,12 @@ run=${3:?run number}
 evals_dir=$(cd "$(dirname "$0")" && pwd)
 repo_root=$(cd "$evals_dir/../../../.." && pwd)
 out_root=${MONITOR_RUNS_DIR:?MONITOR_RUNS_DIR must point outside the repository}
+case $(cd "$out_root" 2>/dev/null && pwd -P || echo "$out_root")/ in
+  "$repo_root"/*)
+    echo "run.sh: MONITOR_RUNS_DIR must be outside the repository" >&2
+    exit 2
+    ;;
+esac
 token_file=${CTWCTL_O2_TOKEN_FILE:?CTWCTL_O2_TOKEN_FILE must name a file holding the token}
 prompt_file="$evals_dir/$case_name/prompt.md"
 
@@ -44,6 +50,7 @@ claude -p "$prompt" \
   --allowedTools "Bash(ctwctl o2 *)" "Bash(ctwctl -o json o2 *)" "Bash(date)" "Read(./**)" Skill \
   --disallowedTools "Read(agents/plugins/service/evals/*/graders/**)" "Read(services/**)" "Read(deploy/**)" "Read(infra/**)" \
   --strict-mcp-config \
+  --max-turns 40 \
   --max-budget-usd 5 \
   < /dev/null > "$out"
 echo "$out"
