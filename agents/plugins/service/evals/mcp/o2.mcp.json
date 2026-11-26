@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "o2": {
+      "type": "http",
+      "url": "https://o2.obs.scw.clevertechware.fr/api/default/mcp",
+      "headers": { "Authorization": "${O2_MCP_AUTHORIZATION}" }
+    }
+  }
+}

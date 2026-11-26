@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Usage: run.sh <version> <case> <run-number>
 # Runs one case read-only with `claude -p` and stores the stream-json output outside the repository.
+# EVAL_ACCESS=mcp swaps the ctwctl queries for the OpenObserve MCP server (evals/mcp): the same case then runs
+# with the MCP variant of the diagnose skill, and ctwctl only builds the UI links.
 # Prerequisites: ctwctl built (make -C cli/ctwctl build), SKILL_RUNS_DIR and CTWCTL_O2_TOKEN_FILE exported.
 set -euo pipefail
 
@@ -37,19 +39,32 @@ CTWCTL_O2_TOKEN=$(cat "$token_file")
 export CTWCTL_O2_TOKEN
 export CLAUDE_CODE_DISABLE_CLAUDE_MDS=1 CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
 
+plugin_dir=agents/plugins/service
+mcp_args=(--strict-mcp-config)
+access_tools=("Bash(ctwctl o2 *)" "Bash(ctwctl -o json o2 *)")
+if [[ ${EVAL_ACCESS:-cli} == mcp ]]; then
+  O2_MCP_AUTHORIZATION="Basic $(printf '%s:%s' "$CTWCTL_O2_USER" "$CTWCTL_O2_TOKEN" | base64 | tr -d '\n')"
+  export O2_MCP_AUTHORIZATION
+  plugin_dir=agents/plugins/service/evals/mcp/plugin
+  mcp_args=(--strict-mcp-config --mcp-config agents/plugins/service/evals/mcp/o2.mcp.json)
+  access_tools=("Bash(ctwctl o2 link *)" mcp__o2__StreamList mcp__o2__StreamSchema mcp__o2__SearchSQL
+    mcp__o2__GetLatestTraces)
+fi
+
 # --allowedTools only pre-approves; --permission-mode dontAsk and --tools keep the run read-only.
 # A "*" in a Bash rule also matches spaces: pinning "-o json" keeps "ctwctl -o json orders create ... o2" refused.
 cd "$repo_root"
 claude -p "$prompt" \
-  --plugin-dir agents/plugins/service \
+  --plugin-dir "$plugin_dir" \
   --model sonnet \
   --output-format stream-json --verbose \
   --setting-sources project \
   --permission-mode dontAsk \
   --tools "Bash,Read,Skill" \
-  --allowedTools "Bash(ctwctl o2 *)" "Bash(ctwctl -o json o2 *)" "Bash(date)" "Bash(date +%u)" "Read(./**)" Skill \
+  --allowedTools "${access_tools[@]}" "Bash(date)" "Bash(date +%u)" "Read(./**)" Skill \
   --disallowedTools "Read(agents/plugins/service/evals/*/graders/**)" "Read(services/**)" "Read(deploy/**)" "Read(infra/**)" \
-  --strict-mcp-config \
+    mcp__o2__tools_call \
+  "${mcp_args[@]}" \
   --max-turns 40 \
   --max-budget-usd 5 \
   < /dev/null > "$out"
