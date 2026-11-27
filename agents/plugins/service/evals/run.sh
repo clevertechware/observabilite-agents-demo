@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Usage: run.sh <version> <case> <run-number>
 # Runs one case read-only with `claude -p` and stores the stream-json output outside the repository.
+# The agent works in an empty temporary directory holding only the case files: Claude Code runs read-only
+# commands such as grep or git grep without asking inside its working directory, which would expose the code
+# and the fault injection of the demo.
 # Prerequisites: ctwctl built (make -C cli/ctwctl build), SKILL_RUNS_DIR and CTWCTL_O2_TOKEN_FILE exported.
 set -euo pipefail
 
@@ -39,9 +42,14 @@ export CLAUDE_CODE_DISABLE_CLAUDE_MDS=1 CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
 
 # --allowedTools only pre-approves; --permission-mode dontAsk and --tools keep the run read-only.
 # A "*" in a Bash rule also matches spaces: pinning "-o json" keeps "ctwctl -o json orders create ... o2" refused.
-cd "$repo_root"
+workdir=$(mktemp -d)
+trap 'rm -rf "$workdir"' EXIT
+case_copy="$workdir/agents/plugins/service/evals/$case_name"
+mkdir -p "$case_copy"
+find "$evals_dir/$case_name" -maxdepth 1 -type f ! -name prompt.md -exec cp {} "$case_copy/" \;
+cd "$workdir"
 claude -p "$prompt" \
-  --plugin-dir agents/plugins/service \
+  --plugin-dir "$repo_root/agents/plugins/service" \
   --model sonnet \
   --output-format stream-json --verbose \
   --setting-sources project \
