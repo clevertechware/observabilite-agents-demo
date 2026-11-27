@@ -57,8 +57,10 @@ export CTWCTL_O2_TOKEN
 # the token stays in the environment, never in a repo file.
 export O2_MCP_AUTHORIZATION="Basic $(printf '%s:%s' "${CTWCTL_O2_USER:-ctwctl@sa.internal}" "$CTWCTL_O2_TOKEN" | base64 | tr -d '\n')"
 
-# Headless mode never prompts: a call needing approval is denied, so the copied
-# config is what keeps the run read-only.
+# Headless mode never prompts: a call needing approval is denied, so the copied config and the
+# approval policy keep the run read-only. --enabled-tools disables every other tool in headless mode:
+# Vibe's remote defaults can approve edits and add a run_typescript tool that starts processes
+# outside the bash allowlist. The model is pinned for the same reason.
 mkdir -p "$workdir/.agents"
 cp -RL "$repo_root/.agents/skills" "$workdir/.agents/"
 case_copy="$workdir/agents/plugins/service/evals/$case_name"
@@ -66,6 +68,9 @@ mkdir -p "$case_copy"
 find "$evals_dir/$case_name" -maxdepth 1 -type f ! -name prompt.md -exec cp {} "$case_copy/" \;
 cd "$workdir"
 VIBE_HOME="$vibe_home" vibe --trust \
+  --model mistral-large-4-0 \
+  --approval-policy ask \
+  --enabled-tools bash --enabled-tools read_file --enabled-tools skill \
   --prompt-file "$prompt_tmp" \
   --output-dir "$out" \
   --max-turns "$max_turns" \

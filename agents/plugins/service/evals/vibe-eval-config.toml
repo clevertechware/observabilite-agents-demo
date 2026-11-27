@@ -8,6 +8,13 @@ applied_migrations = [
     "bash_read_only_defaults_v1",
 ]
 
+# Vibe's remote defaults change between runs: pin what keeps the run read-only and single-agent.
+default_approval_policy = "ask"
+enable_background_processes = false
+enable_subagents = false
+enable_connectors = false
+enable_auto_update = false
+
 [tools.bash]
 allowlist = [
     "ctwctl o2",
