@@ -67,11 +67,17 @@ cp -RL "$repo_root/.agents/skills" "$workdir/.agents/"
 case_copy="$workdir/agents/plugins/service/evals/$case_name"
 mkdir -p "$case_copy"
 find "$evals_dir/$case_name" -maxdepth 1 -type f ! -name prompt.md -exec cp {} "$case_copy/" \;
+enabled_tools=(--enabled-tools bash --enabled-tools read_file --enabled-tools skill)
+if grep -q '^\[\[mcp_servers\]\]' "$config_file"; then
+  for tool in o2_StreamList o2_StreamSchema o2_SearchSQL o2_GetLatestTraces; do
+    enabled_tools+=(--enabled-tools "$tool")
+  done
+fi
 cd "$workdir"
 VIBE_HOME="$vibe_home" vibe --trust \
   --model mistral-large-4-0 \
   --approval-policy ask \
-  --enabled-tools bash --enabled-tools read_file --enabled-tools skill \
+  "${enabled_tools[@]}" \
   --prompt-file "$prompt_tmp" \
   --output-dir "$out" \
   --max-turns "$max_turns" \
