@@ -2,7 +2,8 @@
 # Usage: run.sh <version> <case> <run-number>
 # Runs one case read-only with `claude -p` and stores the stream-json output outside the repository.
 # EVAL_ACCESS=mcp swaps the ctwctl queries for the OpenObserve MCP server (evals/mcp): the same case then runs
-# with the MCP variant of the diagnose skill, and ctwctl only builds the UI links.
+# with the MCP variant of the diagnose skill, and ctwctl only builds the UI links. EVAL_MCP_TOOL_SEARCH=1 adds the
+# ToolSearch tool, so Claude Code defers the MCP tool definitions instead of loading them on the first call.
 # The agent works in an empty temporary directory holding only the case files: Claude Code runs read-only
 # commands such as grep or git grep without asking inside its working directory, which would expose the code
 # and the fault injection of the demo.
@@ -43,6 +44,7 @@ export CTWCTL_O2_TOKEN
 export CLAUDE_CODE_DISABLE_CLAUDE_MDS=1 CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
 
 plugin_dir=$repo_root/agents/plugins/service
+builtin_tools=Bash,Read,Skill
 mcp_args=(--strict-mcp-config)
 access_tools=("Bash(ctwctl o2 *)" "Bash(ctwctl -o json o2 *)")
 if [[ ${EVAL_ACCESS:-cli} == mcp ]]; then
@@ -52,6 +54,10 @@ if [[ ${EVAL_ACCESS:-cli} == mcp ]]; then
   mcp_args=(--strict-mcp-config --mcp-config "$evals_dir/mcp/o2.mcp.json")
   access_tools=("Bash(ctwctl o2 link *)" mcp__o2__StreamList mcp__o2__StreamSchema mcp__o2__SearchSQL
     mcp__o2__GetLatestTraces)
+  if [[ ${EVAL_MCP_TOOL_SEARCH:-0} == 1 ]]; then
+    builtin_tools=$builtin_tools,ToolSearch
+    access_tools+=(ToolSearch)
+  fi
 fi
 
 # --allowedTools only pre-approves; --permission-mode dontAsk and --tools keep the run read-only.
@@ -68,7 +74,7 @@ claude -p "$prompt" \
   --output-format stream-json --verbose \
   --setting-sources project \
   --permission-mode dontAsk \
-  --tools "Bash,Read,Skill" \
+  --tools "$builtin_tools" \
   --allowedTools "${access_tools[@]}" "Bash(date)" "Bash(date +%u)" "Read(./**)" Skill \
   --disallowedTools "Read(agents/plugins/service/evals/*/graders/**)" "Read(services/**)" "Read(deploy/**)" "Read(infra/**)" \
     mcp__o2__tools_call \
