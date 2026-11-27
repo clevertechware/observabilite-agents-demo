@@ -53,9 +53,10 @@ CTWCTL_O2_TOKEN=$(cat "$token_file")
 export CTWCTL_O2_TOKEN
 
 # Headless mode never prompts: a call needing approval is denied, so the copied config and the
-# approval policy keep the run read-only. --enabled-tools disables every other tool in headless mode:
-# Vibe's remote defaults can approve edits and add a run_typescript tool that starts processes
-# outside the bash allowlist. The model is pinned for the same reason.
+# approval policy keep the run read-only. Vibe's remote defaults change between runs (edits approved,
+# subagents, background processes started from run_typescript outside the bash allowlist): the config
+# turns them off, --enabled-tools limits the tools and the model is pinned. run_typescript stays
+# available, but its bash calls go through the same allowlist.
 mkdir -p "$workdir/.agents"
 cp -RL "$repo_root/.agents/skills" "$workdir/.agents/"
 case_copy="$workdir/agents/plugins/service/evals/$case_name"
