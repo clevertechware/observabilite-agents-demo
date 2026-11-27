@@ -29,6 +29,16 @@ def starts_before_incident(command):
     return False
 
 
+def search_sql_starts_before_incident(call):
+    """True when a SearchSQL call of the o2 MCP server opens its window within the hour before the incident."""
+    query = call["input"].get("request_body", {}).get("query", {})
+    start_us = query.get("start_time")
+    if not isinstance(start_us, int):
+        return False
+    start = datetime.fromtimestamp(start_us / 1_000_000, tz=timezone.utc)
+    return INCIDENT - timedelta(hours=1) <= start <= INCIDENT
+
+
 def load(path):
     with open(path, encoding="utf-8") as fh:
         return [json.loads(line) for line in fh if line.strip()]
@@ -83,7 +93,10 @@ def main():
         checks["trace-link-built-by-ctwctl"] = any(re.search(r"o2 link\b.*--trace-id", c, re.S) for c in commands)
         urls = set(re.findall(O2 + r"/web/[^\s)>`\"']+", text))
         checks["every-url-comes-from-ctwctl"] = bool(urls) and all(u in results_text for u in urls)
-        checks["window-uses-absolute-range"] = any(starts_before_incident(c) for c in commands)
+        searches = [c for c in calls if c["name"] == "mcp__o2__SearchSQL"]
+        checks["window-uses-absolute-range"] = any(starts_before_incident(c) for c in commands) or any(
+            search_sql_starts_before_incident(c) for c in searches
+        )
         if case == "order-error-screenshot":
             checks["reads-image"] = any(c["name"] == "Read" and "erreur-commande.png" in json.dumps(c["input"]) for c in calls)
             checks["uses-screenshot-time"] = "12:01:43" in text

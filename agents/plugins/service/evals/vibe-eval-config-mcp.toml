@@ -1,0 +1,59 @@
+# Variante MCP de vibe-eval-config.toml, copiée par run_vibe.sh (VIBE_EVAL_CONFIG) à la place de
+# la config CLI quand le cas order-error-text-mcp tourne. Le serveur MCP "o2" d'OpenObserve y
+# remplace la CLI ctwctl : tools_call est désactivé, il ne reste que les outils épinglés read-only
+# (StreamList, StreamSchema, SearchSQL, GetLatestTraces, PrometheusRangeQuery) plus tool_search,
+# chacun approuvé "always" pour tourner en headless. La clé de config d'un outil MCP est
+# "<alias>_<outil>" (o2_SearchSQL), pas la route affichée (mcp_o2.SearchSQL). L'en-tête
+# Authorization est lu depuis O2_MCP_AUTHORIZATION (exporté par run_vibe.sh depuis le token) :
+# aucun secret dans ce fichier.
+applied_migrations = [
+    "bash_read_only_defaults_v1",
+]
+
+# Vibe's remote defaults change between runs: pin what keeps the run read-only and single-agent.
+default_approval_policy = "ask"
+enable_background_processes = false
+enable_subagents = false
+enable_connectors = false
+enable_auto_update = false
+
+[tools.bash]
+allowlist = [
+    "ctwctl o2 link",
+    "date",
+]
+
+[tools.read_file]
+permission = "always"
+outside_workdir = "deny"
+denylist = [
+    "*/evals/*/graders/*",
+    "*/services/*",
+    "*/deploy/*",
+    "*/infra/*",
+]
+
+[[mcp_servers]]
+name = "o2"
+transport = "streamable-http"
+url = "https://o2.obs.scw.clevertechware.fr/api/default/mcp"
+disabled_tools = ["tools_call"]
+
+[mcp_servers.auth]
+type = "static"
+api_key_env = "O2_MCP_AUTHORIZATION"
+api_key_header = "Authorization"
+api_key_format = "{token}"
+
+[tools.o2_StreamList]
+permission = "always"
+[tools.o2_StreamSchema]
+permission = "always"
+[tools.o2_SearchSQL]
+permission = "always"
+[tools.o2_GetLatestTraces]
+permission = "always"
+[tools.o2_PrometheusRangeQuery]
+permission = "always"
+[tools.o2_tool_search]
+permission = "always"

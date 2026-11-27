@@ -1,0 +1,6 @@
+{
+  "name": "service",
+  "description": "Variante d'évaluation du plugin service : le skill diagnose lit OpenObserve par son serveur MCP.",
+  "version": "0.1.0",
+  "author": { "name": "Clever Tech Ware" }
+}
