@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Usage: run_vibe.sh <version> <case> <run-number>
 # Same cases as run.sh, run with the vibe CLI (portability arm of the eval).
-# The agent runs through .agents/skills, discovered with --trust. Read-only: the versioned
+# The agent works in an empty temporary directory holding only the case files and a copy of
+# .agents/skills, discovered with --trust: with read_file limited to the working directory, the code
+# and the fault injection of the demo stay out of reach. Read-only: the versioned
 # vibe-eval-config.toml is copied to $VIBE_EVAL_HOME/config.toml before each run. Its bash allowlist
 # is the prefixes "ctwctl o2", "ctwctl -o json o2" and "date"; read_file is denied on graders,
 # services, deploy and infra. In headless mode every call outside the allowlists is denied instead
@@ -38,7 +40,8 @@ cp "$evals_dir/vibe-eval-config.toml" "$vibe_home/config.toml"
 out="$out_root/$version/$case_name-$run"
 mkdir -p "$out"
 prompt_tmp=$(mktemp)
-trap 'rm -f "$prompt_tmp"' EXIT
+workdir=$(mktemp -d)
+trap 'rm -f "$prompt_tmp"; rm -rf "$workdir"' EXIT
 awk 'BEGIN{n=0} /^---$/{n++; next} n>=2' "$prompt_file" > "$prompt_tmp"
 max_turns=$(awk 'NR==1 && $0=="---"{infm=1; next} infm && $0=="---"{exit} infm && /^max_turns:[ ]*/{sub(/^max_turns:[ ]*/,""); print; exit}' "$prompt_file")
 max_turns=${max_turns:-40}
@@ -51,7 +54,12 @@ export CTWCTL_O2_TOKEN
 
 # Headless mode never prompts: a call needing approval is denied, so the copied
 # config is what keeps the run read-only.
-cd "$repo_root"
+mkdir -p "$workdir/.agents"
+cp -RL "$repo_root/.agents/skills" "$workdir/.agents/"
+case_copy="$workdir/agents/plugins/service/evals/$case_name"
+mkdir -p "$case_copy"
+find "$evals_dir/$case_name" -maxdepth 1 -type f ! -name prompt.md -exec cp {} "$case_copy/" \;
+cd "$workdir"
 VIBE_HOME="$vibe_home" vibe --trust \
   --prompt-file "$prompt_tmp" \
   --output-dir "$out" \
